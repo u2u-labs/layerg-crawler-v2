@@ -1,0 +1,4 @@
+# Cockroach DB info
+COCKROACH_DB_URL: http://127.0.0.1:26257/defaultdb
+
+# Multi-chain configs
