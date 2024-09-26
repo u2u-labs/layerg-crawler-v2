@@ -1,18 +1,18 @@
 package config
 
 import (
-	"layerg-crawler/common"
+	"layerg-crawler/types"
 )
 
 var (
-	U2UTestnet = &common.Network{
+	U2UTestnet = &types.Network{
 		Chain:    "U2U",
 		Name:     "Nebulas Testnet",
 		RpcUrl:   "https://rpc-nebulas-testnet.uniultra.xyz/",
 		ChainId:  2484,
 		Explorer: "https://testnet.u2uscan.xyz/",
 	}
-	U2UMainnet = &common.Network{
+	U2UMainnet = &types.Network{
 		Chain:    "U2U",
 		Name:     "Solaris Mainnet",
 		RpcUrl:   "https://rpc-mainnet.uniultra.xyz",

@@ -1,8 +1,8 @@
-package common
+package types
 
 import (
 	"fmt"
-	"math/big"
+	"github.com/jackc/pgx/v5/pgtype"
 	"time"
 
 	"github.com/unicornultrafoundation/go-u2u/common"
@@ -25,7 +25,7 @@ Explorer: %s`, n.Chain, n.Name, n.RpcUrl, n.ChainId, n.Explorer)
 
 type Metadata struct {
 	Decimal      uint8
-	InitialBlock *big.Int
+	InitialBlock pgtype.Numeric
 	LastUpdated  time.Time
 }
 
@@ -37,7 +37,7 @@ type Asset struct {
 }
 
 type ERC721CollectionAsset struct {
-	TokenId *big.Int        `gorm:"index:,unique,sort:desc"`
+	TokenId pgtype.Numeric  `gorm:"index:,unique,sort:desc"`
 	Owner   *common.Address `gorm:"index:,type:btree,length:20"`
 }
 
@@ -48,17 +48,17 @@ type ERC20Asset struct {
 }
 
 type ERC1155CollectionAsset struct {
-	TokenId *big.Int        `gorm:"index:,unique,sort:desc"`
+	TokenId pgtype.Numeric  `gorm:"type:numeric;index:idx_contract_token,unique,sort:desc"`
 	Owner   *common.Address `gorm:"index:,type:btree,length:20"`
-	Balance *big.Int
+	Balance pgtype.Numeric
 }
 
 type OnchainHistory struct {
 	From              *common.Address `gorm:"index:,type:btree,length:20"`
 	To                *common.Address `gorm:"index:,type:btree,length:20"`
 	CollectionAddress *common.Address `gorm:"index:,type:btree,length:20"`
-	TokenId           *big.Int
-	Amount            *big.Int
+	TokenId           pgtype.Numeric
+	Amount            pgtype.Numeric
 	TxHash            *common.Hash `gorm:"index:,type:btree,length:32"`
 	Timestamp         time.Time    `gorm:"sort:desc"`
 }

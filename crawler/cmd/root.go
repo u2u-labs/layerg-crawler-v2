@@ -26,10 +26,21 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		_, err := db.New(&db.DbConfig{
-			Url: viper.GetString("COCKROACH_DB_URL"),
+		_, err := db.NewCockroachDbClient(&db.DbConfig{
+			Url:  viper.GetString("COCKROACH_DB_URL"),
+			Name: viper.GetString("COCKROACH_DB_NAME"),
 		})
-		fmt.Println("err: ", err)
+		if err != nil {
+			panic(err)
+		}
+		_, err = db.NewRedisClient(&db.RedisConfig{
+			Url:      viper.GetString("REDIS_DB_URL"),
+			Db:       viper.GetInt("REDIS_DB"),
+			Password: viper.GetString("REDIS_DB_PASSWORD"),
+		})
+		if err != nil {
+			panic(err)
+		}
 	},
 }
 
