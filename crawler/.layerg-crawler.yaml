@@ -1,8 +1,0 @@
-# DB info
-COCKROACH_DB_URL: postgres://root@localhost:26257
-COCKROACH_DB_NAME: layerg
-REDIS_DB_URL: http://localhost:6379
-REDIS_DB_PASSWORD:
-REDIS_DB: 0
-
-# Multi-chain configs

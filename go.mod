@@ -1,4 +1,4 @@
-module layerg-crawler
+module github.com/u2u-labs/layerg-crawler
 
 go 1.22.5
 
