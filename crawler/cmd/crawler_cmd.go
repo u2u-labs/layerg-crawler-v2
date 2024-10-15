@@ -1,10 +1,6 @@
 package cmd
 
 import (
-	"context"
-	"strconv"
-	"time"
-
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -36,12 +32,10 @@ func startCrawler(cmd *cobra.Command, args []string) {
 func initSupportedChains(gdb *gorm.DB, rdb *redis.Client) {
 	gdb.AutoMigrate(&types.Network{})
 	db.InsertSupportedChains(gdb)
-	var (
-		ctx    = context.Background()
-		chains []*types.Network
-	)
-	gdb.Find(chains)
+	var chains []*types.Network
+	// Query and cache all supported chains
+	gdb.Find(&chains)
 	for _, chain := range chains {
-		rdb.Set(ctx, strconv.Itoa(chain.Id), chain.String(), 2*time.Second)
+		db.SetChain(rdb, chain)
 	}
 }

@@ -3,13 +3,13 @@ package types
 import "fmt"
 
 type Network struct {
-	Id          int    `gorm:"index:,unique,sort:asc"`
-	Chain       string `yaml:"chain"`
-	Name        string `yaml:"name"`
-	RpcUrl      string `yaml:"rpcUrl"`
-	ChainId     int    `yaml:"chainId"`
-	Explorer    string `yaml:"explorer"`
-	LatestBlock uint64
+	Id          int    `json:"id" gorm:"index:,unique,sort:asc"`
+	Chain       string `json:"chain" yaml:"chain"`
+	Name        string `json:"name" yaml:"name"`
+	RpcUrl      string `json:"rpcUrl" yaml:"rpcUrl"`
+	ChainId     int    `json:"chainId" yaml:"chainId"`
+	Explorer    string `json:"explorer" yaml:"explorer"`
+	LatestBlock uint64 `json:"latestBlock" `
 }
 
 func (n *Network) String() string {

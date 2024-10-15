@@ -1,8 +1,7 @@
 version: '3.5'
 
 services:
-
- crdb:
+  crdb:
    image: cockroachdb/cockroach:v24.2.1
    ports:
      - "26257:26257"
@@ -10,3 +9,17 @@ services:
    command: start-single-node --insecure
    volumes:
      - "~/.data/crdb:/cockroach/cockroach-data"
+  redis:
+    image: bitnami/redis:latest
+    environment:
+      # ALLOW_EMPTY_PASSWORD is recommended only for development.
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+    ports:
+      - '6379:6379'
+    volumes:
+      - 'redis_data:/bitnami/redis/data'
+
+volumes:
+  redis_data:
+    driver: local

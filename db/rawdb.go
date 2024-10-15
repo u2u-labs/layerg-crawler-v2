@@ -1,10 +1,10 @@
 package db
 
 import (
-	"github.com/u2u-labs/layerg-crawler/config"
 	"github.com/unicornultrafoundation/go-u2u/common"
 	"gorm.io/gorm"
 
+	"github.com/u2u-labs/layerg-crawler/config"
 	"github.com/u2u-labs/layerg-crawler/types"
 )
 
