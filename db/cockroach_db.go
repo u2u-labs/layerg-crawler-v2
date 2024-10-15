@@ -17,7 +17,5 @@ func NewCockroachDbClient(cfg *DbConfig) (*gorm.DB, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	//db.AutoMigrate(&types.ERC20Asset{})
-	//mintErc20Asset(db, &common.Address{}, &common.Address{}, 100)
 	return db, err
 }
