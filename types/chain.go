@@ -5,15 +5,15 @@ import (
 )
 
 type Network struct {
-	Id             int      `json:"id" gorm:"index:,unique,sort:asc"`
-	Chain          string   `json:"chain" yaml:"chain"`
-	Name           string   `json:"name" yaml:"name"`
-	RpcUrl         string   `json:"rpcUrl" yaml:"rpcUrl"`
-	ChainId        int      `json:"chainId" yaml:"chainId"`
-	Explorer       string   `json:"explorer" yaml:"explorer"`
-	TokenContracts []string `json:"tokenContracts"`
-	NftContracts   []string `json:"nftContracts"`
-	LatestBlock    uint64   `json:"latestBlock" `
+	Id             int    `json:"id" gorm:"index:,unique,sort:asc"`
+	Chain          string `json:"chain" yaml:"chain"`
+	Name           string `json:"name" yaml:"name"`
+	RpcUrl         string `json:"rpcUrl" yaml:"rpcUrl"`
+	ChainId        int    `json:"chainId" yaml:"chainId"`
+	Explorer       string `json:"explorer" yaml:"explorer"`
+	TokenContracts string `json:"tokenContracts"`
+	NftContracts   string `json:"nftContracts"`
+	LatestBlock    uint64 `json:"latestBlock" `
 }
 
 func (n *Network) String() string {

@@ -3,7 +3,7 @@ package db
 import (
 	"gorm.io/gorm"
 
-	"github.com/u2u-labs/layerg-crawler/config"
+	"layerg-crawler/config"
 )
 
 func InsertSupportedChains(gdb *gorm.DB) error {

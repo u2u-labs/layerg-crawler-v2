@@ -1,16 +1,18 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gorm.io/gorm"
 
-	"github.com/u2u-labs/layerg-crawler/db"
-	"github.com/u2u-labs/layerg-crawler/types"
+	"layerg-crawler/db"
+	"layerg-crawler/types"
 )
 
 func startCrawler(cmd *cobra.Command, args []string) {
+	fmt.Println("!!!!!!!!!!")
 	gdb, err := db.NewCockroachDbClient(&db.DbConfig{
 		Url:  viper.GetString("COCKROACH_DB_URL"),
 		Name: viper.GetString("COCKROACH_DB_NAME"),
@@ -26,16 +28,33 @@ func startCrawler(cmd *cobra.Command, args []string) {
 	if err != nil {
 		panic(err)
 	}
-	initSupportedChains(gdb, rdb)
+	err = initSupportedChains(gdb, rdb)
+	if err != nil {
+		panic(err)
+	}
 }
 
-func initSupportedChains(gdb *gorm.DB, rdb *redis.Client) {
-	gdb.AutoMigrate(&types.Network{})
-	db.InsertSupportedChains(gdb)
-	var chains []*types.Network
-	// Query and cache all supported chains
+func initSupportedChains(gdb *gorm.DB, rdb *redis.Client) error {
+	if err := gdb.AutoMigrate(&types.Network{}); err != nil {
+		return err
+	}
+	if err := db.InsertSupportedChains(gdb); err != nil {
+		return err
+	}
+	var (
+		chains []*types.Network
+	)
+	// Query, cache and connect all supported chains
 	gdb.Find(&chains)
 	for _, chain := range chains {
-		db.SetChain(rdb, chain)
+		if err := db.SetChain(rdb, chain); err != nil {
+			return err
+		}
+		c, err := initChainClient(chain)
+		if err != nil {
+			return err
+		}
+		go StartChainCrawler(c, chain)
 	}
+	return nil
 }
