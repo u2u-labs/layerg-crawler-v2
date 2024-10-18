@@ -1,5 +1,7 @@
 ### Compiled binaries
+cmd/main
 main
+layerg-crawler
 
 ### VisualStudioCode template
 .vscode/*

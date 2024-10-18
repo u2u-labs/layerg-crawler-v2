@@ -7,7 +7,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"layerg-crawler/types"
+	"github.com/u2u-labs/layerg-crawler/types"
 )
 
 type RedisConfig struct {

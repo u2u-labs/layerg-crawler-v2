@@ -21,18 +21,11 @@ var (
 		Long:  `Start a multichain crawler.`,
 		Run:   startCrawler,
 	}
-	apiCmd = &cobra.Command{
-		Use:   "api",
-		Short: "Start a multichain crawler API server",
-		Long:  `Start a multichain crawler API server.`,
-		Run:   startAPI,
-	}
 )
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	rootCmd.AddCommand(apiCmd)
 	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)

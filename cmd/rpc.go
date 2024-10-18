@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/unicornultrafoundation/go-u2u/ethclient"
 
-	"layerg-crawler/types"
+	"github.com/u2u-labs/layerg-crawler/types"
 )
 
 func initChainClient(chain *types.Network) (*ethclient.Client, error) {

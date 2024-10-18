@@ -1,9 +1,9 @@
 all:
-	go build crawler/main.go
+	go build -o main
 	chmod +x main
 	./main --config .layerg-crawler.yaml
 
 api:
-	go build crawler/main.go
+	go build -o main
 	chmod +x main
-	./main --config .layerg-crawler.yaml api
+	./main api --config .layerg-crawler.yaml

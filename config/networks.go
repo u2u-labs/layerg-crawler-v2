@@ -1,7 +1,7 @@
 package config
 
 import (
-	"layerg-crawler/types"
+	"github.com/u2u-labs/layerg-crawler/types"
 )
 
 var (

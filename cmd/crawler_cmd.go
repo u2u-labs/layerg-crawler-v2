@@ -1,18 +1,16 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gorm.io/gorm"
 
-	"layerg-crawler/db"
-	"layerg-crawler/types"
+	"github.com/u2u-labs/layerg-crawler/db"
+	"github.com/u2u-labs/layerg-crawler/types"
 )
 
 func startCrawler(cmd *cobra.Command, args []string) {
-	fmt.Println("!!!!!!!!!!")
 	gdb, err := db.NewCockroachDbClient(&db.DbConfig{
 		Url:  viper.GetString("COCKROACH_DB_URL"),
 		Name: viper.GetString("COCKROACH_DB_NAME"),
