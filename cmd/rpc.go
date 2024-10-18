@@ -6,6 +6,6 @@ import (
 	"github.com/u2u-labs/layerg-crawler/types"
 )
 
-func initChainClient(chain *types.Network) (*ethclient.Client, error) {
+func initChainClient(chain *types.Chain) (*ethclient.Client, error) {
 	return ethclient.Dial(chain.RpcUrl)
 }

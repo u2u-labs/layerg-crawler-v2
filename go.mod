@@ -8,6 +8,7 @@ require (
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
 	github.com/unicornultrafoundation/go-u2u v0.0.0-00010101000000-000000000000
+	go.uber.org/zap v1.21.0
 	gorm.io/driver/postgres v1.5.9
 	gorm.io/gorm v1.25.12
 )

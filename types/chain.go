@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-type Network struct {
+type Chain struct {
 	Id             int    `json:"id" gorm:"index:,unique,sort:asc"`
 	Chain          string `json:"chain" yaml:"chain"`
 	Name           string `json:"name" yaml:"name"`
@@ -14,14 +14,10 @@ type Network struct {
 	TokenContracts string `json:"tokenContracts"`
 	NftContracts   string `json:"nftContracts"`
 	LatestBlock    uint64 `json:"latestBlock" `
+	BlockTime      uint   `json:"blockTime"`
 }
 
-func (n *Network) String() string {
-	return fmt.Sprintf(`%s %s
-RPC URL: %s,
-Chain ID: %d,
-Explorer: %s,
-Token Contracts: %v,
-NFT Contracts: %v,
-Latest Block: %d`, n.Chain, n.Name, n.RpcUrl, n.ChainId, n.Explorer, n.TokenContracts, n.NftContracts, n.LatestBlock)
+func (n *Chain) String() string {
+	return fmt.Sprintf(`%s %s - RPC URL: %s - Chain ID: %d - Explorer: %s - Token Contracts: %v - NFT Contracts: %v - Latest Block: %d`,
+		n.Chain, n.Name, n.RpcUrl, n.ChainId, n.Explorer, n.TokenContracts, n.NftContracts, n.LatestBlock)
 }

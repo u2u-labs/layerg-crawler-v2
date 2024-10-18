@@ -27,24 +27,24 @@ func NewRedisClient(cfg *RedisConfig) (*redis.Client, error) {
 
 var ctx = context.Background()
 
-func ChainKey(chainId int) string {
+func ChainCacheKey(chainId int) string {
 	return "chain" + strconv.Itoa(chainId)
 }
 
-func GetChain(rdb *redis.Client, chainId int) (*types.Network, error) {
-	res := rdb.Get(ctx, ChainKey(chainId))
+func GetCachedChain(rdb *redis.Client, chainId int) (*types.Chain, error) {
+	res := rdb.Get(ctx, ChainCacheKey(chainId))
 	if res.Err() != nil {
 		return nil, res.Err()
 	}
-	var chain *types.Network
+	var chain *types.Chain
 	err := json.Unmarshal([]byte(res.Val()), &chain)
 	return chain, err
 }
 
-func SetChain(rdb *redis.Client, chain *types.Network) error {
+func SetChainToCache(rdb *redis.Client, chain *types.Chain) error {
 	jsonChain, err := json.Marshal(chain)
 	if err != nil {
 		return err
 	}
-	return rdb.Set(ctx, ChainKey(chain.Id), string(jsonChain), 0).Err()
+	return rdb.Set(ctx, ChainCacheKey(chain.Id), string(jsonChain), 0).Err()
 }
