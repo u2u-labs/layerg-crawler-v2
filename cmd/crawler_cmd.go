@@ -52,7 +52,7 @@ func initSupportedChains(gdb *gorm.DB, rdb *redis.Client) error {
 		if err != nil {
 			return err
 		}
-		go StartChainCrawler(c, chain)
+		StartChainCrawler(c, chain)
 	}
 	return nil
 }
