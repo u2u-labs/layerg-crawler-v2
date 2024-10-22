@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"github.com/unicornultrafoundation/go-u2u/rpc"
 	"go.uber.org/zap"
 	"time"
 
@@ -28,19 +27,20 @@ func StartChainCrawler(sugar *zap.SugaredLogger, client *ethclient.Client, chain
 
 func ProcessLatestBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *ethclient.Client, chain *types.Chain) error {
 	latest, err := client.BlockNumber(ctx)
+	sugar.Info(latest)
 	if err != nil {
 		sugar.Errorw("Failed to fetch latest blocks", "err", err, "chain", chain)
 		return err
 	}
-	var receipts []*utypes.Receipt
-	for i := chain.LatestBlock + 1; i <= latest; i++ {
-		r, err := client.BlockReceipts(ctx, rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(latest)))
-		if err != nil {
-			sugar.Errorw("Failed to fetch latest block receipts", "err", err, "height", i, "chain", chain)
-			return err
-		}
-		receipts = append(receipts, r...)
-	}
+	//var receipts []*utypes.Receipt
+	//for i := chain.LatestBlock + 1; i <= latest; i++ {
+	//	r, err := client.BlockReceipts(ctx, rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(latest)))
+	//	if err != nil {
+	//		sugar.Errorw("Failed to fetch latest block receipts", "err", err, "height", i, "chain", chain)
+	//		return err
+	//	}
+	//	receipts = append(receipts, r...)
+	//}
 
 	return nil
 }

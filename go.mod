@@ -7,7 +7,7 @@ require (
 	github.com/redis/go-redis/v9 v9.6.1
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
-	github.com/unicornultrafoundation/go-u2u v0.0.0-00010101000000-000000000000
+	github.com/unicornultrafoundation/go-u2u v1.0.0-rc1.0.20241019123338-d78a8fb4a3c9
 	go.uber.org/zap v1.21.0
 	gorm.io/driver/postgres v1.5.9
 	gorm.io/gorm v1.25.12
@@ -56,5 +56,3 @@ require (
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/unicornultrafoundation/go-u2u => ../go-u2u

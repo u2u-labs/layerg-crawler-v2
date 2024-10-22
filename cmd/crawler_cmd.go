@@ -41,13 +41,8 @@ func startCrawler(cmd *cobra.Command, args []string) {
 }
 
 func crawlSupportedChains(sugar *zap.SugaredLogger, gdb *gorm.DB, rdb *redis.Client) error {
-	if !gdb.Migrator().HasTable(&types.Chain{}) {
-		if err := gdb.AutoMigrate(&types.Chain{}); err != nil {
-			return err
-		}
-		if err := db.InsertSupportedChains(gdb); err != nil {
-			return err
-		}
+	if err := initialMigration(gdb); err != nil {
+		return err
 	}
 	var (
 		chains []*types.Chain
@@ -64,5 +59,29 @@ func crawlSupportedChains(sugar *zap.SugaredLogger, gdb *gorm.DB, rdb *redis.Cli
 		}
 		go StartChainCrawler(sugar, client, chain)
 	}
+	return nil
+}
+
+func initialMigration(gdb *gorm.DB) error {
+	if !gdb.Migrator().HasTable(&types.Chain{}) {
+		if err := gdb.AutoMigrate(&types.Chain{}); err != nil {
+			return err
+		}
+		if err := db.InsertSupportedChains(gdb); err != nil {
+			return err
+		}
+	}
+	if !gdb.Migrator().HasTable(&types.Contract{}) {
+		if err := gdb.AutoMigrate(&types.Contract{}); err != nil {
+			return err
+		}
+		if err := db.InsertDefaultContracts(gdb); err != nil {
+			return err
+		}
+	}
+	// cache DefaultContracts
+	//for _, c := range config.DefaultContracts {
+	//
+	//}
 	return nil
 }

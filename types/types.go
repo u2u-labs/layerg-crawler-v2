@@ -22,6 +22,7 @@ type Asset struct {
 type ERC721CollectionAsset struct {
 	TokenId *pgtype.Numeric `gorm:"index:,unique,sort:desc"`
 	Owner   string          `gorm:"index:,type:btree,length:20"`
+	URI     string
 }
 
 type ERC20Asset struct {
