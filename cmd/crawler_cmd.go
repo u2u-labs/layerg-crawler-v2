@@ -79,9 +79,7 @@ func initialMigration(gdb *gorm.DB) error {
 			return err
 		}
 	}
-	// cache DefaultContracts
-	//for _, c := range config.DefaultContracts {
-	//
-	//}
+	var contracts []*types.Contract
+	gdb.Find(&contracts)
 	return nil
 }
