@@ -46,5 +46,4 @@ func ProcessLatestBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *
 }
 
 func FilterEvents(chain types.Chain, receipts utypes.Receipts) {
-
 }

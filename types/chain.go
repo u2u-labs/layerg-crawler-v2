@@ -17,6 +17,11 @@ type Chain struct {
 	BlockTime      uint   `json:"blockTime"`
 }
 
+type Contract struct {
+	Address     string `json:"id" gorm:"index:,unique,sort:asc"`
+	LatestBlock uint64
+}
+
 func (n *Chain) String() string {
 	return fmt.Sprintf(`%s %s - RPC URL: %s - Chain ID: %d - Explorer: %s - Token Contracts: %v - NFT Contracts: %v - Latest Block: %d`,
 		n.Chain, n.Name, n.RpcUrl, n.ChainId, n.Explorer, n.TokenContracts, n.NftContracts, n.LatestBlock)

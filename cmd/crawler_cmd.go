@@ -32,7 +32,7 @@ func startCrawler(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 
-	err = initSupportedChains(sugar, gdb, rdb)
+	err = crawlSupportedChains(sugar, gdb, rdb)
 	if err != nil {
 		sugar.Errorw("Error init supported chains", "err", err)
 		return
@@ -40,7 +40,7 @@ func startCrawler(cmd *cobra.Command, args []string) {
 	select {}
 }
 
-func initSupportedChains(sugar *zap.SugaredLogger, gdb *gorm.DB, rdb *redis.Client) error {
+func crawlSupportedChains(sugar *zap.SugaredLogger, gdb *gorm.DB, rdb *redis.Client) error {
 	if !gdb.Migrator().HasTable(&types.Chain{}) {
 		if err := gdb.AutoMigrate(&types.Chain{}); err != nil {
 			return err
