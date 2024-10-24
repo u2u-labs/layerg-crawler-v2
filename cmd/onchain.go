@@ -2,11 +2,12 @@ package cmd
 
 import (
 	"context"
-	"go.uber.org/zap"
 	"time"
 
 	utypes "github.com/unicornultrafoundation/go-u2u/core/types"
 	"github.com/unicornultrafoundation/go-u2u/ethclient"
+	"github.com/unicornultrafoundation/go-u2u/rpc"
+	"go.uber.org/zap"
 
 	"github.com/u2u-labs/layerg-crawler/types"
 )
@@ -32,16 +33,18 @@ func ProcessLatestBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *
 		sugar.Errorw("Failed to fetch latest blocks", "err", err, "chain", chain)
 		return err
 	}
-	//var receipts []*utypes.Receipt
-	//for i := chain.LatestBlock + 1; i <= latest; i++ {
-	//	r, err := client.BlockReceipts(ctx, rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(latest)))
-	//	if err != nil {
-	//		sugar.Errorw("Failed to fetch latest block receipts", "err", err, "height", i, "chain", chain)
-	//		return err
-	//	}
-	//	receipts = append(receipts, r...)
-	//}
-
+	var receipts []*utypes.Receipt
+	for i := chain.LatestBlock + 1; i <= latest; i++ {
+		r, err := client.BlockReceipts(ctx, rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(latest)))
+		if err != nil {
+			sugar.Errorw("Failed to fetch latest block receipts", "err", err, "height", i, "chain", chain)
+			return err
+		}
+		receipts = append(receipts, r...)
+	}
+	for _, r := range receipts {
+		sugar.Info("hash", r.TxHash)
+	}
 	return nil
 }
 
