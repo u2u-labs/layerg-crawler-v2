@@ -16,7 +16,7 @@ INSERT INTO
     erc_20_collection_assets (asset_id, owner, balance)
 VALUES (
     $1, $2, $3
-) RETURNING id, asset_id, owner, balance, created_at, updated_at
+) RETURNING id, chain_id, asset_id, owner, balance, created_at, updated_at
 `
 
 type Add20AssetParams struct {
@@ -43,7 +43,7 @@ func (q *Queries) Delete20Asset(ctx context.Context, id uuid.UUID) error {
 }
 
 const get20AssetByAssetId = `-- name: Get20AssetByAssetId :many
-SELECT id, asset_id, owner, balance, created_at, updated_at FROM erc_20_collection_assets WHERE asset_id = $1
+SELECT id, chain_id, asset_id, owner, balance, created_at, updated_at FROM erc_20_collection_assets WHERE asset_id = $1
 `
 
 func (q *Queries) Get20AssetByAssetId(ctx context.Context, assetID string) ([]Erc20CollectionAsset, error) {
@@ -57,6 +57,7 @@ func (q *Queries) Get20AssetByAssetId(ctx context.Context, assetID string) ([]Er
 		var i Erc20CollectionAsset
 		if err := rows.Scan(
 			&i.ID,
+			&i.ChainID,
 			&i.AssetID,
 			&i.Owner,
 			&i.Balance,
@@ -77,7 +78,7 @@ func (q *Queries) Get20AssetByAssetId(ctx context.Context, assetID string) ([]Er
 }
 
 const get20AssetByAssetIdAndTokenId = `-- name: Get20AssetByAssetIdAndTokenId :one
-SELECT id, asset_id, owner, balance, created_at, updated_at FROM erc_20_collection_assets
+SELECT id, chain_id, asset_id, owner, balance, created_at, updated_at FROM erc_20_collection_assets
 WHERE
     asset_id = $1
     AND owner = $2
@@ -93,6 +94,7 @@ func (q *Queries) Get20AssetByAssetIdAndTokenId(ctx context.Context, arg Get20As
 	var i Erc20CollectionAsset
 	err := row.Scan(
 		&i.ID,
+		&i.ChainID,
 		&i.AssetID,
 		&i.Owner,
 		&i.Balance,
@@ -103,7 +105,7 @@ func (q *Queries) Get20AssetByAssetIdAndTokenId(ctx context.Context, arg Get20As
 }
 
 const get20AssetByOwner = `-- name: Get20AssetByOwner :many
-SELECT id, asset_id, owner, balance, created_at, updated_at FROM erc_20_collection_assets
+SELECT id, chain_id, asset_id, owner, balance, created_at, updated_at FROM erc_20_collection_assets
 WHERE
     owner = $1
 `
@@ -119,6 +121,7 @@ func (q *Queries) Get20AssetByOwner(ctx context.Context, owner string) ([]Erc20C
 		var i Erc20CollectionAsset
 		if err := rows.Scan(
 			&i.ID,
+			&i.ChainID,
 			&i.AssetID,
 			&i.Owner,
 			&i.Balance,

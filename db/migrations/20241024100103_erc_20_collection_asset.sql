@@ -3,7 +3,7 @@
 CREATE TABLE
     erc_20_collection_assets (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-        -- chain_id INT NOT NULL,
+        chain_id INT NOT NULL,
         asset_id VARCHAR NOT NULL,
         owner VARCHAR(42) NOT NULL,
         balance FLOAT NOT NULL,
@@ -14,7 +14,7 @@ CREATE TABLE
 
 CREATE INDEX erc_20_collection_assets_asset_id_idx ON erc_20_collection_assets (asset_id, owner);
 
-CREATE INDEX erc_20_collection_assets_owner_idx ON erc_20_collection_assets (owner);
+CREATE INDEX erc_20_collection_assets_owner_idx ON erc_20_collection_assets (chain_id, owner);
 
 -- +goose StatementEnd
 -- +goose Down

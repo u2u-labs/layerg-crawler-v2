@@ -10,17 +10,17 @@ import (
 	db "github.com/u2u-labs/layerg-crawler/db/sqlc"
 )
 
-type NftAssetController struct {
+type AssetController struct {
 	db  *db.Queries
 	ctx context.Context
 }
 
-func NewNftAssetController(db *db.Queries, ctx context.Context) *NftAssetController {
-	return &NftAssetController{db, ctx}
+func NewAssetController(db *db.Queries, ctx context.Context) *AssetController {
+	return &AssetController{db, ctx}
 }
 
 // Get a single handler
-func (cc *NftAssetController) GetErc721AssetByChainIdAddress(ctx *gin.Context) {
+func (cc *AssetController) GetAssetByChainIdAddress(ctx *gin.Context) {
 	chainIdStr := ctx.Query("chainId")
 	chainId, err := strconv.Atoi(chainIdStr)
 	if err != nil {
@@ -40,14 +40,21 @@ func (cc *NftAssetController) GetErc721AssetByChainIdAddress(ctx *gin.Context) {
 	case db.AssetTypeERC721:
 		erc721Assets, _ := cc.db.Get721AssetByAssetId(ctx, assetCollection.ID)
 		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC721", "asset": erc721Assets})
-
+	case db.AssetTypeERC1155:
+		erc1155Assets, _ := cc.db.Get1155AssetByAssetId(ctx, assetCollection.ID)
+		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC1155", "asset": erc1155Assets})
+	case db.AssetTypeERC20:
+		erc20Assets, _ := cc.db.Get20AssetByAssetId(ctx, assetCollection.ID)
+		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC20", "asset": erc20Assets})
+	default:
+		ctx.JSON(http.StatusNotFound, gin.H{"status": "failed", "message": "Failed to retrieve NFT with this contract address in the chain"})
 	}
 	if err != nil {
 		if err == sql.ErrNoRows {
 			ctx.JSON(http.StatusNotFound, gin.H{"status": "failed", "message": "Failed to retrieve NFT with this contract address in the chain"})
 			return
 		}
-		ctx.JSON(http.StatusBadGateway, gin.H{"status": "Failed retrieving NFT Asset", "error": err.Error()})
+		ctx.JSON(http.StatusBadGateway, gin.H{"status": "Failed retrieving Asset", "error": err.Error()})
 		return
 	}
 

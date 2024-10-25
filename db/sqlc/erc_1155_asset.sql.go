@@ -17,7 +17,7 @@ INSERT INTO
     erc_1155_collection_assets (asset_id, token_id, owner, balance, attributes)
 VALUES (
     $1, $2, $3, $4, $5
-) RETURNING id, asset_id, token_id, owner, balance, attributes, created_at, updated_at
+) RETURNING id, chain_id, asset_id, token_id, owner, balance, attributes, created_at, updated_at
 `
 
 type Add1155AssetParams struct {
@@ -52,7 +52,7 @@ func (q *Queries) Delete1155Asset(ctx context.Context, id uuid.UUID) error {
 }
 
 const get1155AssetByAssetId = `-- name: Get1155AssetByAssetId :many
-SELECT id, asset_id, token_id, owner, balance, attributes, created_at, updated_at FROM erc_1155_collection_assets WHERE asset_id = $1
+SELECT id, chain_id, asset_id, token_id, owner, balance, attributes, created_at, updated_at FROM erc_1155_collection_assets WHERE asset_id = $1
 `
 
 func (q *Queries) Get1155AssetByAssetId(ctx context.Context, assetID string) ([]Erc1155CollectionAsset, error) {
@@ -66,6 +66,7 @@ func (q *Queries) Get1155AssetByAssetId(ctx context.Context, assetID string) ([]
 		var i Erc1155CollectionAsset
 		if err := rows.Scan(
 			&i.ID,
+			&i.ChainID,
 			&i.AssetID,
 			&i.TokenID,
 			&i.Owner,
@@ -88,7 +89,7 @@ func (q *Queries) Get1155AssetByAssetId(ctx context.Context, assetID string) ([]
 }
 
 const get1155AssetByAssetIdAndTokenId = `-- name: Get1155AssetByAssetIdAndTokenId :one
-SELECT id, asset_id, token_id, owner, balance, attributes, created_at, updated_at FROM erc_1155_collection_assets
+SELECT id, chain_id, asset_id, token_id, owner, balance, attributes, created_at, updated_at FROM erc_1155_collection_assets
 WHERE
     asset_id = $1
     AND token_id = $2
@@ -104,6 +105,7 @@ func (q *Queries) Get1155AssetByAssetIdAndTokenId(ctx context.Context, arg Get11
 	var i Erc1155CollectionAsset
 	err := row.Scan(
 		&i.ID,
+		&i.ChainID,
 		&i.AssetID,
 		&i.TokenID,
 		&i.Owner,
@@ -116,7 +118,7 @@ func (q *Queries) Get1155AssetByAssetIdAndTokenId(ctx context.Context, arg Get11
 }
 
 const get1155AssetByOwner = `-- name: Get1155AssetByOwner :many
-SELECT id, asset_id, token_id, owner, balance, attributes, created_at, updated_at FROM erc_1155_collection_assets
+SELECT id, chain_id, asset_id, token_id, owner, balance, attributes, created_at, updated_at FROM erc_1155_collection_assets
 WHERE
     owner = $1
 `
@@ -132,6 +134,7 @@ func (q *Queries) Get1155AssetByOwner(ctx context.Context, owner string) ([]Erc1
 		var i Erc1155CollectionAsset
 		if err := rows.Scan(
 			&i.ID,
+			&i.ChainID,
 			&i.AssetID,
 			&i.TokenID,
 			&i.Owner,

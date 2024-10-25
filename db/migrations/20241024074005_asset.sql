@@ -13,10 +13,11 @@ CREATE TABLE
         decimal_data SMALLINT,
         initial_block INTEGER,
         last_updated TIMESTAMP,
-        FOREIGN KEY (chain_id) REFERENCES chains (id)
+        FOREIGN KEY (chain_id) REFERENCES chains (id),
+        CONSTRAINT UC_ASSET_COLLECTION UNIQUE (chain_id, collection_address)
     );
 
-CREATE INDEX assets_chain_id_collection_address_idx ON assets (chain_id, collection_address);
+CREATE INDEX assets_chain_id_collection_address_idx ON assets (chain_id);
 
 -- +goose StatementEnd
 -- +goose Down

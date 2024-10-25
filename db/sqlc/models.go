@@ -71,6 +71,7 @@ type Asset struct {
 
 type Erc1155CollectionAsset struct {
 	ID         uuid.UUID
+	ChainID    int32
 	AssetID    string
 	TokenID    int32
 	Owner      string
@@ -82,6 +83,7 @@ type Erc1155CollectionAsset struct {
 
 type Erc20CollectionAsset struct {
 	ID        uuid.UUID
+	ChainID   int32
 	AssetID   string
 	Owner     string
 	Balance   float64
@@ -91,6 +93,7 @@ type Erc20CollectionAsset struct {
 
 type Erc721CollectionAsset struct {
 	ID         uuid.UUID
+	ChainID    int32
 	AssetID    string
 	TokenID    int32
 	Owner      string

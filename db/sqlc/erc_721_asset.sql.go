@@ -17,7 +17,7 @@ INSERT INTO
     erc_721_collection_assets (asset_id, token_id, owner, attributes)
 VALUES (
     $1, $2, $3, $4
-) RETURNING id, asset_id, token_id, owner, attributes, created_at, updated_at
+) RETURNING id, chain_id, asset_id, token_id, owner, attributes, created_at, updated_at
 `
 
 type Add721AssetParams struct {
@@ -50,7 +50,7 @@ func (q *Queries) Delete721Asset(ctx context.Context, id uuid.UUID) error {
 }
 
 const get721AssetByAssetId = `-- name: Get721AssetByAssetId :many
-SELECT id, asset_id, token_id, owner, attributes, created_at, updated_at FROM erc_721_collection_assets WHERE asset_id = $1
+SELECT id, chain_id, asset_id, token_id, owner, attributes, created_at, updated_at FROM erc_721_collection_assets WHERE asset_id = $1
 `
 
 func (q *Queries) Get721AssetByAssetId(ctx context.Context, assetID string) ([]Erc721CollectionAsset, error) {
@@ -64,6 +64,7 @@ func (q *Queries) Get721AssetByAssetId(ctx context.Context, assetID string) ([]E
 		var i Erc721CollectionAsset
 		if err := rows.Scan(
 			&i.ID,
+			&i.ChainID,
 			&i.AssetID,
 			&i.TokenID,
 			&i.Owner,
@@ -85,7 +86,7 @@ func (q *Queries) Get721AssetByAssetId(ctx context.Context, assetID string) ([]E
 }
 
 const get721AssetByAssetIdAndTokenId = `-- name: Get721AssetByAssetIdAndTokenId :one
-SELECT id, asset_id, token_id, owner, attributes, created_at, updated_at FROM erc_721_collection_assets
+SELECT id, chain_id, asset_id, token_id, owner, attributes, created_at, updated_at FROM erc_721_collection_assets
 WHERE
     asset_id = $1
     AND token_id = $2
@@ -101,6 +102,7 @@ func (q *Queries) Get721AssetByAssetIdAndTokenId(ctx context.Context, arg Get721
 	var i Erc721CollectionAsset
 	err := row.Scan(
 		&i.ID,
+		&i.ChainID,
 		&i.AssetID,
 		&i.TokenID,
 		&i.Owner,
@@ -112,7 +114,7 @@ func (q *Queries) Get721AssetByAssetIdAndTokenId(ctx context.Context, arg Get721
 }
 
 const get721AssetByOwner = `-- name: Get721AssetByOwner :many
-SELECT id, asset_id, token_id, owner, attributes, created_at, updated_at FROM erc_721_collection_assets
+SELECT id, chain_id, asset_id, token_id, owner, attributes, created_at, updated_at FROM erc_721_collection_assets
 WHERE
     owner = $1
 `
@@ -128,6 +130,7 @@ func (q *Queries) Get721AssetByOwner(ctx context.Context, owner string) ([]Erc72
 		var i Erc721CollectionAsset
 		if err := rows.Scan(
 			&i.ID,
+			&i.ChainID,
 			&i.AssetID,
 			&i.TokenID,
 			&i.Owner,
