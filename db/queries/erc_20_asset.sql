@@ -1,0 +1,33 @@
+-- name: Get20AssetByAssetId :many
+SELECT * FROM erc_20_collection_assets WHERE asset_id = $1;
+
+-- name: Get20AssetByAssetIdAndTokenId :one
+SELECT * FROM erc_20_collection_assets
+WHERE
+    asset_id = $1
+    AND owner = $2;
+
+-- name: Get20AssetByOwner :many
+SELECT * FROM erc_20_collection_assets
+WHERE
+    owner = $1;
+
+-- name: Add20Asset :exec
+INSERT INTO
+    erc_20_collection_assets (asset_id, owner, balance)
+VALUES (
+    $1, $2, $3
+) RETURNING *;
+
+-- name: Update20Asset :exec
+UPDATE erc_20_collection_assets
+SET
+    owner = $2 
+WHERE 
+    id = $1;
+
+-- name: Delete20Asset :exec
+DELETE 
+FROM erc_20_collection_assets
+WHERE
+    id = $1;

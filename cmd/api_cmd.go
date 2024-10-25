@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -35,5 +38,18 @@ func startApi(cmd *cobra.Command, args []string) {
 }
 
 func serveApi(sugar *zap.SugaredLogger, gdb *gorm.DB, rdb *redis.Client) error {
+
+	// Create a default Gin router
+	router := gin.Default()
+
+	// Define a simple GET route
+	router.GET("/", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Hello, World!",
+		})
+	})
+
+	// Start the server on port 8080
+	router.Run(":8085")
 	return nil
 }
