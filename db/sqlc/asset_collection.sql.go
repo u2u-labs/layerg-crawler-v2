@@ -7,7 +7,40 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
+
+const addNewAsset = `-- name: AddNewAsset :exec
+INSERT INTO assets (
+    id, chain_id, collection_address, type, decimal_data, initial_block, last_updated
+)
+VALUES (
+    $1, $2, $3, $4, $5, $6, $7
+) RETURNING id, chain_id, collection_address, type, created_at, updated_at, decimal_data, initial_block, last_updated
+`
+
+type AddNewAssetParams struct {
+	ID                string
+	ChainID           int32
+	CollectionAddress string
+	Type              AssetType
+	DecimalData       sql.NullInt16
+	InitialBlock      sql.NullInt64
+	LastUpdated       sql.NullTime
+}
+
+func (q *Queries) AddNewAsset(ctx context.Context, arg AddNewAssetParams) error {
+	_, err := q.db.ExecContext(ctx, addNewAsset,
+		arg.ID,
+		arg.ChainID,
+		arg.CollectionAddress,
+		arg.Type,
+		arg.DecimalData,
+		arg.InitialBlock,
+		arg.LastUpdated,
+	)
+	return err
+}
 
 const getAssetByChainIdAndContractAddress = `-- name: GetAssetByChainIdAndContractAddress :one
 SELECT id, chain_id, collection_address, type, created_at, updated_at, decimal_data, initial_block, last_updated FROM assets 

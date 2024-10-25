@@ -9,6 +9,40 @@ import (
 	"context"
 )
 
+const addChain = `-- name: AddChain :exec
+INSERT INTO chains (
+    id, chain, name, rpc_url, chain_id,explorer, latest_block, block_time   
+)
+VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8
+) RETURNING id, chain, name, rpc_url, chain_id, explorer, latest_block, block_time
+`
+
+type AddChainParams struct {
+	ID          int32
+	Chain       string
+	Name        string
+	RpcUrl      string
+	ChainID     int64
+	Explorer    string
+	LatestBlock int64
+	BlockTime   int32
+}
+
+func (q *Queries) AddChain(ctx context.Context, arg AddChainParams) error {
+	_, err := q.db.ExecContext(ctx, addChain,
+		arg.ID,
+		arg.Chain,
+		arg.Name,
+		arg.RpcUrl,
+		arg.ChainID,
+		arg.Explorer,
+		arg.LatestBlock,
+		arg.BlockTime,
+	)
+	return err
+}
+
 const getAllChain = `-- name: GetAllChain :many
 SELECT id, chain, name, rpc_url, chain_id, explorer, latest_block, block_time FROM chains
 `
