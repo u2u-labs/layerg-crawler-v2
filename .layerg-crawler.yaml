@@ -1,4 +1,5 @@
 # DB info
+COCKROACH_DB_DRIVER: postgres
 COCKROACH_DB_URL: postgres://root@localhost:26257
 COCKROACH_DB_NAME: layerg
 REDIS_DB_URL: localhost:6379
