@@ -65,8 +65,19 @@ type Asset struct {
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 	DecimalData       sql.NullInt16
-	InitialBlock      sql.NullString
+	InitialBlock      sql.NullInt64
 	LastUpdated       sql.NullTime
+}
+
+type Chain struct {
+	ID          int32
+	Chain       string
+	Name        string
+	RpcUrl      string
+	ChainID     int64
+	Explorer    string
+	LatestBlock int64
+	BlockTime   int32
 }
 
 type Erc1155CollectionAsset struct {
@@ -113,4 +124,9 @@ type OnchainHistory struct {
 	Timestamp time.Time
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+type TrackingContract struct {
+	ChainID         int32
+	ContractAddress string
 }
