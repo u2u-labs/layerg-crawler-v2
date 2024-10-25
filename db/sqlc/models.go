@@ -125,8 +125,3 @@ type OnchainHistory struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
-
-type TrackingContract struct {
-	ChainID         int32
-	ContractAddress string
-}
