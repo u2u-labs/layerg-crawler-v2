@@ -11,7 +11,7 @@ CREATE TABLE
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         decimal_data SMALLINT,
-        initial_block INTEGER,
+        initial_block DECIMAL(78, 0),
         last_updated TIMESTAMP,
         FOREIGN KEY (chain_id) REFERENCES chains (id),
         CONSTRAINT UC_ASSET_COLLECTION UNIQUE (chain_id, collection_address)

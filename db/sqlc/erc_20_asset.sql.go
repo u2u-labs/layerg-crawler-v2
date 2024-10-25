@@ -22,7 +22,7 @@ VALUES (
 type Add20AssetParams struct {
 	AssetID string
 	Owner   string
-	Balance float64
+	Balance string
 }
 
 func (q *Queries) Add20Asset(ctx context.Context, arg Add20AssetParams) error {

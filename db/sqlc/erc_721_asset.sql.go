@@ -22,7 +22,7 @@ VALUES (
 
 type Add721AssetParams struct {
 	AssetID    string
-	TokenID    int32
+	TokenID    string
 	Owner      string
 	Attributes pqtype.NullRawMessage
 }
@@ -94,7 +94,7 @@ WHERE
 
 type Get721AssetByAssetIdAndTokenIdParams struct {
 	AssetID string
-	TokenID int32
+	TokenID string
 }
 
 func (q *Queries) Get721AssetByAssetIdAndTokenId(ctx context.Context, arg Get721AssetByAssetIdAndTokenIdParams) (Erc721CollectionAsset, error) {

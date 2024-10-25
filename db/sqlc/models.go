@@ -65,7 +65,7 @@ type Asset struct {
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 	DecimalData       sql.NullInt16
-	InitialBlock      sql.NullInt32
+	InitialBlock      sql.NullString
 	LastUpdated       sql.NullTime
 }
 
@@ -73,9 +73,9 @@ type Erc1155CollectionAsset struct {
 	ID         uuid.UUID
 	ChainID    int32
 	AssetID    string
-	TokenID    int32
+	TokenID    string
 	Owner      string
-	Balance    int32
+	Balance    string
 	Attributes pqtype.NullRawMessage
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
@@ -86,7 +86,7 @@ type Erc20CollectionAsset struct {
 	ChainID   int32
 	AssetID   string
 	Owner     string
-	Balance   float64
+	Balance   string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -95,7 +95,7 @@ type Erc721CollectionAsset struct {
 	ID         uuid.UUID
 	ChainID    int32
 	AssetID    string
-	TokenID    int32
+	TokenID    string
 	Owner      string
 	Attributes pqtype.NullRawMessage
 	CreatedAt  time.Time
@@ -107,7 +107,7 @@ type OnchainHistory struct {
 	From      string
 	To        string
 	AssetID   string
-	TokenID   int32
+	TokenID   string
 	Amount    float64
 	TxHash    string
 	Timestamp time.Time

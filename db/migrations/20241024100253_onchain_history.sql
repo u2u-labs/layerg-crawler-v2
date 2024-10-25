@@ -6,7 +6,7 @@ CREATE TABLE
         "from" VARCHAR(42) NOT NULL,
         "to" VARCHAR(42) NOT NULL,
         asset_id VARCHAR NOT NULL,
-        token_id INT NOT NULL,
+        token_id DECIMAL(78, 0) NOT NULL,
         amount FLOAT NOT NULL,
         tx_hash VARCHAR(66) NOT NULL,
         timestamp TIMESTAMP NOT NULL,

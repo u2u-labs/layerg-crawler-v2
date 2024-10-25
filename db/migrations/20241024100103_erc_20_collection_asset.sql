@@ -6,7 +6,7 @@ CREATE TABLE
         chain_id INT NOT NULL,
         asset_id VARCHAR NOT NULL,
         owner VARCHAR(42) NOT NULL,
-        balance FLOAT NOT NULL,
+        balance DECIMAL(78, 0) NOT NULL,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (asset_id) REFERENCES assets (id)

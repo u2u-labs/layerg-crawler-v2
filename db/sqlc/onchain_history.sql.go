@@ -22,7 +22,7 @@ type AddOnchainTransactionParams struct {
 	From      string
 	To        string
 	AssetID   string
-	TokenID   int32
+	TokenID   string
 	Amount    float64
 	TxHash    string
 	Timestamp time.Time

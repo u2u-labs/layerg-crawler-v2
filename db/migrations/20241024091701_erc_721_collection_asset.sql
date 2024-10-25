@@ -5,7 +5,7 @@ CREATE TABLE
         id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
         chain_id INT NOT NULL,
         asset_id VARCHAR NOT NULL,
-        token_id INT NOT NULL,
+        token_id DECIMAL(78, 0) NOT NULL,
         owner VARCHAR(42) NOT NULL,
         attributes JSONB,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
