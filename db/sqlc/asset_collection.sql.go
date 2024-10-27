@@ -42,6 +42,44 @@ func (q *Queries) AddNewAsset(ctx context.Context, arg AddNewAssetParams) error 
 	return err
 }
 
+const getAssetByChainId = `-- name: GetAssetByChainId :many
+SELECT id, chain_id, collection_address, type, created_at, updated_at, decimal_data, initial_block, last_updated FROM assets 
+WHERE chain_id = $1
+`
+
+func (q *Queries) GetAssetByChainId(ctx context.Context, chainID int32) ([]Asset, error) {
+	rows, err := q.db.QueryContext(ctx, getAssetByChainId, chainID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Asset
+	for rows.Next() {
+		var i Asset
+		if err := rows.Scan(
+			&i.ID,
+			&i.ChainID,
+			&i.CollectionAddress,
+			&i.Type,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DecimalData,
+			&i.InitialBlock,
+			&i.LastUpdated,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getAssetByChainIdAndContractAddress = `-- name: GetAssetByChainIdAndContractAddress :one
 SELECT id, chain_id, collection_address, type, created_at, updated_at, decimal_data, initial_block, last_updated FROM assets 
 WHERE chain_id = $1 

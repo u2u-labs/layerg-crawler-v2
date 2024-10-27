@@ -1,11 +1,10 @@
 # DB info
 COCKROACH_DB_DRIVER: postgres
-COCKROACH_DB_URL: postgres://root@localhost:26257
+COCKROACH_DB_URL: postgres://root@localhost:26257/layerg?sslmode=disable
 COCKROACH_DB_NAME: layerg
 API_PORT: ":8085"
 
 REDIS_DB_URL: localhost:6379
 REDIS_DB_PASSWORD:
 REDIS_DB: 0
-
 # Multi-chain configs

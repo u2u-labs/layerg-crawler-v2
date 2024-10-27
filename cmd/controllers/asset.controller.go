@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/u2u-labs/layerg-crawler/cmd/utils"
 	db "github.com/u2u-labs/layerg-crawler/db/sqlc"
 )
 
@@ -22,7 +23,8 @@ func NewAssetController(db *db.Queries, ctx context.Context) *AssetController {
 
 // Create new Asset
 func (cc *AssetController) AddNewAsset(ctx *gin.Context) {
-	var params *db.AddNewAssetParams
+	// var params *db.AddNewAssetParams
+	var params *utils.AddNewAssetParamsUtil
 	chainIdStr := ctx.Param("chainId")
 	chainId, err := strconv.Atoi(chainIdStr)
 
@@ -47,7 +49,33 @@ func (cc *AssetController) AddNewAsset(ctx *gin.Context) {
 	params.ChainID = int32(chainId)
 	params.ID = strconv.Itoa(int(chainId)) + ":" + params.CollectionAddress
 
+	assetParam := utils.ConvertUtilToParams(params)
+
+	// add to db
+	if err := cc.db.AddNewAsset(ctx, assetParam); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 	ctx.JSON(http.StatusOK, gin.H{"message": "Asset added", "data": params})
+}
+
+// Get All collection asset
+func (cc *AssetController) GetAssetByChainId(ctx *gin.Context) {
+	chainIdStr := ctx.Param("chainId")
+	chainId, err := strconv.Atoi(chainIdStr)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"status": "failed", "message": "Invalid chainId"})
+		return
+	}
+
+	assets, err := cc.db.GetAssetByChainId(ctx, int32(chainId))
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": assets})
 }
 
 // Get a single handler

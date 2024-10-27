@@ -48,7 +48,7 @@ func serveApi(db *dbCon.Queries, ctx context.Context) {
 	// Asset routes
 	router.POST("/chain/:chainId/asset", assetController.AddNewAsset)
 
-	router.GET("/chain/:chainId/asset", assetController.GetAssetByChainIdAndContractAddress)
+	router.GET("/chain/:chainId/asset", assetController.GetAssetByChainId)
 
 	// Run the server
 	router.Run(viper.GetString("API_PORT"))
