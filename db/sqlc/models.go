@@ -80,6 +80,11 @@ type Chain struct {
 	BlockTime   int32
 }
 
+func (c *Chain) String() string {
+	return fmt.Sprintf(`%s %s - RPC URL: %s - Chain ID: %d - Explorer: %s - Latest Block: %d`,
+		c.Chain, c.Name, c.RpcUrl, c.ChainID, c.Explorer, c.LatestBlock)
+}
+
 type Erc1155CollectionAsset struct {
 	ID         uuid.UUID
 	ChainID    int32

@@ -9,10 +9,10 @@ import (
 	"github.com/unicornultrafoundation/go-u2u/rpc"
 	"go.uber.org/zap"
 
-	"github.com/u2u-labs/layerg-crawler/types"
+	db "github.com/u2u-labs/layerg-crawler/db/sqlc"
 )
 
-func StartChainCrawler(sugar *zap.SugaredLogger, client *ethclient.Client, chain *types.Chain) {
+func StartChainCrawler(sugar *zap.SugaredLogger, client *ethclient.Client, chain *db.Chain) {
 	ctx := context.Background()
 	timer := time.NewTimer(time.Duration(chain.BlockTime) * time.Millisecond)
 	defer timer.Stop()
@@ -26,7 +26,7 @@ func StartChainCrawler(sugar *zap.SugaredLogger, client *ethclient.Client, chain
 	}
 }
 
-func ProcessLatestBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *ethclient.Client, chain *types.Chain) error {
+func ProcessLatestBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *ethclient.Client, chain *db.Chain) error {
 	latest, err := client.BlockNumber(ctx)
 	sugar.Info(latest)
 	if err != nil {
@@ -34,7 +34,7 @@ func ProcessLatestBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *
 		return err
 	}
 	var receipts []*utypes.Receipt
-	for i := chain.LatestBlock + 1; i <= latest; i++ {
+	for i := chain.LatestBlock + 1; i <= int64(latest); i++ {
 		r, err := client.BlockReceipts(ctx, rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(latest)))
 		if err != nil {
 			sugar.Errorw("Failed to fetch latest block receipts", "err", err, "height", i, "chain", chain)
@@ -48,5 +48,5 @@ func ProcessLatestBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *
 	return nil
 }
 
-func FilterEvents(chain types.Chain, receipts utypes.Receipts) {
+func FilterEvents(chain db.Chain, receipts utypes.Receipts) {
 }
