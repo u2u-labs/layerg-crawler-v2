@@ -21,7 +21,16 @@ func NewAssetController(db *db.Queries, ctx context.Context) *AssetController {
 	return &AssetController{db, ctx}
 }
 
-// Create new Asset
+// AddNewAsset godoc
+// @Summary      Add a new asset collection to the chain
+// @Description  Add a new asset collection to the chain
+// @Tags         asset
+// @Accept       json
+// @Produce      json
+// @Param chainId path int true "Chain ID"
+// @Param body body utils.AddNewAssetParamsSwagger true "Asset collection information"
+// @Example      { "id": 1, "chain": "U2U", "name": "Nebulas Testnet", "RpcUrl": "sre", "ChainId": 2484, "Explorer": "str", "BlockTime": 500 }
+// @Router       /chain/:chainId/asset [post]
 func (cc *AssetController) AddNewAsset(ctx *gin.Context) {
 	// var params *db.AddNewAssetParams
 	var params *utils.AddNewAssetParamsUtil
@@ -60,7 +69,14 @@ func (cc *AssetController) AddNewAsset(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "Asset added", "data": params})
 }
 
-// Get All collection asset
+// AddNewAsset godoc
+// @Summary      Get all asset collection of the chain
+// @Description  Get all asset collection of the chain
+// @Tags         asset
+// @Accept       json
+// @Produce      json
+// @Param chainId path int true "Chain ID"
+// @Router       /chain/:chainId/asset [get]
 func (cc *AssetController) GetAssetByChainId(ctx *gin.Context) {
 	chainIdStr := ctx.Param("chainId")
 	chainId, err := strconv.Atoi(chainIdStr)

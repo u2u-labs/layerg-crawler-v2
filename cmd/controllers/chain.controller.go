@@ -17,7 +17,15 @@ func NewChainController(db *db.Queries, ctx context.Context) *ChainController {
 	return &ChainController{db, ctx}
 }
 
-// Get a single handler
+// AddNewChain godoc
+// @Summary      Add a new chain
+// @Description  Add a new chain
+// @Tags         chains
+// @Accept       json
+// @Produce      json
+// @Param body body db.AddChainParams true "Chain network information"
+// @Example      { "id": 1, "chain": "U2U", "name": "Nebulas Testnet", "RpcUrl": "sre", "ChainId": 2484, "Explorer": "str", "BlockTime": 500 }
+// @Router       /chain [post]
 func (cc *ChainController) AddNewChain(ctx *gin.Context) {
 	var params *db.AddChainParams
 
@@ -36,7 +44,13 @@ func (cc *ChainController) AddNewChain(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "Chain added", "data": params})
 }
 
-// Get all supported chains
+// GetAllSupportedChain godoc
+// @Summary      Get all supported chains
+// @Description  Get all supported chains
+// @Tags         chains
+// @Accept       json
+// @Produce      json
+// @Router       /chain [get]
 func (cc *ChainController) GetAllChains(ctx *gin.Context) {
 	chains, err := cc.db.GetAllChain(ctx)
 	if err != nil {

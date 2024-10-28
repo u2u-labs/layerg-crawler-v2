@@ -92,6 +92,15 @@ type AddNewAssetParamsUtil struct {
 	LastUpdated       JsonNullTime
 }
 
+type AddNewAssetParamsSwagger struct {
+	ChainID           int32
+	CollectionAddress string
+	Type              db.AssetType
+	DecimalData       int16
+	InitialBlock      int64
+	LastUpdated       time.Time
+}
+
 // Convert function
 func ConvertUtilToParams(util *AddNewAssetParamsUtil) db.AddNewAssetParams {
 	return db.AddNewAssetParams{

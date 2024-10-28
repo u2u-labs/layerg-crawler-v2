@@ -1,0 +1,136 @@
+definitions:
+  db.AddChainParams:
+    properties:
+      blockTime:
+        type: integer
+      chain:
+        type: string
+      chainID:
+        type: integer
+      explorer:
+        type: string
+      id:
+        type: integer
+      latestBlock:
+        type: integer
+      name:
+        type: string
+      rpcUrl:
+        type: string
+    type: object
+  db.AssetType:
+    enum:
+    - ERC721
+    - ERC1155
+    - ERC20
+    type: string
+    x-enum-varnames:
+    - AssetTypeERC721
+    - AssetTypeERC1155
+    - AssetTypeERC20
+  utils.AddNewAssetParamsSwagger:
+    properties:
+      chainID:
+        type: integer
+      collectionAddress:
+        type: string
+      decimalData:
+        type: integer
+      initialBlock:
+        type: integer
+      lastUpdated:
+        type: string
+      type:
+        $ref: '#/definitions/db.AssetType'
+    type: object
+externalDocs:
+  description: OpenAPI
+  url: https://swagger.io/resources/open-api/
+host: localhost:8085
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is a sample server celler server.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Swagger Example API
+  version: "1.0"
+paths:
+  /chain:
+    get:
+      consumes:
+      - application/json
+      description: Get all supported chains
+      produces:
+      - application/json
+      responses: {}
+      summary: Get all supported chains
+      tags:
+      - chains
+    post:
+      consumes:
+      - application/json
+      description: Add a new chain
+      parameters:
+      - description: Chain network information
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/db.AddChainParams'
+      produces:
+      - application/json
+      responses: {}
+      summary: Add a new chain
+      tags:
+      - chains
+  /chain/:chainId/asset:
+    get:
+      consumes:
+      - application/json
+      description: Get all asset collection of the chain
+      parameters:
+      - description: Chain ID
+        in: path
+        name: chainId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses: {}
+      summary: Get all asset collection of the chain
+      tags:
+      - asset
+    post:
+      consumes:
+      - application/json
+      description: Add a new asset collection to the chain
+      parameters:
+      - description: Chain ID
+        in: path
+        name: chainId
+        required: true
+        type: integer
+      - description: Asset collection information
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/utils.AddNewAssetParamsSwagger'
+      produces:
+      - application/json
+      responses: {}
+      summary: Add a new asset collection to the chain
+      tags:
+      - asset
+schemes:
+- http
+- https
+securityDefinitions:
+  BasicAuth:
+    type: basic
+swagger: "2.0"
