@@ -3,8 +3,13 @@ SELECT * FROM assets
 WHERE chain_id = $1 
 AND collection_address = $2;
 
--- name: GetAssetByChainId :many
+-- name: GetPaginatedAssetsByChainId :many
 SELECT * FROM assets 
+WHERE chain_id = $1
+LIMIT $2 OFFSET $3;
+
+-- name: CountAssetByChainId :one
+SELECT COUNT(*) FROM assets 
 WHERE chain_id = $1;
 
 -- name: AddNewAsset :exec

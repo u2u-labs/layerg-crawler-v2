@@ -36,7 +36,7 @@ func startApi(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 
-	serveApi(db, context.Background())
+	serveApi(db, conn, context.Background())
 }
 
 // @title           Swagger Example API
@@ -58,13 +58,13 @@ func startApi(cmd *cobra.Command, args []string) {
 // @externalDocs.description  OpenAPI
 // @externalDocs.url          https://swagger.io/resources/open-api/
 // @schemes http https
-func serveApi(db *dbCon.Queries, ctx context.Context) {
+func serveApi(db *dbCon.Queries, rawDb *sql.DB, ctx context.Context) {
 
 	// Create a default Gin router
 	router := gin.Default()
 
 	// new Controller
-	assetController := controllers.NewAssetController(db, ctx)
+	assetController := controllers.NewAssetController(db, rawDb, ctx)
 	chainController := controllers.NewChainController(db, ctx)
 
 	// Chain routes
@@ -73,11 +73,10 @@ func serveApi(db *dbCon.Queries, ctx context.Context) {
 
 	// Asset routes
 	router.POST("/chain/:chainId/asset", assetController.AddNewAsset)
-
 	router.GET("/chain/:chainId/asset", assetController.GetAssetByChainId)
+	router.GET("/chain/:chainId/asset/test", assetController.Test)
 
 	// Run the server
-
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	router.Run(viper.GetString("API_PORT"))
 }

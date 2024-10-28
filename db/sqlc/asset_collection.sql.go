@@ -42,13 +42,60 @@ func (q *Queries) AddNewAsset(ctx context.Context, arg AddNewAssetParams) error 
 	return err
 }
 
-const getAssetByChainId = `-- name: GetAssetByChainId :many
-SELECT id, chain_id, collection_address, type, created_at, updated_at, decimal_data, initial_block, last_updated FROM assets 
+const countAssetByChainId = `-- name: CountAssetByChainId :one
+SELECT COUNT(*) FROM assets 
 WHERE chain_id = $1
 `
 
-func (q *Queries) GetAssetByChainId(ctx context.Context, chainID int32) ([]Asset, error) {
-	rows, err := q.db.QueryContext(ctx, getAssetByChainId, chainID)
+func (q *Queries) CountAssetByChainId(ctx context.Context, chainID int32) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countAssetByChainId, chainID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getAssetByChainIdAndContractAddress = `-- name: GetAssetByChainIdAndContractAddress :one
+SELECT id, chain_id, collection_address, type, created_at, updated_at, decimal_data, initial_block, last_updated FROM assets 
+WHERE chain_id = $1 
+AND collection_address = $2
+`
+
+type GetAssetByChainIdAndContractAddressParams struct {
+	ChainID           int32
+	CollectionAddress string
+}
+
+func (q *Queries) GetAssetByChainIdAndContractAddress(ctx context.Context, arg GetAssetByChainIdAndContractAddressParams) (Asset, error) {
+	row := q.db.QueryRowContext(ctx, getAssetByChainIdAndContractAddress, arg.ChainID, arg.CollectionAddress)
+	var i Asset
+	err := row.Scan(
+		&i.ID,
+		&i.ChainID,
+		&i.CollectionAddress,
+		&i.Type,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DecimalData,
+		&i.InitialBlock,
+		&i.LastUpdated,
+	)
+	return i, err
+}
+
+const getPaginatedAssetsByChainId = `-- name: GetPaginatedAssetsByChainId :many
+SELECT id, chain_id, collection_address, type, created_at, updated_at, decimal_data, initial_block, last_updated FROM assets 
+WHERE chain_id = $1
+LIMIT $2 OFFSET $3
+`
+
+type GetPaginatedAssetsByChainIdParams struct {
+	ChainID int32
+	Limit   int32
+	Offset  int32
+}
+
+func (q *Queries) GetPaginatedAssetsByChainId(ctx context.Context, arg GetPaginatedAssetsByChainIdParams) ([]Asset, error) {
+	rows, err := q.db.QueryContext(ctx, getPaginatedAssetsByChainId, arg.ChainID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -78,32 +125,4 @@ func (q *Queries) GetAssetByChainId(ctx context.Context, chainID int32) ([]Asset
 		return nil, err
 	}
 	return items, nil
-}
-
-const getAssetByChainIdAndContractAddress = `-- name: GetAssetByChainIdAndContractAddress :one
-SELECT id, chain_id, collection_address, type, created_at, updated_at, decimal_data, initial_block, last_updated FROM assets 
-WHERE chain_id = $1 
-AND collection_address = $2
-`
-
-type GetAssetByChainIdAndContractAddressParams struct {
-	ChainID           int32
-	CollectionAddress string
-}
-
-func (q *Queries) GetAssetByChainIdAndContractAddress(ctx context.Context, arg GetAssetByChainIdAndContractAddressParams) (Asset, error) {
-	row := q.db.QueryRowContext(ctx, getAssetByChainIdAndContractAddress, arg.ChainID, arg.CollectionAddress)
-	var i Asset
-	err := row.Scan(
-		&i.ID,
-		&i.ChainID,
-		&i.CollectionAddress,
-		&i.Type,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DecimalData,
-		&i.InitialBlock,
-		&i.LastUpdated,
-	)
-	return i, err
 }

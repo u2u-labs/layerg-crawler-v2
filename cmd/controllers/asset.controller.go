@@ -13,12 +13,13 @@ import (
 )
 
 type AssetController struct {
-	db  *db.Queries
-	ctx context.Context
+	db    *db.Queries
+	rawDb *sql.DB
+	ctx   context.Context
 }
 
-func NewAssetController(db *db.Queries, ctx context.Context) *AssetController {
-	return &AssetController{db, ctx}
+func NewAssetController(db *db.Queries, rawDb *sql.DB, ctx context.Context) *AssetController {
+	return &AssetController{db, rawDb, ctx}
 }
 
 // AddNewAsset godoc
@@ -85,14 +86,65 @@ func (cc *AssetController) GetAssetByChainId(ctx *gin.Context) {
 		return
 	}
 
-	assets, err := cc.db.GetAssetByChainId(ctx, int32(chainId))
+	page, limit, offset := db.GetLimitAndOffset(ctx)
+
+	assets, err := cc.db.GetPaginatedAssetsByChainId(ctx, db.GetPaginatedAssetsByChainIdParams{
+		ChainID: int32(chainId),
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	})
+
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"data": assets})
+	// Query total items count
+	totalAssets, err := cc.db.CountAssetByChainId(ctx, int32(chainId))
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Create pagination response
+	paginationResponse := db.Pagination[db.Asset]{
+		Page:       page,
+		Limit:      limit,
+		TotalItems: totalAssets,
+		TotalPages: (totalAssets + int64(limit) - 1) / int64(limit), // Calculate total pages
+		Data:       assets,
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": paginationResponse})
 }
+
+// func (cc *AssetController) Test(ctx *gin.Context) {
+// 	fmt.Print("Test")
+// 	chainIdStr := ctx.Param("chainId")
+// 	chainId, err := strconv.Atoi(chainIdStr)
+// 	// if err != nil {
+// 	// 	ctx.JSON(http.StatusBadRequest, gin.H{"status": "failed", "message": "Invalid chainId"})
+// 	// 	return
+// 	// }
+
+// 	fmt.Print(chainId)
+
+// 	filterConditions := make(map[string]string)
+// 	if filterField := ctx.Query("collection_address"); filterField != "" {
+// 		filterConditions["collection_address"] = filterField
+// 	}
+
+// 	fmt.Print(filterConditions)
+
+// 	countAssetByCollectionAddress, err := db.CountItemsWithFilter(cc.rawDb, "assets", filterConditions)
+
+// 	if err != nil {
+// 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+// 		return
+// 	}
+
+// 	ctx.JSON(http.StatusOK, gin.H{"data": countAssetByCollectionAddress})
+// }
 
 // Get a single handler
 func (cc *AssetController) GetAssetByChainIdAndContractAddress(ctx *gin.Context) {

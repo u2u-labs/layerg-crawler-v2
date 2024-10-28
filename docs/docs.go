@@ -53,8 +53,8 @@ const docTemplate = `{
                 "summary": "Add a new chain",
                 "parameters": [
                     {
-                        "description": "Chain network information",
-                        "name": "body",
+                        "description": "Add a new chain",
+                        "name": "payload",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -62,7 +62,20 @@ const docTemplate = `{
                         }
                     }
                 ],
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.ResponseData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/chain/:chainId/asset": {
@@ -165,6 +178,26 @@ const docTemplate = `{
                 "AssetTypeERC1155",
                 "AssetTypeERC20"
             ]
+        },
+        "response.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "detail": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.ResponseData": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "message": {
+                    "type": "string"
+                }
+            }
         },
         "utils.AddNewAssetParamsSwagger": {
             "type": "object",

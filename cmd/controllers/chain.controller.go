@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/u2u-labs/layerg-crawler/cmd/response"
 	db "github.com/u2u-labs/layerg-crawler/db/sqlc"
 )
 
@@ -23,7 +24,9 @@ func NewChainController(db *db.Queries, ctx context.Context) *ChainController {
 // @Tags         chains
 // @Accept       json
 // @Produce      json
-// @Param body body db.AddChainParams true "Chain network information"
+// @Param body body db.AddChainParams true "Add a new chain"
+// @Success      200 {object} response.ResponseData
+// @Failure      500 {object} response.ErrorResponse
 // @Example      { "id": 1, "chain": "U2U", "name": "Nebulas Testnet", "RpcUrl": "sre", "ChainId": 2484, "Explorer": "str", "BlockTime": 500 }
 // @Router       /chain [post]
 func (cc *ChainController) AddNewChain(ctx *gin.Context) {
@@ -31,17 +34,23 @@ func (cc *ChainController) AddNewChain(ctx *gin.Context) {
 
 	// Read the request body
 	if err := ctx.ShouldBindJSON(&params); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.ErrorResponseData(ctx, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	// add to db
 	if err := cc.db.AddChain(ctx, *params); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.ErrorResponseData(ctx, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "Chain added", "data": params})
+	// response
+	resData, err := cc.db.GetChainById(ctx, params.ID)
+	if err != nil {
+		response.ErrorResponseData(ctx, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.SuccessReponseData(ctx, http.StatusOK, resData)
 }
 
 // GetAllSupportedChain godoc
@@ -54,9 +63,9 @@ func (cc *ChainController) AddNewChain(ctx *gin.Context) {
 func (cc *ChainController) GetAllChains(ctx *gin.Context) {
 	chains, err := cc.db.GetAllChain(ctx)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.ErrorResponseData(ctx, http.StatusInternalServerError, err.Error())
 		return
 	}
+	response.SuccessReponseData(ctx, http.StatusOK, chains)
 
-	ctx.JSON(http.StatusOK, gin.H{"data": chains})
 }

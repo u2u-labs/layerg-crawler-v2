@@ -28,6 +28,19 @@ definitions:
     - AssetTypeERC721
     - AssetTypeERC1155
     - AssetTypeERC20
+  response.ErrorResponse:
+    properties:
+      detail:
+        type: string
+      error:
+        type: string
+    type: object
+  response.ResponseData:
+    properties:
+      data: {}
+      message:
+        type: string
+    type: object
   utils.AddNewAssetParamsSwagger:
     properties:
       chainID:
@@ -76,15 +89,23 @@ paths:
       - application/json
       description: Add a new chain
       parameters:
-      - description: Chain network information
+      - description: Add a new chain
         in: body
-        name: body
+        name: payload
         required: true
         schema:
           $ref: '#/definitions/db.AddChainParams'
       produces:
       - application/json
-      responses: {}
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.ResponseData'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
       summary: Add a new chain
       tags:
       - chains
