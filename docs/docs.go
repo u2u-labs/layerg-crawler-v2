@@ -24,6 +24,53 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/asset": {
+            "get": {
+                "description": "Get all asset collection of the chain",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "asset"
+                ],
+                "summary": "Get all asset collection of the chain",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of items per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Owner Address",
+                        "name": "owner",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "ERC721",
+                            "ERC1155",
+                            "ERC20"
+                        ],
+                        "type": "string",
+                        "description": "Asset Type",
+                        "name": "asset_type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            }
+        },
         "/chain": {
             "get": {
                 "description": "Get all supported chains",
@@ -98,6 +145,18 @@ const docTemplate = `{
                         "name": "chain_id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of items per page",
+                        "name": "limit",
+                        "in": "query"
                     }
                 ],
                 "responses": {}
@@ -194,6 +253,18 @@ const docTemplate = `{
                         "name": "collection_address",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of items per page",
+                        "name": "limit",
+                        "in": "query"
                     },
                     {
                         "type": "string",

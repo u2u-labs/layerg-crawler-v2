@@ -73,6 +73,38 @@ info:
   title: Swagger Example API
   version: "1.0"
 paths:
+  /asset:
+    get:
+      consumes:
+      - application/json
+      description: Get all asset collection of the chain
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Number of items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Owner Address
+        in: query
+        name: owner
+        type: string
+      - description: Asset Type
+        enum:
+        - ERC721
+        - ERC1155
+        - ERC20
+        in: query
+        name: asset_type
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      summary: Get all asset collection of the chain
+      tags:
+      - asset
   /chain:
     get:
       consumes:
@@ -121,6 +153,14 @@ paths:
         name: chain_id
         required: true
         type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Number of items per page
+        in: query
+        name: limit
+        type: integer
       produces:
       - application/json
       responses: {}
@@ -187,6 +227,14 @@ paths:
         name: collection_address
         required: true
         type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Number of items per page
+        in: query
+        name: limit
+        type: integer
       - description: Token ID
         in: query
         name: token_id

@@ -77,7 +77,7 @@ func serveApi(db *dbCon.Queries, rawDb *sql.DB, ctx context.Context) {
 	router.GET("/chain/:chain_id/collection/:collection_address", assetController.GetAssetCollectionByChainIdAndContractAddress)
 	router.GET("/chain/:chain_id/collection/:collection_address/asset", assetController.GetAssetByChainIdAndContractAddress)
 
-	router.GET("/asset", assetController.GetAssetByChainIdAndContractAddress)
+	router.GET("/asset", assetController.GetAssetsByOwner)
 
 	// Run the server
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
