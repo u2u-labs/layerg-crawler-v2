@@ -54,7 +54,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "Add a new chain",
-                        "name": "payload",
+                        "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -78,9 +78,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/chain/:chainId/asset": {
+        "/chain/{chain_id}/collection": {
             "get": {
-                "description": "Get all asset collection of the chain",
+                "description": "Retrieve all asset collections associated with the specified chain ID.",
                 "consumes": [
                     "application/json"
                 ],
@@ -90,12 +90,12 @@ const docTemplate = `{
                 "tags": [
                     "asset"
                 ],
-                "summary": "Get all asset collection of the chain",
+                "summary": "Get all asset collections for a specific chain",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "Chain ID",
-                        "name": "chainId",
+                        "name": "chain_id",
                         "in": "path",
                         "required": true
                     }
@@ -116,9 +116,9 @@ const docTemplate = `{
                 "summary": "Add a new asset collection to the chain",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "Chain ID",
-                        "name": "chainId",
+                        "name": "chain_id",
                         "in": "path",
                         "required": true
                     },
@@ -130,6 +130,82 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/utils.AddNewAssetParamsSwagger"
                         }
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/chain/{chain_id}/collection/{collection_address}": {
+            "get": {
+                "description": "Get all asset collection of the chain",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "asset"
+                ],
+                "summary": "Get all asset collection of the chain",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Chain ID",
+                        "name": "chain_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Collection Address",
+                        "name": "collection_address",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/chain/{chain_id}/collection/{collection_address}/asset": {
+            "get": {
+                "description": "Get all asset collection of the chain",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "asset"
+                ],
+                "summary": "Get all asset collection of the chain",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Chain ID",
+                        "name": "chain_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Collection Address",
+                        "name": "collection_address",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Token ID",
+                        "name": "token_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Owner Address",
+                        "name": "owner",
+                        "in": "query"
                     }
                 ],
                 "responses": {}

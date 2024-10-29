@@ -54,19 +54,13 @@ func (q *Queries) CountAssetByChainId(ctx context.Context, chainID int32) (int64
 	return count, err
 }
 
-const getAssetByChainIdAndContractAddress = `-- name: GetAssetByChainIdAndContractAddress :one
+const getAssetById = `-- name: GetAssetById :one
 SELECT id, chain_id, collection_address, type, created_at, updated_at, decimal_data, initial_block, last_updated FROM assets 
-WHERE chain_id = $1 
-AND collection_address = $2
+WHERE id = $1
 `
 
-type GetAssetByChainIdAndContractAddressParams struct {
-	ChainID           int32
-	CollectionAddress string
-}
-
-func (q *Queries) GetAssetByChainIdAndContractAddress(ctx context.Context, arg GetAssetByChainIdAndContractAddressParams) (Asset, error) {
-	row := q.db.QueryRowContext(ctx, getAssetByChainIdAndContractAddress, arg.ChainID, arg.CollectionAddress)
+func (q *Queries) GetAssetById(ctx context.Context, id string) (Asset, error) {
+	row := q.db.QueryRowContext(ctx, getAssetById, id)
 	var i Asset
 	err := row.Scan(
 		&i.ID,

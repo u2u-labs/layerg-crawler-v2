@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/u2u-labs/layerg-crawler/cmd/response"
 	"github.com/u2u-labs/layerg-crawler/cmd/utils"
 	db "github.com/u2u-labs/layerg-crawler/db/sqlc"
 )
@@ -28,14 +29,14 @@ func NewAssetController(db *db.Queries, rawDb *sql.DB, ctx context.Context) *Ass
 // @Tags         asset
 // @Accept       json
 // @Produce      json
-// @Param chainId path int true "Chain ID"
+// @Param chain_id path string true "Chain ID"
 // @Param body body utils.AddNewAssetParamsSwagger true "Asset collection information"
 // @Example      { "id": 1, "chain": "U2U", "name": "Nebulas Testnet", "RpcUrl": "sre", "ChainId": 2484, "Explorer": "str", "BlockTime": 500 }
-// @Router       /chain/:chainId/asset [post]
+// @Router       /chain/{chain_id}/collection [post]
 func (cc *AssetController) AddNewAsset(ctx *gin.Context) {
 	// var params *db.AddNewAssetParams
 	var params *utils.AddNewAssetParamsUtil
-	chainIdStr := ctx.Param("chainId")
+	chainIdStr := ctx.Param("chain_id")
 	chainId, err := strconv.Atoi(chainIdStr)
 
 	if err != nil {
@@ -70,16 +71,17 @@ func (cc *AssetController) AddNewAsset(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "Asset added", "data": params})
 }
 
-// AddNewAsset godoc
-// @Summary      Get all asset collection of the chain
-// @Description  Get all asset collection of the chain
+// GetAssetByChainId godoc
+// @Summary      Get all asset collections for a specific chain
+// @Description  Retrieve all asset collections associated with the specified chain ID.
 // @Tags         asset
 // @Accept       json
 // @Produce      json
-// @Param chainId path int true "Chain ID"
-// @Router       /chain/:chainId/asset [get]
+// @Param chain_id path string true "Chain ID"
+// @Router       /chain/{chain_id}/collection [get]
 func (cc *AssetController) GetAssetByChainId(ctx *gin.Context) {
-	chainIdStr := ctx.Param("chainId")
+	chainIdStr := ctx.Param("chain_id")
+
 	chainId, err := strconv.Atoi(chainIdStr)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"status": "failed", "message": "Invalid chainId"})
@@ -118,95 +120,239 @@ func (cc *AssetController) GetAssetByChainId(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"data": paginationResponse})
 }
 
-// func (cc *AssetController) Test(ctx *gin.Context) {
-// 	fmt.Print("Test")
-// 	chainIdStr := ctx.Param("chainId")
-// 	chainId, err := strconv.Atoi(chainIdStr)
-// 	// if err != nil {
-// 	// 	ctx.JSON(http.StatusBadRequest, gin.H{"status": "failed", "message": "Invalid chainId"})
-// 	// 	return
-// 	// }
+// GetAssetCollectionAByChainIdAndContractAddress godoc
+// @Summary      Get all asset collection of the chain
+// @Description  Get all asset collection of the chain
+// @Tags         asset
+// @Accept       json
+// @Produce      json
+// @Param chain_id path string true "Chain ID"
+// @Param collection_address path string true "Collection Address"
+// @Router       /chain/{chain_id}/collection/{collection_address} [get]
+func (cc *AssetController) GetAssetCollectionByChainIdAndContractAddress(ctx *gin.Context) {
+	chainIdStr := ctx.Param("chain_id")
+	collectionAddress := ctx.Param("collection_address")
 
-// 	fmt.Print(chainId)
+	assetId := chainIdStr + ":" + collectionAddress
 
-// 	filterConditions := make(map[string]string)
-// 	if filterField := ctx.Query("collection_address"); filterField != "" {
-// 		filterConditions["collection_address"] = filterField
-// 	}
+	assetCollection, err := cc.db.GetAssetById(ctx, assetId)
 
-// 	fmt.Print(filterConditions)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			response.ErrorResponseData(ctx, http.StatusNotFound, "Failed to retrieve asset collection with this contract address in the chain")
+			return
+		}
+		response.ErrorResponseData(ctx, http.StatusBadGateway, err.Error())
+		return
+	}
 
-// 	countAssetByCollectionAddress, err := db.CountItemsWithFilter(cc.rawDb, "assets", filterConditions)
+	response.SuccessReponseData(ctx, http.StatusOK, assetCollection)
+}
+
+// GetAssetCollectionAByChainIdAndContractAddress godoc
+// @Summary      Get all asset collection of the chain
+// @Description  Get all asset collection of the chain
+// @Tags         asset
+// @Accept       json
+// @Produce      json
+// @Param chain_id path int true "Chain ID"
+// @Param collection_address path string true "Collection Address"
+// @Param token_id query string false "Token ID"
+// @Param owner query string false "Owner Address"
+// @Router       /chain/{chain_id}/collection/{collection_address}/asset [get]
+func (cc *AssetController) GetAssetByChainIdAndContractAddress(ctx *gin.Context) {
+	chainIdStr := ctx.Param("chain_id")
+	collectionAddress := ctx.Param("collection_address")
+
+	assetId := chainIdStr + ":" + collectionAddress
+
+	hasFilterParam, tokenId, owner := utils.GetAssetFilterParam(ctx)
+
+	if !hasFilterParam {
+		cc.GetAssetsFromCollection(ctx, assetId)
+	} else {
+		cc.GetAssetsFromCollectionWithFilter(ctx, assetId, tokenId, owner)
+	}
+
+}
+
+// get all assets filter by owner
+// func (cc *AssetController) GetAssetsByOwner(ctx *gin.Context) {
+// 	owner := ctx.Query("owner")
+// 	assets, err := cc.db.GetAssetsByOwner(ctx, owner)
 
 // 	if err != nil {
 // 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 // 		return
 // 	}
 
-// 	ctx.JSON(http.StatusOK, gin.H{"data": countAssetByCollectionAddress})
+// 	ctx.JSON(http.StatusOK, gin.H{"data": assets})
+
 // }
 
-// Get a single handler
-func (cc *AssetController) GetAssetByChainIdAndContractAddress(ctx *gin.Context) {
-	chainIdStr := ctx.Query("chainId")
-	chainId, err := strconv.Atoi(chainIdStr)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"status": "failed", "message": "Invalid chainId"})
-		return
-	}
-	contractAddress := ctx.Query("contractAddress")
+func (cc *AssetController) GetAssetsFromCollection(ctx *gin.Context, assetId string) {
+	assetCollection, err := cc.db.GetAssetById(ctx, assetId)
 
-	tokenId := ctx.Query("tokenId")
-
-	args := &db.GetAssetByChainIdAndContractAddressParams{
-		ChainID:           int32(chainId),
-		CollectionAddress: contractAddress,
-	}
-
-	assetCollection, err := cc.db.GetAssetByChainIdAndContractAddress(ctx, *args)
-
-	switch assetType := assetCollection.Type; assetType {
-	case db.AssetTypeERC721:
-		erc721Assets, _ := func() (interface{}, error) {
-			if tokenId != "" {
-				args := &db.Get721AssetByAssetIdAndTokenIdParams{
-					AssetID: assetCollection.ID,
-					TokenID: tokenId,
-				}
-				return cc.db.Get721AssetByAssetIdAndTokenId(ctx, *args)
-			}
-			return cc.db.Get721AssetByAssetId(ctx, assetCollection.ID)
-		}()
-		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC721", "asset": erc721Assets})
-	case db.AssetTypeERC1155:
-		erc1155Assets, _ := func() (interface{}, error) {
-			if tokenId != "" {
-				args := &db.Get1155AssetByAssetIdAndTokenIdParams{
-					AssetID: assetCollection.ID,
-					TokenID: tokenId,
-				}
-				return cc.db.Get1155AssetByAssetIdAndTokenId(ctx, *args)
-			}
-			return cc.db.Get1155AssetByAssetId(ctx, assetCollection.ID)
-		}()
-		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC1155", "asset": erc1155Assets})
-	case db.AssetTypeERC20:
-		erc20Assets, _ := func() (interface{}, error) {
-			if tokenId != "" {
-				// error because there is no token id in erc20
-				return nil, nil
-			}
-			asset, err := cc.db.Get20AssetByAssetId(ctx, assetCollection.ID)
-			return asset, err
-		}()
-		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC20", "asset": erc20Assets})
-	}
 	if err != nil {
 		if err == sql.ErrNoRows {
-			ctx.JSON(http.StatusNotFound, gin.H{"status": "failed", "message": "Failed to retrieve NFT with this contract address in the chain"})
+			ctx.JSON(http.StatusNotFound, gin.H{"status": "failed", "message": "Failed to retrieve asset collection with this contract address in the chain"})
 			return
 		}
 		ctx.JSON(http.StatusBadGateway, gin.H{"status": "Failed retrieving Asset", "error": err.Error()})
-		return
 	}
+	page, limit, offset := db.GetLimitAndOffset(ctx)
+
+	switch assetType := assetCollection.Type; assetType {
+	case db.AssetTypeERC721:
+		totalAssets, err := cc.db.Count721AssetByAssetId(ctx, assetCollection.ID)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		assets, _ := cc.db.GetPaginated721AssetByAssetId(ctx, db.GetPaginated721AssetByAssetIdParams{
+			AssetID: assetCollection.ID,
+			Limit:   int32(limit),
+			Offset:  int32(offset),
+		})
+
+		paginationResponse := db.Pagination[db.Erc721CollectionAsset]{
+			Page:       page,
+			Limit:      limit,
+			TotalItems: totalAssets,
+			TotalPages: (totalAssets + int64(limit) - 1) / int64(limit),
+			Data:       assets,
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC721", "asset": paginationResponse})
+	case db.AssetTypeERC1155:
+		totalAssets, err := cc.db.Count1155AssetByAssetId(ctx, assetCollection.ID)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		assets, _ := cc.db.GetPaginated1155AssetByAssetId(ctx, db.GetPaginated1155AssetByAssetIdParams{
+			AssetID: assetCollection.ID,
+			Limit:   int32(limit),
+			Offset:  int32(offset),
+		})
+
+		paginationResponse := db.Pagination[db.Erc1155CollectionAsset]{
+			Page:       page,
+			Limit:      limit,
+			TotalItems: totalAssets,
+			TotalPages: (totalAssets + int64(limit) - 1) / int64(limit),
+			Data:       assets,
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC1155", "asset": paginationResponse})
+
+	case db.AssetTypeERC20:
+		totalAssets, err := cc.db.Count20AssetByAssetId(ctx, assetCollection.ID)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		assets, _ := cc.db.GetPaginated20AssetByAssetId(ctx, db.GetPaginated20AssetByAssetIdParams{
+			AssetID: assetCollection.ID,
+			Limit:   int32(limit),
+			Offset:  int32(offset),
+		})
+
+		paginationResponse := db.Pagination[db.Erc20CollectionAsset]{
+			Page:       page,
+			Limit:      limit,
+			TotalItems: totalAssets,
+			TotalPages: (totalAssets + int64(limit) - 1) / int64(limit),
+			Data:       assets,
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC20", "asset": paginationResponse})
+	}
+
+}
+
+func (cc *AssetController) GetAssetsFromCollectionWithFilter(ctx *gin.Context, assetId string, tokenId string, owner string) {
+	assetCollection, err := cc.db.GetAssetById(ctx, assetId)
+	filterConditions := make(map[string]string)
+
+	if filterField := ctx.Query("token_id"); filterField != "" {
+		filterConditions["token_id"] = filterField
+	}
+
+	if filterField := ctx.Query("owner"); filterField != "" {
+		filterConditions["owner"] = filterField
+	}
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, gin.H{"status": "failed", "message": "Failed to retrieve asset collection with this contract address in the chain"})
+			return
+		}
+		ctx.JSON(http.StatusBadGateway, gin.H{"status": "Failed retrieving Asset", "error": err.Error()})
+	}
+	page, limit, offset := db.GetLimitAndOffset(ctx)
+
+	switch assetType := assetCollection.Type; assetType {
+	case db.AssetTypeERC721:
+		totalAssets, err := db.CountItemsWithFilter(cc.rawDb, "erc_721_collection_assets", filterConditions)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		assets, _ := db.QueryWithDynamicFilter[db.Erc721CollectionAsset](cc.rawDb, "erc_721_collection_assets", limit, offset, filterConditions)
+
+		paginationResponse := db.Pagination[db.Erc721CollectionAsset]{
+			Page:       page,
+			Limit:      limit,
+			TotalItems: int64(totalAssets),
+			TotalPages: int64(totalAssets+(limit)-1) / int64(limit),
+			Data:       assets,
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC721", "asset": paginationResponse})
+
+	case db.AssetTypeERC1155:
+		totalAssets, err := db.CountItemsWithFilter(cc.rawDb, "erc_1155_collection_assets", filterConditions)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		assets, _ := db.QueryWithDynamicFilter[db.Erc1155CollectionAsset](cc.rawDb, "erc_1155_collection_assets", limit, offset, filterConditions)
+
+		paginationResponse := db.Pagination[db.Erc1155CollectionAsset]{
+			Page:       page,
+			Limit:      limit,
+			TotalItems: int64(totalAssets),
+			TotalPages: int64(totalAssets+(limit)-1) / int64(limit),
+			Data:       assets,
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC721", "asset": paginationResponse})
+
+	case db.AssetTypeERC20:
+		totalAssets, err := db.CountItemsWithFilter(cc.rawDb, "erc_20_collection_assets", filterConditions)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		assets, _ := db.QueryWithDynamicFilter[db.Erc20CollectionAsset](cc.rawDb, "erc_20_collection_assets", limit, offset, filterConditions)
+
+		paginationResponse := db.Pagination[db.Erc20CollectionAsset]{
+			Page:       page,
+			Limit:      limit,
+			TotalItems: int64(totalAssets),
+			TotalPages: int64(totalAssets+(limit)-1) / int64(limit),
+			Data:       assets,
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC721", "asset": paginationResponse})
+
+	}
+
 }

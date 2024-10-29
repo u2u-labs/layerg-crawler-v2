@@ -72,9 +72,12 @@ func serveApi(db *dbCon.Queries, rawDb *sql.DB, ctx context.Context) {
 	router.GET("/chain", chainController.GetAllChains)
 
 	// Asset routes
-	router.POST("/chain/:chainId/asset", assetController.AddNewAsset)
-	router.GET("/chain/:chainId/asset", assetController.GetAssetByChainId)
-	router.GET("/chain/:chainId/asset/test", assetController.Test)
+	router.POST("/chain/:chain_id/collection", assetController.AddNewAsset)
+	router.GET("/chain/:chain_id/collection", assetController.GetAssetByChainId)
+	router.GET("/chain/:chain_id/collection/:collection_address", assetController.GetAssetCollectionByChainIdAndContractAddress)
+	router.GET("/chain/:chain_id/collection/:collection_address/asset", assetController.GetAssetByChainIdAndContractAddress)
+
+	router.GET("/asset", assetController.GetAssetByChainIdAndContractAddress)
 
 	// Run the server
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

@@ -37,6 +37,30 @@ func (q *Queries) Add721Asset(ctx context.Context, arg Add721AssetParams) error 
 	return err
 }
 
+const count721AssetByAssetId = `-- name: Count721AssetByAssetId :one
+SELECT COUNT(*) FROM erc_721_collection_assets 
+WHERE asset_id = $1
+`
+
+func (q *Queries) Count721AssetByAssetId(ctx context.Context, assetID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, count721AssetByAssetId, assetID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const count721AssetByOwnerAddress = `-- name: Count721AssetByOwnerAddress :one
+SELECT COUNT(*) FROM erc_721_collection_assets 
+WHERE owner = $1
+`
+
+func (q *Queries) Count721AssetByOwnerAddress(ctx context.Context, owner string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, count721AssetByOwnerAddress, owner)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const delete721Asset = `-- name: Delete721Asset :exec
 DELETE 
 FROM erc_721_collection_assets
@@ -47,42 +71,6 @@ WHERE
 func (q *Queries) Delete721Asset(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, delete721Asset, id)
 	return err
-}
-
-const get721AssetByAssetId = `-- name: Get721AssetByAssetId :many
-SELECT id, chain_id, asset_id, token_id, owner, attributes, created_at, updated_at FROM erc_721_collection_assets WHERE asset_id = $1
-`
-
-func (q *Queries) Get721AssetByAssetId(ctx context.Context, assetID string) ([]Erc721CollectionAsset, error) {
-	rows, err := q.db.QueryContext(ctx, get721AssetByAssetId, assetID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Erc721CollectionAsset
-	for rows.Next() {
-		var i Erc721CollectionAsset
-		if err := rows.Scan(
-			&i.ID,
-			&i.ChainID,
-			&i.AssetID,
-			&i.TokenID,
-			&i.Owner,
-			&i.Attributes,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const get721AssetByAssetIdAndTokenId = `-- name: Get721AssetByAssetIdAndTokenId :one
@@ -113,14 +101,65 @@ func (q *Queries) Get721AssetByAssetIdAndTokenId(ctx context.Context, arg Get721
 	return i, err
 }
 
-const get721AssetByOwner = `-- name: Get721AssetByOwner :many
+const getPaginated721AssetByAssetId = `-- name: GetPaginated721AssetByAssetId :many
+SELECT id, chain_id, asset_id, token_id, owner, attributes, created_at, updated_at FROM erc_721_collection_assets 
+WHERE asset_id = $1
+LIMIT $2 OFFSET $3
+`
+
+type GetPaginated721AssetByAssetIdParams struct {
+	AssetID string
+	Limit   int32
+	Offset  int32
+}
+
+func (q *Queries) GetPaginated721AssetByAssetId(ctx context.Context, arg GetPaginated721AssetByAssetIdParams) ([]Erc721CollectionAsset, error) {
+	rows, err := q.db.QueryContext(ctx, getPaginated721AssetByAssetId, arg.AssetID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Erc721CollectionAsset
+	for rows.Next() {
+		var i Erc721CollectionAsset
+		if err := rows.Scan(
+			&i.ID,
+			&i.ChainID,
+			&i.AssetID,
+			&i.TokenID,
+			&i.Owner,
+			&i.Attributes,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPaginated721AssetByOwnerAddress = `-- name: GetPaginated721AssetByOwnerAddress :many
 SELECT id, chain_id, asset_id, token_id, owner, attributes, created_at, updated_at FROM erc_721_collection_assets
 WHERE
     owner = $1
+LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) Get721AssetByOwner(ctx context.Context, owner string) ([]Erc721CollectionAsset, error) {
-	rows, err := q.db.QueryContext(ctx, get721AssetByOwner, owner)
+type GetPaginated721AssetByOwnerAddressParams struct {
+	Owner  string
+	Limit  int32
+	Offset int32
+}
+
+func (q *Queries) GetPaginated721AssetByOwnerAddress(ctx context.Context, arg GetPaginated721AssetByOwnerAddressParams) ([]Erc721CollectionAsset, error) {
+	rows, err := q.db.QueryContext(ctx, getPaginated721AssetByOwnerAddress, arg.Owner, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

@@ -39,6 +39,30 @@ func (q *Queries) Add1155Asset(ctx context.Context, arg Add1155AssetParams) erro
 	return err
 }
 
+const count1155AssetByAssetId = `-- name: Count1155AssetByAssetId :one
+SELECT COUNT(*) FROM erc_1155_collection_assets 
+WHERE asset_id = $1
+`
+
+func (q *Queries) Count1155AssetByAssetId(ctx context.Context, assetID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, count1155AssetByAssetId, assetID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const count1155AssetByOwner = `-- name: Count1155AssetByOwner :one
+SELECT COUNT(*) FROM erc_1155_collection_assets 
+WHERE owner = $1
+`
+
+func (q *Queries) Count1155AssetByOwner(ctx context.Context, owner string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, count1155AssetByOwner, owner)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const delete1155Asset = `-- name: Delete1155Asset :exec
 DELETE 
 FROM erc_1155_collection_assets
@@ -49,43 +73,6 @@ WHERE
 func (q *Queries) Delete1155Asset(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, delete1155Asset, id)
 	return err
-}
-
-const get1155AssetByAssetId = `-- name: Get1155AssetByAssetId :many
-SELECT id, chain_id, asset_id, token_id, owner, balance, attributes, created_at, updated_at FROM erc_1155_collection_assets WHERE asset_id = $1
-`
-
-func (q *Queries) Get1155AssetByAssetId(ctx context.Context, assetID string) ([]Erc1155CollectionAsset, error) {
-	rows, err := q.db.QueryContext(ctx, get1155AssetByAssetId, assetID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Erc1155CollectionAsset
-	for rows.Next() {
-		var i Erc1155CollectionAsset
-		if err := rows.Scan(
-			&i.ID,
-			&i.ChainID,
-			&i.AssetID,
-			&i.TokenID,
-			&i.Owner,
-			&i.Balance,
-			&i.Attributes,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const get1155AssetByAssetIdAndTokenId = `-- name: Get1155AssetByAssetIdAndTokenId :one
@@ -117,14 +104,66 @@ func (q *Queries) Get1155AssetByAssetIdAndTokenId(ctx context.Context, arg Get11
 	return i, err
 }
 
-const get1155AssetByOwner = `-- name: Get1155AssetByOwner :many
+const getPaginated1155AssetByAssetId = `-- name: GetPaginated1155AssetByAssetId :many
+SELECT id, chain_id, asset_id, token_id, owner, balance, attributes, created_at, updated_at FROM erc_1155_collection_assets 
+WHERE asset_id = $1
+LIMIT $2 OFFSET $3
+`
+
+type GetPaginated1155AssetByAssetIdParams struct {
+	AssetID string
+	Limit   int32
+	Offset  int32
+}
+
+func (q *Queries) GetPaginated1155AssetByAssetId(ctx context.Context, arg GetPaginated1155AssetByAssetIdParams) ([]Erc1155CollectionAsset, error) {
+	rows, err := q.db.QueryContext(ctx, getPaginated1155AssetByAssetId, arg.AssetID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Erc1155CollectionAsset
+	for rows.Next() {
+		var i Erc1155CollectionAsset
+		if err := rows.Scan(
+			&i.ID,
+			&i.ChainID,
+			&i.AssetID,
+			&i.TokenID,
+			&i.Owner,
+			&i.Balance,
+			&i.Attributes,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPaginated1155AssetByOwnerAddress = `-- name: GetPaginated1155AssetByOwnerAddress :many
 SELECT id, chain_id, asset_id, token_id, owner, balance, attributes, created_at, updated_at FROM erc_1155_collection_assets
 WHERE
     owner = $1
+LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) Get1155AssetByOwner(ctx context.Context, owner string) ([]Erc1155CollectionAsset, error) {
-	rows, err := q.db.QueryContext(ctx, get1155AssetByOwner, owner)
+type GetPaginated1155AssetByOwnerAddressParams struct {
+	Owner  string
+	Limit  int32
+	Offset int32
+}
+
+func (q *Queries) GetPaginated1155AssetByOwnerAddress(ctx context.Context, arg GetPaginated1155AssetByOwnerAddressParams) ([]Erc1155CollectionAsset, error) {
+	rows, err := q.db.QueryContext(ctx, getPaginated1155AssetByOwnerAddress, arg.Owner, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

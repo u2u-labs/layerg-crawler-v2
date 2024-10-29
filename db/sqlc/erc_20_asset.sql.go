@@ -30,6 +30,30 @@ func (q *Queries) Add20Asset(ctx context.Context, arg Add20AssetParams) error {
 	return err
 }
 
+const count20AssetByAssetId = `-- name: Count20AssetByAssetId :one
+SELECT COUNT(*) FROM erc_20_collection_assets 
+WHERE asset_id = $1
+`
+
+func (q *Queries) Count20AssetByAssetId(ctx context.Context, assetID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, count20AssetByAssetId, assetID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const count20AssetByOwner = `-- name: Count20AssetByOwner :one
+SELECT COUNT(*) FROM erc_20_collection_assets 
+WHERE owner = $1
+`
+
+func (q *Queries) Count20AssetByOwner(ctx context.Context, owner string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, count20AssetByOwner, owner)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const delete20Asset = `-- name: Delete20Asset :exec
 DELETE 
 FROM erc_20_collection_assets
@@ -40,41 +64,6 @@ WHERE
 func (q *Queries) Delete20Asset(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, delete20Asset, id)
 	return err
-}
-
-const get20AssetByAssetId = `-- name: Get20AssetByAssetId :many
-SELECT id, chain_id, asset_id, owner, balance, created_at, updated_at FROM erc_20_collection_assets WHERE asset_id = $1
-`
-
-func (q *Queries) Get20AssetByAssetId(ctx context.Context, assetID string) ([]Erc20CollectionAsset, error) {
-	rows, err := q.db.QueryContext(ctx, get20AssetByAssetId, assetID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Erc20CollectionAsset
-	for rows.Next() {
-		var i Erc20CollectionAsset
-		if err := rows.Scan(
-			&i.ID,
-			&i.ChainID,
-			&i.AssetID,
-			&i.Owner,
-			&i.Balance,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const get20AssetByAssetIdAndTokenId = `-- name: Get20AssetByAssetIdAndTokenId :one
@@ -104,14 +93,64 @@ func (q *Queries) Get20AssetByAssetIdAndTokenId(ctx context.Context, arg Get20As
 	return i, err
 }
 
-const get20AssetByOwner = `-- name: Get20AssetByOwner :many
+const getPaginated20AssetByAssetId = `-- name: GetPaginated20AssetByAssetId :many
+SELECT id, chain_id, asset_id, owner, balance, created_at, updated_at FROM erc_20_collection_assets 
+WHERE asset_id = $1
+LIMIT $2 OFFSET $3
+`
+
+type GetPaginated20AssetByAssetIdParams struct {
+	AssetID string
+	Limit   int32
+	Offset  int32
+}
+
+func (q *Queries) GetPaginated20AssetByAssetId(ctx context.Context, arg GetPaginated20AssetByAssetIdParams) ([]Erc20CollectionAsset, error) {
+	rows, err := q.db.QueryContext(ctx, getPaginated20AssetByAssetId, arg.AssetID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Erc20CollectionAsset
+	for rows.Next() {
+		var i Erc20CollectionAsset
+		if err := rows.Scan(
+			&i.ID,
+			&i.ChainID,
+			&i.AssetID,
+			&i.Owner,
+			&i.Balance,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPaginated20AssetByOwnerAddress = `-- name: GetPaginated20AssetByOwnerAddress :many
 SELECT id, chain_id, asset_id, owner, balance, created_at, updated_at FROM erc_20_collection_assets
 WHERE
     owner = $1
+LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) Get20AssetByOwner(ctx context.Context, owner string) ([]Erc20CollectionAsset, error) {
-	rows, err := q.db.QueryContext(ctx, get20AssetByOwner, owner)
+type GetPaginated20AssetByOwnerAddressParams struct {
+	Owner  string
+	Limit  int32
+	Offset int32
+}
+
+func (q *Queries) GetPaginated20AssetByOwnerAddress(ctx context.Context, arg GetPaginated20AssetByOwnerAddressParams) ([]Erc20CollectionAsset, error) {
+	rows, err := q.db.QueryContext(ctx, getPaginated20AssetByOwnerAddress, arg.Owner, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

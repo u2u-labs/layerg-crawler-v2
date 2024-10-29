@@ -91,7 +91,7 @@ paths:
       parameters:
       - description: Add a new chain
         in: body
-        name: payload
+        name: body
         required: true
         schema:
           $ref: '#/definitions/db.AddChainParams'
@@ -109,21 +109,22 @@ paths:
       summary: Add a new chain
       tags:
       - chains
-  /chain/:chainId/asset:
+  /chain/{chain_id}/collection:
     get:
       consumes:
       - application/json
-      description: Get all asset collection of the chain
+      description: Retrieve all asset collections associated with the specified chain
+        ID.
       parameters:
       - description: Chain ID
         in: path
-        name: chainId
+        name: chain_id
         required: true
-        type: integer
+        type: string
       produces:
       - application/json
       responses: {}
-      summary: Get all asset collection of the chain
+      summary: Get all asset collections for a specific chain
       tags:
       - asset
     post:
@@ -133,9 +134,9 @@ paths:
       parameters:
       - description: Chain ID
         in: path
-        name: chainId
+        name: chain_id
         required: true
-        type: integer
+        type: string
       - description: Asset collection information
         in: body
         name: body
@@ -146,6 +147,58 @@ paths:
       - application/json
       responses: {}
       summary: Add a new asset collection to the chain
+      tags:
+      - asset
+  /chain/{chain_id}/collection/{collection_address}:
+    get:
+      consumes:
+      - application/json
+      description: Get all asset collection of the chain
+      parameters:
+      - description: Chain ID
+        in: path
+        name: chain_id
+        required: true
+        type: string
+      - description: Collection Address
+        in: path
+        name: collection_address
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      summary: Get all asset collection of the chain
+      tags:
+      - asset
+  /chain/{chain_id}/collection/{collection_address}/asset:
+    get:
+      consumes:
+      - application/json
+      description: Get all asset collection of the chain
+      parameters:
+      - description: Chain ID
+        in: path
+        name: chain_id
+        required: true
+        type: integer
+      - description: Collection Address
+        in: path
+        name: collection_address
+        required: true
+        type: string
+      - description: Token ID
+        in: query
+        name: token_id
+        type: string
+      - description: Owner Address
+        in: query
+        name: owner
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      summary: Get all asset collection of the chain
       tags:
       - asset
 schemes:
