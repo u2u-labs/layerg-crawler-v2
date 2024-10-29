@@ -20,13 +20,13 @@ VALUES (
 `
 
 type AddNewAssetParams struct {
-	ID                string
-	ChainID           int32
-	CollectionAddress string
-	Type              AssetType
-	DecimalData       sql.NullInt16
-	InitialBlock      sql.NullInt64
-	LastUpdated       sql.NullTime
+	ID                string        `json:"id"`
+	ChainID           int32         `json:"chainId"`
+	CollectionAddress string        `json:"collectionAddress"`
+	Type              AssetType     `json:"type"`
+	DecimalData       sql.NullInt16 `json:"decimalData"`
+	InitialBlock      sql.NullInt64 `json:"initialBlock"`
+	LastUpdated       sql.NullTime  `json:"lastUpdated"`
 }
 
 func (q *Queries) AddNewAsset(ctx context.Context, arg AddNewAssetParams) error {
@@ -83,9 +83,9 @@ LIMIT $2 OFFSET $3
 `
 
 type GetPaginatedAssetsByChainIdParams struct {
-	ChainID int32
-	Limit   int32
-	Offset  int32
+	ChainID int32 `json:"chainId"`
+	Limit   int32 `json:"limit"`
+	Offset  int32 `json:"offset"`
 }
 
 func (q *Queries) GetPaginatedAssetsByChainId(ctx context.Context, arg GetPaginatedAssetsByChainIdParams) ([]Asset, error) {

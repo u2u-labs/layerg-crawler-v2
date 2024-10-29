@@ -21,10 +21,10 @@ VALUES (
 `
 
 type Add721AssetParams struct {
-	AssetID    string
-	TokenID    string
-	Owner      string
-	Attributes pqtype.NullRawMessage
+	AssetID    string                `json:"assetId"`
+	TokenID    string                `json:"tokenId"`
+	Owner      string                `json:"owner"`
+	Attributes pqtype.NullRawMessage `json:"attributes"`
 }
 
 func (q *Queries) Add721Asset(ctx context.Context, arg Add721AssetParams) error {
@@ -81,8 +81,8 @@ WHERE
 `
 
 type Get721AssetByAssetIdAndTokenIdParams struct {
-	AssetID string
-	TokenID string
+	AssetID string `json:"assetId"`
+	TokenID string `json:"tokenId"`
 }
 
 func (q *Queries) Get721AssetByAssetIdAndTokenId(ctx context.Context, arg Get721AssetByAssetIdAndTokenIdParams) (Erc721CollectionAsset, error) {
@@ -108,9 +108,9 @@ LIMIT $2 OFFSET $3
 `
 
 type GetPaginated721AssetByAssetIdParams struct {
-	AssetID string
-	Limit   int32
-	Offset  int32
+	AssetID string `json:"assetId"`
+	Limit   int32  `json:"limit"`
+	Offset  int32  `json:"offset"`
 }
 
 func (q *Queries) GetPaginated721AssetByAssetId(ctx context.Context, arg GetPaginated721AssetByAssetIdParams) ([]Erc721CollectionAsset, error) {
@@ -153,9 +153,9 @@ LIMIT $2 OFFSET $3
 `
 
 type GetPaginated721AssetByOwnerAddressParams struct {
-	Owner  string
-	Limit  int32
-	Offset int32
+	Owner  string `json:"owner"`
+	Limit  int32  `json:"limit"`
+	Offset int32  `json:"offset"`
 }
 
 func (q *Queries) GetPaginated721AssetByOwnerAddress(ctx context.Context, arg GetPaginated721AssetByOwnerAddressParams) ([]Erc721CollectionAsset, error) {
@@ -199,8 +199,8 @@ WHERE
 `
 
 type Update721AssetParams struct {
-	ID    uuid.UUID
-	Owner string
+	ID    uuid.UUID `json:"id"`
+	Owner string    `json:"owner"`
 }
 
 func (q *Queries) Update721Asset(ctx context.Context, arg Update721AssetParams) error {

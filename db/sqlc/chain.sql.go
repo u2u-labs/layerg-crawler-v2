@@ -19,14 +19,14 @@ VALUES (
 `
 
 type AddChainParams struct {
-	ID          int32
-	Chain       string
-	Name        string
-	RpcUrl      string
-	ChainID     int64
-	Explorer    string
-	LatestBlock int64
-	BlockTime   int32
+	ID          int32  `json:"id"`
+	Chain       string `json:"chain"`
+	Name        string `json:"name"`
+	RpcUrl      string `json:"rpcUrl"`
+	ChainID     int64  `json:"chainId"`
+	Explorer    string `json:"explorer"`
+	LatestBlock int64  `json:"latestBlock"`
+	BlockTime   int32  `json:"blockTime"`
 }
 
 func (q *Queries) AddChain(ctx context.Context, arg AddChainParams) error {

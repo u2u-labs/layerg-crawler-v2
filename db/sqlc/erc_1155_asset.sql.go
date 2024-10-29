@@ -21,11 +21,11 @@ VALUES (
 `
 
 type Add1155AssetParams struct {
-	AssetID    string
-	TokenID    string
-	Owner      string
-	Balance    string
-	Attributes pqtype.NullRawMessage
+	AssetID    string                `json:"assetId"`
+	TokenID    string                `json:"tokenId"`
+	Owner      string                `json:"owner"`
+	Balance    string                `json:"balance"`
+	Attributes pqtype.NullRawMessage `json:"attributes"`
 }
 
 func (q *Queries) Add1155Asset(ctx context.Context, arg Add1155AssetParams) error {
@@ -83,8 +83,8 @@ WHERE
 `
 
 type Get1155AssetByAssetIdAndTokenIdParams struct {
-	AssetID string
-	TokenID string
+	AssetID string `json:"assetId"`
+	TokenID string `json:"tokenId"`
 }
 
 func (q *Queries) Get1155AssetByAssetIdAndTokenId(ctx context.Context, arg Get1155AssetByAssetIdAndTokenIdParams) (Erc1155CollectionAsset, error) {
@@ -111,9 +111,9 @@ LIMIT $2 OFFSET $3
 `
 
 type GetPaginated1155AssetByAssetIdParams struct {
-	AssetID string
-	Limit   int32
-	Offset  int32
+	AssetID string `json:"assetId"`
+	Limit   int32  `json:"limit"`
+	Offset  int32  `json:"offset"`
 }
 
 func (q *Queries) GetPaginated1155AssetByAssetId(ctx context.Context, arg GetPaginated1155AssetByAssetIdParams) ([]Erc1155CollectionAsset, error) {
@@ -157,9 +157,9 @@ LIMIT $2 OFFSET $3
 `
 
 type GetPaginated1155AssetByOwnerAddressParams struct {
-	Owner  string
-	Limit  int32
-	Offset int32
+	Owner  string `json:"owner"`
+	Limit  int32  `json:"limit"`
+	Offset int32  `json:"offset"`
 }
 
 func (q *Queries) GetPaginated1155AssetByOwnerAddress(ctx context.Context, arg GetPaginated1155AssetByOwnerAddressParams) ([]Erc1155CollectionAsset, error) {
@@ -204,8 +204,8 @@ WHERE
 `
 
 type Update1155AssetParams struct {
-	ID    uuid.UUID
-	Owner string
+	ID    uuid.UUID `json:"id"`
+	Owner string    `json:"owner"`
 }
 
 func (q *Queries) Update1155Asset(ctx context.Context, arg Update1155AssetParams) error {

@@ -19,13 +19,13 @@ VALUES (
 `
 
 type AddOnchainTransactionParams struct {
-	From      string
-	To        string
-	AssetID   string
-	TokenID   string
-	Amount    float64
-	TxHash    string
-	Timestamp time.Time
+	From      string    `json:"from"`
+	To        string    `json:"to"`
+	AssetID   string    `json:"assetId"`
+	TokenID   string    `json:"tokenId"`
+	Amount    float64   `json:"amount"`
+	TxHash    string    `json:"txHash"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 func (q *Queries) AddOnchainTransaction(ctx context.Context, arg AddOnchainTransactionParams) error {

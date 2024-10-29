@@ -20,9 +20,9 @@ VALUES (
 `
 
 type Add20AssetParams struct {
-	AssetID string
-	Owner   string
-	Balance string
+	AssetID string `json:"assetId"`
+	Owner   string `json:"owner"`
+	Balance string `json:"balance"`
 }
 
 func (q *Queries) Add20Asset(ctx context.Context, arg Add20AssetParams) error {
@@ -74,8 +74,8 @@ WHERE
 `
 
 type Get20AssetByAssetIdAndTokenIdParams struct {
-	AssetID string
-	Owner   string
+	AssetID string `json:"assetId"`
+	Owner   string `json:"owner"`
 }
 
 func (q *Queries) Get20AssetByAssetIdAndTokenId(ctx context.Context, arg Get20AssetByAssetIdAndTokenIdParams) (Erc20CollectionAsset, error) {
@@ -100,9 +100,9 @@ LIMIT $2 OFFSET $3
 `
 
 type GetPaginated20AssetByAssetIdParams struct {
-	AssetID string
-	Limit   int32
-	Offset  int32
+	AssetID string `json:"assetId"`
+	Limit   int32  `json:"limit"`
+	Offset  int32  `json:"offset"`
 }
 
 func (q *Queries) GetPaginated20AssetByAssetId(ctx context.Context, arg GetPaginated20AssetByAssetIdParams) ([]Erc20CollectionAsset, error) {
@@ -144,9 +144,9 @@ LIMIT $2 OFFSET $3
 `
 
 type GetPaginated20AssetByOwnerAddressParams struct {
-	Owner  string
-	Limit  int32
-	Offset int32
+	Owner  string `json:"owner"`
+	Limit  int32  `json:"limit"`
+	Offset int32  `json:"offset"`
 }
 
 func (q *Queries) GetPaginated20AssetByOwnerAddress(ctx context.Context, arg GetPaginated20AssetByOwnerAddressParams) ([]Erc20CollectionAsset, error) {
@@ -189,8 +189,8 @@ WHERE
 `
 
 type Update20AssetParams struct {
-	ID    uuid.UUID
-	Owner string
+	ID    uuid.UUID `json:"id"`
+	Owner string    `json:"owner"`
 }
 
 func (q *Queries) Update20Asset(ctx context.Context, arg Update20AssetParams) error {
