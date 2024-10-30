@@ -4,17 +4,29 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// get limit and offset from query parameters
-func GetAssetFilterParam(ctx *gin.Context) (bool, string, string) {
+// get asset filter parameters
+func GetAssetFilterParam(ctx *gin.Context) (bool, []string, string) {
 	// Get the query parameters
-	tokenId := ctx.Query("token_id")
-
+	tokenIds := ctx.QueryArray("token_id")
 	owner := ctx.Query("owner")
 
 	hasQuery := false
-	if tokenId != "" || owner != "" {
+	if len(tokenIds) != 0 || owner != "" {
 		hasQuery = true
 	}
 
-	return hasQuery, tokenId, owner
+	return hasQuery, tokenIds, owner
+}
+
+// get asset collection filter parameters
+func GetAssetCollectionFilterParam(ctx *gin.Context) (bool, string) {
+	// Get the query parameters
+	collectionAddress := ctx.Query("collection_address")
+
+	hasQuery := false
+	if collectionAddress != "" {
+		hasQuery = true
+	}
+
+	return hasQuery, collectionAddress
 }

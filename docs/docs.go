@@ -24,55 +24,13 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/asset": {
-            "get": {
-                "description": "Get all asset collection of the chain",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "asset"
-                ],
-                "summary": "Get all asset collection of the chain",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Page number",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Number of items per page",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Owner Address",
-                        "name": "owner",
-                        "in": "query"
-                    },
-                    {
-                        "enum": [
-                            "ERC721",
-                            "ERC1155",
-                            "ERC20"
-                        ],
-                        "type": "string",
-                        "description": "Asset Type",
-                        "name": "asset_type",
-                        "in": "query"
-                    }
-                ],
-                "responses": {}
-            }
-        },
         "/chain": {
             "get": {
+                "security": [
+                    {
+                        "BasicAuth": []
+                    }
+                ],
                 "description": "Get all supported chains",
                 "consumes": [
                     "application/json"
@@ -84,9 +42,22 @@ const docTemplate = `{
                     "chains"
                 ],
                 "summary": "Get all supported chains",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Chain ID",
+                        "name": "chain_id",
+                        "in": "query"
+                    }
+                ],
                 "responses": {}
             },
             "post": {
+                "security": [
+                    {
+                        "BasicAuth": []
+                    }
+                ],
                 "description": "Add a new chain",
                 "consumes": [
                     "application/json"
@@ -127,6 +98,11 @@ const docTemplate = `{
         },
         "/chain/{chain_id}/collection": {
             "get": {
+                "security": [
+                    {
+                        "BasicAuth": []
+                    }
+                ],
                 "description": "Retrieve all asset collections associated with the specified chain ID.",
                 "consumes": [
                     "application/json"
@@ -137,7 +113,7 @@ const docTemplate = `{
                 "tags": [
                     "asset"
                 ],
-                "summary": "Get all asset collections for a specific chain",
+                "summary": "Get all asset in a collection of the chain",
                 "parameters": [
                     {
                         "type": "string",
@@ -145,6 +121,12 @@ const docTemplate = `{
                         "name": "chain_id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Collection Address",
+                        "name": "collection_address",
+                        "in": "query"
                     },
                     {
                         "type": "integer",
@@ -162,6 +144,11 @@ const docTemplate = `{
                 "responses": {}
             },
             "post": {
+                "security": [
+                    {
+                        "BasicAuth": []
+                    }
+                ],
                 "description": "Add a new asset collection to the chain",
                 "consumes": [
                     "application/json"
@@ -194,40 +181,13 @@ const docTemplate = `{
                 "responses": {}
             }
         },
-        "/chain/{chain_id}/collection/{collection_address}": {
+        "/chain/{chain_id}/collection/{collection_address}/assets": {
             "get": {
-                "description": "Get all asset collection of the chain",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "asset"
-                ],
-                "summary": "Get all asset collection of the chain",
-                "parameters": [
+                "security": [
                     {
-                        "type": "string",
-                        "description": "Chain ID",
-                        "name": "chain_id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Collection Address",
-                        "name": "collection_address",
-                        "in": "path",
-                        "required": true
+                        "BasicAuth": []
                     }
                 ],
-                "responses": {}
-            }
-        },
-        "/chain/{chain_id}/collection/{collection_address}/asset": {
-            "get": {
                 "description": "Get all asset collection of the chain",
                 "consumes": [
                     "application/json"
@@ -267,8 +227,12 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "type": "string",
-                        "description": "Token ID",
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "multi",
+                        "description": "Token IDs",
                         "name": "token_id",
                         "in": "query"
                     },
@@ -293,7 +257,7 @@ const docTemplate = `{
                 "chain": {
                     "type": "string"
                 },
-                "chainID": {
+                "chainId": {
                     "type": "integer"
                 },
                 "explorer": {

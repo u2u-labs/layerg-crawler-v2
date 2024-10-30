@@ -30,11 +30,11 @@ func NewAssetController(db *db.Queries, rawDb *sql.DB, ctx context.Context) *Ass
 // @Accept       json
 // @Produce      json
 // @Param chain_id path string true "Chain ID"
+// @Security     BasicAuth
 // @Param body body utils.AddNewAssetParamsSwagger true "Asset collection information"
 // @Example      { "id": 1, "chain": "U2U", "name": "Nebulas Testnet", "RpcUrl": "sre", "ChainId": 2484, "Explorer": "str", "BlockTime": 500 }
 // @Router       /chain/{chain_id}/collection [post]
 func (cc *AssetController) AddNewAsset(ctx *gin.Context) {
-	// var params *db.AddNewAssetParams
 	var params *utils.AddNewAssetParamsUtil
 	chainIdStr := ctx.Param("chain_id")
 	chainId, err := strconv.Atoi(chainIdStr)
@@ -60,7 +60,7 @@ func (cc *AssetController) AddNewAsset(ctx *gin.Context) {
 	params.ChainID = int32(chainId)
 	params.ID = strconv.Itoa(int(chainId)) + ":" + params.CollectionAddress
 
-	assetParam := utils.ConvertUtilToParams(params)
+	assetParam := utils.ConvertCustomTypeToSqlParams(params)
 
 	// add to db
 	if err := cc.db.AddNewAsset(ctx, assetParam); err != nil {
@@ -68,19 +68,16 @@ func (cc *AssetController) AddNewAsset(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "Asset added", "data": params})
+	// Output the result
+	jsonResponse, err := utils.MarshalAssetParams(assetParam)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	response.SuccessReponseData(ctx, http.StatusCreated, jsonResponse)
 }
 
-// GetAssetByChainId godoc
-// @Summary      Get all asset collections for a specific chain
-// @Description  Retrieve all asset collections associated with the specified chain ID.
-// @Tags         asset
-// @Accept       json
-// @Produce      json
-// @Param chain_id path string true "Chain ID"
-// @Param page query int false "Page number"
-// @Param limit query int false "Number of items per page"
-// @Router       /chain/{chain_id}/collection [get]
 func (cc *AssetController) GetAssetByChainId(ctx *gin.Context) {
 	chainIdStr := ctx.Param("chain_id")
 
@@ -111,29 +108,42 @@ func (cc *AssetController) GetAssetByChainId(ctx *gin.Context) {
 	}
 
 	// Create pagination response
-	paginationResponse := db.Pagination[db.Asset]{
+	paginationResponse := db.Pagination[utils.AssetResponse]{
 		Page:       page,
 		Limit:      limit,
 		TotalItems: totalAssets,
 		TotalPages: (totalAssets + int64(limit) - 1) / int64(limit), // Calculate total pages
-		Data:       assets,
+		Data:       utils.ConvertToAssetResponses(assets),
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"data": paginationResponse})
+	response.SuccessReponseData(ctx, http.StatusOK, paginationResponse)
 }
 
-// GetAssetCollectionAByChainIdAndContractAddress godoc
-// @Summary      Get all asset collection of the chain
-// @Description  Get all asset collection of the chain
+// GetAssetCollection godoc
+// @Summary      Get all asset in a collection of the chain
+// @Description  Retrieve all asset collections associated with the specified chain ID.
 // @Tags         asset
 // @Accept       json
 // @Produce      json
+// @Security     BasicAuth
 // @Param chain_id path string true "Chain ID"
-// @Param collection_address path string true "Collection Address"
-// @Router       /chain/{chain_id}/collection/{collection_address} [get]
-func (cc *AssetController) GetAssetCollectionByChainIdAndContractAddress(ctx *gin.Context) {
+// @Param collection_address query string false "Collection Address"
+// @Param page query int false "Page number"
+// @Param limit query int false "Number of items per page"
+// @Router       /chain/{chain_id}/collection [get]
+func (cc *AssetController) GetAssetCollection(ctx *gin.Context) {
+
+	hasQuery, collectionAddress := utils.GetAssetCollectionFilterParam(ctx)
+	if !hasQuery {
+		cc.GetAssetByChainId(ctx)
+	} else {
+		cc.GetAssetCollectionByChainIdAndContractAddress(ctx, collectionAddress)
+	}
+
+}
+
+func (cc *AssetController) GetAssetCollectionByChainIdAndContractAddress(ctx *gin.Context, collectionAddress string) {
 	chainIdStr := ctx.Param("chain_id")
-	collectionAddress := ctx.Param("collection_address")
 
 	assetId := chainIdStr + ":" + collectionAddress
 
@@ -148,7 +158,7 @@ func (cc *AssetController) GetAssetCollectionByChainIdAndContractAddress(ctx *gi
 		return
 	}
 
-	response.SuccessReponseData(ctx, http.StatusOK, assetCollection)
+	response.SuccessReponseData(ctx, http.StatusOK, utils.ConvertAssetToAssetResponse(assetCollection))
 }
 
 // GetAssetCollectionAByChainIdAndContractAddress godoc
@@ -157,117 +167,26 @@ func (cc *AssetController) GetAssetCollectionByChainIdAndContractAddress(ctx *gi
 // @Tags         asset
 // @Accept       json
 // @Produce      json
+// @Security     BasicAuth
 // @Param chain_id path int true "Chain ID"
 // @Param collection_address path string true "Collection Address"
 // @Param page query int false "Page number"
 // @Param limit query int false "Number of items per page"
-// @Param token_id query string false "Token ID"
+// @Param token_id query []string false "Token IDs" collectionFormat(multi)
 // @Param owner query string false "Owner Address"
-// @Router       /chain/{chain_id}/collection/{collection_address}/asset [get]
+// @Router       /chain/{chain_id}/collection/{collection_address}/assets [get]
 func (cc *AssetController) GetAssetByChainIdAndContractAddress(ctx *gin.Context) {
 	chainIdStr := ctx.Param("chain_id")
 	collectionAddress := ctx.Param("collection_address")
 
 	assetId := chainIdStr + ":" + collectionAddress
 
-	hasFilterParam, tokenId, owner := utils.GetAssetFilterParam(ctx)
+	hasFilterParam, tokenIds, owner := utils.GetAssetFilterParam(ctx)
 
 	if !hasFilterParam {
 		cc.GetAssetsFromCollection(ctx, assetId)
 	} else {
-		cc.GetAssetsFromCollectionWithFilter(ctx, assetId, tokenId, owner)
-	}
-
-}
-
-// GetAssetCollectionAByChainIdAndContractAddress godoc
-// @Summary      Get all asset collection of the chain
-// @Description  Get all asset collection of the chain
-// @Tags         asset
-// @Accept       json
-// @Produce      json
-// @Param page query int false "Page number"
-// @Param limit query int false "Number of items per page"
-// @Param owner query string false "Owner Address"
-// @Param asset_type query string false "Asset Type" Enums(ERC721, ERC1155, ERC20)
-// @Router       /asset [get]
-func (cc *AssetController) GetAssetsByOwner(ctx *gin.Context) {
-	owner := ctx.Query("owner")
-
-	page, limit, offset := db.GetLimitAndOffset(ctx)
-
-	switch assetType := ctx.Query("asset_type"); assetType {
-	case "ERC721":
-		erc721Assets, _ := cc.db.GetPaginated721AssetByOwnerAddress(ctx, db.GetPaginated721AssetByOwnerAddressParams{
-			Owner:  owner,
-			Limit:  int32(limit),
-			Offset: int32(offset),
-		})
-
-		totalErc721Assets, err := cc.db.Count721AssetByOwnerAddress(ctx, owner)
-
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		paginationResponse := db.Pagination[db.Erc721CollectionAsset]{
-			Page:       page,
-			Limit:      limit,
-			TotalItems: totalErc721Assets,
-			TotalPages: (totalErc721Assets + int64(limit) - 1) / int64(limit),
-			Data:       erc721Assets,
-		}
-
-		ctx.JSON(http.StatusOK, gin.H{"data": paginationResponse})
-
-	case "ERC1155":
-		erc1155Assets, _ := cc.db.GetPaginated1155AssetByOwnerAddress(ctx, db.GetPaginated1155AssetByOwnerAddressParams{
-			Owner:  owner,
-			Limit:  int32(limit),
-			Offset: int32(offset),
-		})
-
-		totalErc1155Assets, err := cc.db.Count1155AssetByOwner(ctx, owner)
-
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		paginationResponse := db.Pagination[db.Erc1155CollectionAsset]{
-			Page:       page,
-			Limit:      limit,
-			TotalItems: totalErc1155Assets,
-			TotalPages: (totalErc1155Assets + int64(limit) - 1) / int64(limit),
-			Data:       erc1155Assets,
-		}
-
-		ctx.JSON(http.StatusOK, gin.H{"data": paginationResponse})
-
-	case "ERC20":
-		erc20Assets, _ := cc.db.GetPaginated20AssetByOwnerAddress(ctx, db.GetPaginated20AssetByOwnerAddressParams{
-			Owner:  owner,
-			Limit:  int32(limit),
-			Offset: int32(offset),
-		})
-
-		totalErc20Assets, err := cc.db.Count20AssetByOwner(ctx, owner)
-
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		paginationResponse := db.Pagination[db.Erc20CollectionAsset]{
-			Page:       page,
-			Limit:      limit,
-			TotalItems: totalErc20Assets,
-			TotalPages: (totalErc20Assets + int64(limit) - 1) / int64(limit),
-			Data:       erc20Assets,
-		}
-
-		ctx.JSON(http.StatusOK, gin.H{"data": paginationResponse})
+		cc.GetAssetsFromCollectionWithFilter(ctx, assetId, tokenIds, owner)
 	}
 
 }
@@ -298,12 +217,12 @@ func (cc *AssetController) GetAssetsFromCollection(ctx *gin.Context, assetId str
 			Offset:  int32(offset),
 		})
 
-		paginationResponse := db.Pagination[db.Erc721CollectionAsset]{
+		paginationResponse := db.Pagination[utils.Erc721CollectionAssetResponse]{
 			Page:       page,
 			Limit:      limit,
 			TotalItems: totalAssets,
 			TotalPages: (totalAssets + int64(limit) - 1) / int64(limit),
-			Data:       assets,
+			Data:       utils.ConvertToErc721CollectionAssetResponses(assets),
 		}
 
 		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC721", "asset": paginationResponse})
@@ -320,12 +239,12 @@ func (cc *AssetController) GetAssetsFromCollection(ctx *gin.Context, assetId str
 			Offset:  int32(offset),
 		})
 
-		paginationResponse := db.Pagination[db.Erc1155CollectionAsset]{
+		paginationResponse := db.Pagination[utils.Erc1155CollectionAssetResponse]{
 			Page:       page,
 			Limit:      limit,
 			TotalItems: totalAssets,
 			TotalPages: (totalAssets + int64(limit) - 1) / int64(limit),
-			Data:       assets,
+			Data:       utils.ConvertToErc1155CollectionAssetResponses(assets),
 		}
 
 		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC1155", "asset": paginationResponse})
@@ -356,16 +275,16 @@ func (cc *AssetController) GetAssetsFromCollection(ctx *gin.Context, assetId str
 
 }
 
-func (cc *AssetController) GetAssetsFromCollectionWithFilter(ctx *gin.Context, assetId string, tokenId string, owner string) {
+func (cc *AssetController) GetAssetsFromCollectionWithFilter(ctx *gin.Context, assetId string, tokenIds []string, owner string) {
 	assetCollection, err := cc.db.GetAssetById(ctx, assetId)
-	filterConditions := make(map[string]string)
+	filterConditions := make(map[string][]string)
 
-	if filterField := ctx.Query("token_id"); filterField != "" {
-		filterConditions["token_id"] = filterField
+	if len(tokenIds) > 0 {
+		filterConditions["token_id"] = tokenIds
 	}
 
-	if filterField := ctx.Query("owner"); filterField != "" {
-		filterConditions["owner"] = filterField
+	if owner != "" {
+		filterConditions["owner"] = []string{owner}
 	}
 
 	if err != nil {
@@ -387,12 +306,12 @@ func (cc *AssetController) GetAssetsFromCollectionWithFilter(ctx *gin.Context, a
 
 		assets, _ := db.QueryWithDynamicFilter[db.Erc721CollectionAsset](cc.rawDb, "erc_721_collection_assets", limit, offset, filterConditions)
 
-		paginationResponse := db.Pagination[db.Erc721CollectionAsset]{
+		paginationResponse := db.Pagination[utils.Erc721CollectionAssetResponse]{
 			Page:       page,
 			Limit:      limit,
 			TotalItems: int64(totalAssets),
 			TotalPages: int64(totalAssets+(limit)-1) / int64(limit),
-			Data:       assets,
+			Data:       utils.ConvertToErc721CollectionAssetResponses(assets),
 		}
 
 		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC721", "asset": paginationResponse})

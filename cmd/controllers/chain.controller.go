@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/u2u-labs/layerg-crawler/cmd/response"
@@ -25,6 +26,7 @@ func NewChainController(db *db.Queries, ctx context.Context) *ChainController {
 // @Accept       json
 // @Produce      json
 // @Param body body db.AddChainParams true "Add a new chain"
+// @Security     BasicAuth
 // @Success      200 {object} response.ResponseData
 // @Failure      500 {object} response.ErrorResponse
 // @Example      { "id": 1, "chain": "U2U", "name": "Nebulas Testnet", "RpcUrl": "sre", "ChainId": 2484, "Explorer": "str", "BlockTime": 500 }
@@ -59,8 +61,30 @@ func (cc *ChainController) AddNewChain(ctx *gin.Context) {
 // @Tags         chains
 // @Accept       json
 // @Produce      json
+// @Security     BasicAuth
+// @Param chain_id query string false "Chain ID"
 // @Router       /chain [get]
 func (cc *ChainController) GetAllChains(ctx *gin.Context) {
+
+	chainIdStr := ctx.Query("chain_id")
+
+	if chainIdStr != "" {
+		// get chain by id
+		chainId, err := strconv.Atoi(chainIdStr)
+		if err != nil {
+			response.ErrorResponseData(ctx, http.StatusInternalServerError, err.Error())
+			return
+		}
+		chain, err := cc.db.GetChainById(ctx, int32(chainId))
+		if err != nil {
+			response.ErrorResponseData(ctx, http.StatusInternalServerError, err.Error())
+			return
+		}
+		response.SuccessReponseData(ctx, http.StatusOK, chain)
+		return
+	}
+
+	// get all chains
 	chains, err := cc.db.GetAllChain(ctx)
 	if err != nil {
 		response.ErrorResponseData(ctx, http.StatusInternalServerError, err.Error())

@@ -14,11 +14,9 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/u2u-labs/layerg-crawler/cmd/controllers"
+	middleware "github.com/u2u-labs/layerg-crawler/cmd/middlewares"
 	dbCon "github.com/u2u-labs/layerg-crawler/db/sqlc"
 )
-
-// gin-swagger middleware
-// swagger embed files
 
 func startApi(cmd *cobra.Command, args []string) {
 
@@ -67,19 +65,21 @@ func serveApi(db *dbCon.Queries, rawDb *sql.DB, ctx context.Context) {
 	assetController := controllers.NewAssetController(db, rawDb, ctx)
 	chainController := controllers.NewChainController(db, ctx)
 
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// Apply the basic authentication middleware
+	router.Use(middleware.BasicAuth())
+
 	// Chain routes
 	router.POST("/chain", chainController.AddNewChain)
 	router.GET("/chain", chainController.GetAllChains)
 
 	// Asset routes
 	router.POST("/chain/:chain_id/collection", assetController.AddNewAsset)
-	router.GET("/chain/:chain_id/collection", assetController.GetAssetByChainId)
-	router.GET("/chain/:chain_id/collection/:collection_address", assetController.GetAssetCollectionByChainIdAndContractAddress)
-	router.GET("/chain/:chain_id/collection/:collection_address/asset", assetController.GetAssetByChainIdAndContractAddress)
-
-	router.GET("/asset", assetController.GetAssetsByOwner)
+	router.GET("/chain/:chain_id/collection", assetController.GetAssetCollection)
+	router.GET("/chain/:chain_id/collection/:collection_address/assets", assetController.GetAssetByChainIdAndContractAddress)
 
 	// Run the server
-	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	router.Run(viper.GetString("API_PORT"))
 }
