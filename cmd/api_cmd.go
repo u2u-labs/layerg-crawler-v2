@@ -68,7 +68,7 @@ func serveApi(db *dbCon.Queries, rawDb *sql.DB, ctx context.Context) {
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Apply the basic authentication middleware
-	router.Use(middleware.BasicAuth())
+	router.Use(middleware.BasicAuth(db))
 
 	// Chain routes
 	router.POST("/chain", chainController.AddNewChain)

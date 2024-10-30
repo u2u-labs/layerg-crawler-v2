@@ -57,6 +57,12 @@ func (ns NullAssetType) Value() (driver.Value, error) {
 	return string(ns.AssetType), nil
 }
 
+type App struct {
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	SecretKey string    `json:"secretKey"`
+}
+
 type Asset struct {
 	ID                string        `json:"id"`
 	ChainID           int32         `json:"chainId"`

@@ -1,62 +1,53 @@
 package middleware
 
 import (
-	"encoding/base64"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
-)
-
-const (
-	username = "admin"
-	password = "password"
+	"github.com/google/uuid"
+	"github.com/spf13/viper"
+	dbCon "github.com/u2u-labs/layerg-crawler/db/sqlc"
 )
 
 // BasicAuth is a middleware for Basic Authentication
-func BasicAuth() gin.HandlerFunc {
+func BasicAuth(db *dbCon.Queries) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get the Authorization header
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is required"})
+
+		apiHeaderKey := viper.GetString("API_KEY_HEADER_NAME")
+
+		authApikey := c.GetHeader(apiHeaderKey)
+		if authApikey == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "API key is required"})
 			c.Abort()
 			return
 		}
 
-		// Check if the header starts with "Basic "
-		if !strings.HasPrefix(authHeader, "Basic ") {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization type must be Basic"})
-			c.Abort()
-			return
-		}
+		appId := viper.GetString("APP_ID")
 
-		// Decode the base64 part of the Authorization header
-		payload := strings.TrimPrefix(authHeader, "Basic ")
-
-		decoded, err := base64.StdEncoding.DecodeString(payload)
+		// Check if the API key is valid
+		uuidAppId, err := uuid.Parse(appId)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization token"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid app ID format"})
+			c.Abort()
+			return
+		}
+		app, err := db.GetAppById(c, uuidAppId)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid API key"})
 			c.Abort()
 			return
 		}
 
-		// Split the decoded string into username and password
-		parts := strings.SplitN(string(decoded), ":", 2)
-		if len(parts) != 2 {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization format"})
+		// Check if the username and password are set
+		if app.SecretKey != authApikey {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid API key"})
 			c.Abort()
 			return
 		}
 
-		// Validate the username and password
-		if parts[0] != username || parts[1] != password {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid username or password"})
-			c.Abort()
-			return
-		}
-
-		// If everything is fine, proceed to the next handler
+		// Continue down the chain to handler etc
 		c.Next()
 	}
+
 }
