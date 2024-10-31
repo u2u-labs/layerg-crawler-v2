@@ -17,7 +17,7 @@ INSERT INTO
     erc_721_collection_assets (asset_id, chain_id, token_id, owner, attributes)
 VALUES (
     $1, $2, $3, $4, $5
-) ON CONFLICT DO UPDATE SET
+) ON CONFLICT ON CONSTRAINT UC_ERC721 DO UPDATE SET
     owner = $4,
     attributes = $5
 RETURNING id, chain_id, asset_id, token_id, owner, attributes, created_at, updated_at

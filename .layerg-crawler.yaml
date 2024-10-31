@@ -9,4 +9,6 @@ APP_ID: f3e3bf76-62dc-42a7-ad0d-ef9033bc13a5
 REDIS_DB_URL: localhost:6379
 REDIS_DB_PASSWORD:
 REDIS_DB: 0
-# Multi-chain configs
+
+# App configs
+LOG_LEVEL: PROD

@@ -21,8 +21,15 @@ import (
 var contractType = make(map[int32]map[string]dbCon.Asset)
 
 func startCrawler(cmd *cobra.Command, args []string) {
-	ctx := context.Background()
-	logger, _ := zap.NewDevelopment()
+	var (
+		ctx    = context.Background()
+		logger = &zap.Logger{}
+	)
+	if viper.GetString("LOG_LEVEL") == "PROD" {
+		logger, _ = zap.NewProduction()
+	} else {
+		logger, _ = zap.NewDevelopment()
+	}
 	defer logger.Sync() // flushes buffer, if any
 	sugar := logger.Sugar()
 

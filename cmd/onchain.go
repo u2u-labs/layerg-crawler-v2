@@ -16,7 +16,7 @@ import (
 )
 
 func StartChainCrawler(ctx context.Context, sugar *zap.SugaredLogger, client *ethclient.Client, q *db.Queries, chain *db.Chain) {
-	sugar.Infow("Start chain crawler", "chain", chain.Chain+" "+chain.Name)
+	sugar.Infow("Start chain crawler", "chain", chain)
 	timer := time.NewTimer(time.Duration(chain.BlockTime) * time.Millisecond)
 	defer timer.Stop()
 	for {
@@ -38,9 +38,9 @@ func ProcessLatestBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *
 	// Process each block between
 	for i := chain.LatestBlock + 1; i <= int64(latest); i++ {
 		if i%50 == 0 {
-			sugar.Infow("Importing block receipts", "chain", chain.Chain+" "+chain.Name, "block", i)
+			sugar.Infow("Importing block receipts", "chain", chain.Chain+" "+chain.Name, "block", i, "latest", latest)
 		}
-		receipts, err := client.BlockReceipts(ctx, rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(latest)))
+		receipts, err := client.BlockReceipts(ctx, rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(i)))
 		if err != nil {
 			sugar.Errorw("Failed to fetch latest block receipts", "err", err, "height", i, "chain", chain)
 			return err
@@ -65,6 +65,7 @@ func ProcessLatestBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *
 func FilterEvents(ctx context.Context, sugar *zap.SugaredLogger, q *db.Queries, chain *db.Chain, receipts utypes.Receipts) error {
 	for _, r := range receipts {
 		for _, l := range r.Logs {
+			//sugar.Debugw("FilterEvents", "txHash", r.TxHash.Hex(), "l.Address.Hex", l.Address.Hex(), "info", contractType[chain.ID][l.Address.Hex()])
 			switch contractType[chain.ID][l.Address.Hex()].Type {
 			case db.AssetTypeERC20:
 				if err := handleErc20Transfer(ctx, sugar, q, chain, l); err != nil {
@@ -172,7 +173,7 @@ func handleErc721Transfer(ctx context.Context, sugar *zap.SugaredLogger, q *db.Q
 		AssetID:    contractType[chain.ID][l.Address.Hex()].ID,
 		ChainID:    chain.ID,
 		TokenID:    event.TokenID.String(),
-		Owner:      event.From.Hex(),
+		Owner:      event.To.Hex(),
 		Attributes: pqtype.NullRawMessage{},
 	}); err != nil {
 		return err
