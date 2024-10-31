@@ -61,6 +61,7 @@ func startApi(cmd *cobra.Command, args []string) {
 func serveApi(db *dbCon.Queries, rawDb *sql.DB, ctx context.Context) {
 
 	// Create a default Gin router
+	gin.SetMode(viper.GetString("GIN_MODE"))
 	router := gin.Default()
 
 	// new Service
