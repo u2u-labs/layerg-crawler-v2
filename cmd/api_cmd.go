@@ -5,22 +5,21 @@ import (
 	"database/sql"
 	"log"
 
-	_ "github.com/u2u-labs/layerg-crawler/docs"
-
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+
 	"github.com/u2u-labs/layerg-crawler/cmd/controllers"
 	middleware "github.com/u2u-labs/layerg-crawler/cmd/middlewares"
 	"github.com/u2u-labs/layerg-crawler/cmd/services"
 	dbCon "github.com/u2u-labs/layerg-crawler/db/sqlc"
+	_ "github.com/u2u-labs/layerg-crawler/docs"
 )
 
 func startApi(cmd *cobra.Command, args []string) {
-
 	conn, err := sql.Open(
 		viper.GetString("COCKROACH_DB_DRIVER"),
 		viper.GetString("COCKROACH_DB_URL"),
@@ -62,6 +61,7 @@ func startApi(cmd *cobra.Command, args []string) {
 func serveApi(db *dbCon.Queries, rawDb *sql.DB, ctx context.Context) {
 
 	// Create a default Gin router
+	gin.SetMode(viper.GetString("GIN_MODE"))
 	router := gin.Default()
 
 	// new Service

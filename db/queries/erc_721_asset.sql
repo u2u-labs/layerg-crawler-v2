@@ -25,13 +25,15 @@ LIMIT $2 OFFSET $3;
 SELECT COUNT(*) FROM erc_721_collection_assets 
 WHERE owner = $1;
 
-
 -- name: Add721Asset :exec
 INSERT INTO
-    erc_721_collection_assets (asset_id, token_id, owner, attributes)
+    erc_721_collection_assets (asset_id, chain_id, token_id, owner, attributes)
 VALUES (
-    $1, $2, $3, $4
-) RETURNING *;
+    $1, $2, $3, $4, $5
+) ON CONFLICT ON CONSTRAINT UC_ERC721 DO UPDATE SET
+    owner = $4,
+    attributes = $5
+RETURNING *;
 
 -- name: Update721Asset :exec
 UPDATE erc_721_collection_assets

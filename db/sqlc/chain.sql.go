@@ -98,3 +98,21 @@ func (q *Queries) GetChainById(ctx context.Context, id int32) (Chain, error) {
 	)
 	return i, err
 }
+
+const updateChainLatestBlock = `-- name: UpdateChainLatestBlock :exec
+UPDATE chains
+SET
+    latest_block = $2
+WHERE
+    id = $1
+`
+
+type UpdateChainLatestBlockParams struct {
+	ID          int32 `json:"id"`
+	LatestBlock int64 `json:"latestBlock"`
+}
+
+func (q *Queries) UpdateChainLatestBlock(ctx context.Context, arg UpdateChainLatestBlockParams) error {
+	_, err := q.db.ExecContext(ctx, updateChainLatestBlock, arg.ID, arg.LatestBlock)
+	return err
+}

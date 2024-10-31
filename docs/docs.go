@@ -45,7 +45,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Chain ID",
+                        "description": "Chain Id",
                         "name": "chain_id",
                         "in": "query"
                     }
@@ -103,7 +103,7 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Retrieve all asset collections associated with the specified chain ID.",
+                "description": "Retrieve all asset collections associated with the specified chain Id.",
                 "consumes": [
                     "application/json"
                 ],
@@ -117,7 +117,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Chain ID",
+                        "description": "Chain Id",
                         "name": "chain_id",
                         "in": "path",
                         "required": true
@@ -163,7 +163,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Chain ID",
+                        "description": "Chain Id",
                         "name": "chain_id",
                         "in": "path",
                         "required": true
@@ -202,7 +202,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Chain ID",
+                        "description": "Chain Id",
                         "name": "chain_id",
                         "in": "path",
                         "required": true
@@ -232,7 +232,7 @@ const docTemplate = `{
                             "type": "string"
                         },
                         "collectionFormat": "multi",
-                        "description": "Token IDs",
+                        "description": "Token Ids",
                         "name": "token_id",
                         "in": "query"
                     },

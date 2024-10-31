@@ -42,7 +42,7 @@ func (cc *ChainController) AddNewChain(ctx *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Security     ApiKeyAuth
-// @Param chain_id query string false "Chain ID"
+// @Param chain_id query string false "Chain Id"
 // @Router       /chain [get]
 func (cc *ChainController) GetAllChains(ctx *gin.Context) {
 

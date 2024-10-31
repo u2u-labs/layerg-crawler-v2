@@ -14,14 +14,19 @@ import (
 
 const add1155Asset = `-- name: Add1155Asset :exec
 INSERT INTO
-    erc_1155_collection_assets (asset_id, token_id, owner, balance, attributes)
+    erc_1155_collection_assets (asset_id, chain_id, token_id, owner, balance, attributes)
 VALUES (
-    $1, $2, $3, $4, $5
-) RETURNING id, chain_id, asset_id, token_id, owner, balance, attributes, created_at, updated_at
+    $1, $2, $3, $4, $5, $6
+) ON CONFLICT ON CONSTRAINT UC_ERC1155 DO UPDATE SET
+    owner = $4,
+    balance = $5,
+    attributes = $6
+RETURNING id, chain_id, asset_id, token_id, owner, balance, attributes, created_at, updated_at
 `
 
 type Add1155AssetParams struct {
 	AssetID    string                `json:"assetId"`
+	ChainID    int32                 `json:"chainId"`
 	TokenID    string                `json:"tokenId"`
 	Owner      string                `json:"owner"`
 	Balance    string                `json:"balance"`
@@ -31,6 +36,7 @@ type Add1155AssetParams struct {
 func (q *Queries) Add1155Asset(ctx context.Context, arg Add1155AssetParams) error {
 	_, err := q.db.ExecContext(ctx, add1155Asset,
 		arg.AssetID,
+		arg.ChainID,
 		arg.TokenID,
 		arg.Owner,
 		arg.Balance,

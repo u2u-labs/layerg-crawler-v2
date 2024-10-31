@@ -4,6 +4,12 @@ SELECT * FROM chains WHERE id = $1;
 -- name: GetAllChain :many
 SELECT * FROM chains;
 
+-- name: UpdateChainLatestBlock :exec
+UPDATE chains
+SET
+    latest_block = $2
+WHERE
+    id = $1;
 
 -- name: AddChain :exec
 INSERT INTO chains (
@@ -12,4 +18,3 @@ INSERT INTO chains (
 VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8
 ) RETURNING *;
-

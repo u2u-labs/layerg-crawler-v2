@@ -28,7 +28,7 @@ func ApiKeyAuth(db *dbCon.Queries) gin.HandlerFunc {
 		// Check if the API key is valid
 		uuidAppId, err := uuid.Parse(appId)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid app ID format"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid app Id format"})
 			c.Abort()
 			return
 		}

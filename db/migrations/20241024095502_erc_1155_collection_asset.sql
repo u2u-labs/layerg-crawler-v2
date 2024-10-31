@@ -12,7 +12,7 @@ CREATE TABLE
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (asset_id) REFERENCES assets (id),
-        CONSTRAINT UC_ERC1155 UNIQUE (asset_id, token_id)
+        CONSTRAINT UC_ERC1155 UNIQUE (asset_id, chain_id, token_id)
     );
 
 CREATE INDEX erc_1155_collection_assets_chain_id_idx ON erc_1155_collection_assets (asset_id, token_id);

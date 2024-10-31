@@ -3,9 +3,9 @@ package cmd
 import (
 	"github.com/unicornultrafoundation/go-u2u/ethclient"
 
-	"github.com/u2u-labs/layerg-crawler/types"
+	db "github.com/u2u-labs/layerg-crawler/db/sqlc"
 )
 
-func initChainClient(chain *types.Chain) (*ethclient.Client, error) {
+func initChainClient(chain *db.Chain) (*ethclient.Client, error) {
 	return ethclient.Dial(chain.RpcUrl)
 }
