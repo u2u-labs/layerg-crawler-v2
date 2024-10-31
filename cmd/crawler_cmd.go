@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"database/sql"
+	"github.com/u2u-labs/layerg-crawler/cmd/utils"
 	"log"
 	"strings"
 
@@ -17,11 +18,11 @@ import (
 	dbCon "github.com/u2u-labs/layerg-crawler/db/sqlc"
 )
 
-var contractType = make(map[int32]map[string]dbCon.AssetType)
+var contractType = make(map[int32]map[string]dbCon.Asset)
 
 func startCrawler(cmd *cobra.Command, args []string) {
 	ctx := context.Background()
-	logger, _ := zap.NewProduction()
+	logger, _ := zap.NewDevelopment()
 	defer logger.Sync() // flushes buffer, if any
 	sugar := logger.Sugar()
 
@@ -47,13 +48,13 @@ func startCrawler(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 
-	if ERC20ABI, err = abi.JSON(strings.NewReader(ERC20ABIStr)); err != nil {
+	if utils.ERC20ABI, err = abi.JSON(strings.NewReader(utils.ERC20ABIStr)); err != nil {
 		panic(err)
 	}
-	if ERC721ABI, err = abi.JSON(strings.NewReader(ERC721ABIStr)); err != nil {
+	if utils.ERC721ABI, err = abi.JSON(strings.NewReader(utils.ERC721ABIStr)); err != nil {
 		panic(err)
 	}
-	if ERC1155ABI, err = abi.JSON(strings.NewReader(ERC1155ABIStr)); err != nil {
+	if utils.ERC1155ABI, err = abi.JSON(strings.NewReader(utils.ERC1155ABIStr)); err != nil {
 		panic(err)
 	}
 
@@ -72,7 +73,7 @@ func crawlSupportedChains(ctx context.Context, sugar *zap.SugaredLogger, q *dbCo
 		return err
 	}
 	for _, c := range chains {
-		contractType[c.ID] = make(map[string]dbCon.AssetType)
+		contractType[c.ID] = make(map[string]dbCon.Asset)
 		if err = db.DeleteChainInCache(ctx, rdb, c.ID); err != nil {
 			return err
 		}
@@ -80,13 +81,26 @@ func crawlSupportedChains(ctx context.Context, sugar *zap.SugaredLogger, q *dbCo
 			return err
 		}
 
-		assets, err := q.GetPaginatedAssetsByChainId(ctx, dbCon.GetPaginatedAssetsByChainIdParams{
-			ChainID: c.ID,
-			Limit:   0,
-			Offset:  0,
-		})
-		if err != nil {
-			return err
+		// Query all assets of one chain
+		var (
+			assets []dbCon.Asset
+			limit  int32 = 10
+			offset int32 = 0
+		)
+		for {
+			a, err := q.GetPaginatedAssetsByChainId(ctx, dbCon.GetPaginatedAssetsByChainIdParams{
+				ChainID: c.ID,
+				Limit:   limit,
+				Offset:  offset,
+			})
+			if err != nil {
+				return err
+			}
+			assets = append(assets, a...)
+			offset = offset + limit
+			if len(a) < int(limit) {
+				break
+			}
 		}
 
 		if err = db.SetChainToCache(ctx, rdb, &c); err != nil {
@@ -96,7 +110,7 @@ func crawlSupportedChains(ctx context.Context, sugar *zap.SugaredLogger, q *dbCo
 			return err
 		}
 		for _, a := range assets {
-			contractType[a.ChainID][a.CollectionAddress] = a.Type
+			contractType[a.ChainID][a.CollectionAddress] = a
 		}
 		client, err := initChainClient(&c)
 		if err != nil {
@@ -105,4 +119,5 @@ func crawlSupportedChains(ctx context.Context, sugar *zap.SugaredLogger, q *dbCo
 		go StartChainCrawler(ctx, sugar, client, q, &c)
 	}
 	return nil
+
 }

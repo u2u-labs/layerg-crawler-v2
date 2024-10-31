@@ -5,7 +5,7 @@ CREATE TABLE
         id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
         chain_id INT NOT NULL,
         asset_id VARCHAR NOT NULL,
-        owner VARCHAR(42) NOT NULL,
+        owner VARCHAR(42) NOT NULL UNIQUE,
         balance DECIMAL(78, 0) NOT NULL,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

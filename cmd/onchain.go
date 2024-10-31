@@ -2,28 +2,17 @@ package cmd
 
 import (
 	"context"
+	"github.com/sqlc-dev/pqtype"
 	"time"
 
-	"github.com/unicornultrafoundation/go-u2u/accounts/abi"
+	"github.com/unicornultrafoundation/go-u2u/common"
 	utypes "github.com/unicornultrafoundation/go-u2u/core/types"
 	"github.com/unicornultrafoundation/go-u2u/ethclient"
 	"github.com/unicornultrafoundation/go-u2u/rpc"
 	"go.uber.org/zap"
 
+	"github.com/u2u-labs/layerg-crawler/cmd/utils"
 	db "github.com/u2u-labs/layerg-crawler/db/sqlc"
-)
-
-const (
-	TransferEventSig  = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
-	TransferSingleSig = "0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62"
-	TransferBatchSig  = "0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb"
-)
-
-var (
-	ERC20ABI, ERC721ABI, ERC1155ABI abi.ABI
-	ERC20ABIStr                     = `[{"constant":true,"inputs":[],"name":"name","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_value","type":"uint256"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_from","type":"address"},{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"symbol","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"},{"name":"_spender","type":"address"}],"name":"allowance","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"payable":true,"stateMutability":"payable","type":"fallback"},{"anonymous":false,"inputs":[{"indexed":true,"name":"owner","type":"address"},{"indexed":true,"name":"spender","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Transfer","type":"event"}]`
-	ERC721ABIStr                    = `[{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"approved","type":"address"},{"indexed":true,"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"operator","type":"address"},{"indexed":false,"internalType":"bool","name":"approved","type":"bool"}],"name":"ApprovalForAll","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":true,"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"approve","outputs":[],"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"balance","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"getApproved","outputs":[{"internalType":"address","name":"operator","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"operator","type":"address"}],"name":"isApprovedForAll","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"ownerOf","outputs":[{"internalType":"address","name":"owner","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"safeTransferFrom","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"tokenId","type":"uint256"},{"internalType":"bytes","name":"data","type":"bytes"}],"name":"safeTransferFrom","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"operator","type":"address"},{"internalType":"bool","name":"_approved","type":"bool"}],"name":"setApprovalForAll","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes4","name":"interfaceId","type":"bytes4"}],"name":"supportsInterface","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"tokenURI","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"transferFrom","outputs":[],"stateMutability":"nonpayable","type":"function"}]`
-	ERC1155ABIStr                   = `[{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"account","type":"address"},{"indexed":true,"internalType":"address","name":"operator","type":"address"},{"indexed":false,"internalType":"bool","name":"approved","type":"bool"}],"name":"ApprovalForAll","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"operator","type":"address"},{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256[]","name":"ids","type":"uint256[]"},{"indexed":false,"internalType":"uint256[]","name":"values","type":"uint256[]"}],"name":"TransferBatch","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"operator","type":"address"},{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"id","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"TransferSingle","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"value","type":"string"},{"indexed":true,"internalType":"uint256","name":"id","type":"uint256"}],"name":"URI","type":"event"},{"inputs":[{"internalType":"address","name":"account","type":"address"},{"internalType":"uint256","name":"id","type":"uint256"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address[]","name":"accounts","type":"address[]"},{"internalType":"uint256[]","name":"ids","type":"uint256[]"}],"name":"balanceOfBatch","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"},{"internalType":"address","name":"operator","type":"address"}],"name":"isApprovedForAll","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256[]","name":"ids","type":"uint256[]"},{"internalType":"uint256[]","name":"amounts","type":"uint256[]"},{"internalType":"bytes","name":"data","type":"bytes"}],"name":"safeBatchTransferFrom","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"bytes","name":"data","type":"bytes"}],"name":"safeTransferFrom","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"operator","type":"address"},{"internalType":"bool","name":"approved","type":"bool"}],"name":"setApprovalForAll","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes4","name":"interfaceId","type":"bytes4"}],"name":"supportsInterface","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"id","type":"uint256"}],"name":"uri","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"}]`
 )
 
 func StartChainCrawler(ctx context.Context, sugar *zap.SugaredLogger, client *ethclient.Client, q *db.Queries, chain *db.Chain) {
@@ -42,21 +31,27 @@ func StartChainCrawler(ctx context.Context, sugar *zap.SugaredLogger, client *et
 
 func ProcessLatestBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *ethclient.Client, q *db.Queries, chain *db.Chain) error {
 	latest, err := client.BlockNumber(ctx)
-	sugar.Info(latest)
 	if err != nil {
 		sugar.Errorw("Failed to fetch latest blocks", "err", err, "chain", chain)
 		return err
 	}
 	// Process each block between
 	for i := chain.LatestBlock + 1; i <= int64(latest); i++ {
-		sugar.Infow("Importing block receipts", "chain", chain.Chain+" "+chain.Name, "block", i)
+		if i%50 == 0 {
+			sugar.Infow("Importing block receipts", "chain", chain.Chain+" "+chain.Name, "block", i)
+		}
 		receipts, err := client.BlockReceipts(ctx, rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(latest)))
 		if err != nil {
 			sugar.Errorw("Failed to fetch latest block receipts", "err", err, "height", i, "chain", chain)
 			return err
 		}
-		FilterEvents(q, chain, receipts)
+		if err = FilterEvents(ctx, sugar, q, chain, receipts); err != nil {
+			sugar.Errorw("Failed to filter events", "err", err, "height", i, "chain", chain)
+			return err
+		}
 	}
+	// Update latest block processed
+	chain.LatestBlock = int64(latest)
 	if err = q.UpdateChainLatestBlock(ctx, db.UpdateChainLatestBlockParams{
 		ID:          chain.ID,
 		LatestBlock: int64(latest),
@@ -67,6 +62,201 @@ func ProcessLatestBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *
 	return nil
 }
 
-func FilterEvents(q *db.Queries, chain *db.Chain, receipts utypes.Receipts) {
+func FilterEvents(ctx context.Context, sugar *zap.SugaredLogger, q *db.Queries, chain *db.Chain, receipts utypes.Receipts) error {
+	for _, r := range receipts {
+		for _, l := range r.Logs {
+			switch contractType[chain.ID][l.Address.Hex()].Type {
+			case db.AssetTypeERC20:
+				if err := handleErc20Transfer(ctx, sugar, q, chain, l); err != nil {
+					sugar.Errorw("handleErc20Transfer", "err", err)
+					return err
+				}
+			case db.AssetTypeERC721:
+				if err := handleErc721Transfer(ctx, sugar, q, chain, l); err != nil {
+					sugar.Errorw("handleErc721Transfer", "err", err)
+					return err
+				}
+			case db.AssetTypeERC1155:
+				if l.Topics[0].Hex() == utils.TransferSingleSig {
+					if err := handleErc1155TransferSingle(ctx, sugar, q, chain, l); err != nil {
+						sugar.Errorw("handleErc1155TransferSingle", "err", err)
+						return err
+					}
+				}
+				if l.Topics[0].Hex() == utils.TransferBatchSig {
+					if err := handleErc1155TransferBatch(ctx, sugar, q, chain, l); err != nil {
+						sugar.Errorw("handleErc1155TransferBatch", "err", err)
+						return err
+					}
+				}
+			default:
+				continue
+			}
+		}
+	}
+	return nil
+}
 
+func handleErc20Transfer(ctx context.Context, sugar *zap.SugaredLogger, q *db.Queries, chain *db.Chain, l *utypes.Log) error {
+	if l.Topics[0].Hex() != utils.TransferEventSig {
+		return nil
+	}
+	// Unpack the log data
+	var event utils.Erc20TransferEvent
+	err := utils.ERC20ABI.UnpackIntoInterface(&event, "Transfer", l.Data)
+	if err != nil {
+		sugar.Fatalf("Failed to unpack log: %v", err)
+		return err
+	}
+	// Decode the indexed fields manually
+	event.From = common.BytesToAddress(l.Topics[1].Bytes())
+	event.To = common.BytesToAddress(l.Topics[2].Bytes())
+	amount, _ := event.Value.Float64()
+
+	if err = q.AddOnchainTransaction(ctx, db.AddOnchainTransactionParams{
+		From:      event.From.Hex(),
+		To:        event.To.Hex(),
+		AssetID:   contractType[chain.ID][l.Address.Hex()].ID,
+		TokenID:   "0",
+		Amount:    amount,
+		TxHash:    l.TxHash.Hex(),
+		Timestamp: time.Now(),
+	}); err != nil {
+		return err
+	}
+	// Update holders without balances
+	if err = q.Add20Asset(ctx, db.Add20AssetParams{
+		AssetID: contractType[chain.ID][l.Address.Hex()].ID,
+		ChainID: chain.ID,
+		Owner:   event.From.Hex(),
+		Balance: "0",
+	}); err != nil {
+		return err
+	}
+	if err = q.Add20Asset(ctx, db.Add20AssetParams{
+		AssetID: contractType[chain.ID][l.Address.Hex()].ID,
+		ChainID: chain.ID,
+		Owner:   event.To.Hex(),
+		Balance: "0",
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func handleErc721Transfer(ctx context.Context, sugar *zap.SugaredLogger, q *db.Queries, chain *db.Chain, l *utypes.Log) error {
+	if l.Topics[0].Hex() != utils.TransferEventSig {
+		return nil
+	}
+	// Decode the indexed fields manually
+	event := utils.Erc721TransferEvent{
+		From:    common.BytesToAddress(l.Topics[1].Bytes()),
+		To:      common.BytesToAddress(l.Topics[2].Bytes()),
+		TokenID: l.Topics[3].Big(),
+	}
+	err := q.AddOnchainTransaction(ctx, db.AddOnchainTransactionParams{
+		From:      event.From.Hex(),
+		To:        event.To.Hex(),
+		AssetID:   contractType[chain.ID][l.Address.Hex()].ID,
+		TokenID:   event.TokenID.String(),
+		Amount:    0,
+		TxHash:    l.TxHash.Hex(),
+		Timestamp: time.Now(),
+	})
+	if err != nil {
+		return err
+	}
+	// Update NFT holder
+	if err = q.Add721Asset(ctx, db.Add721AssetParams{
+		AssetID:    contractType[chain.ID][l.Address.Hex()].ID,
+		ChainID:    chain.ID,
+		TokenID:    event.TokenID.String(),
+		Owner:      event.From.Hex(),
+		Attributes: pqtype.NullRawMessage{},
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func handleErc1155TransferBatch(ctx context.Context, sugar *zap.SugaredLogger, q *db.Queries, chain *db.Chain, l *utypes.Log) error {
+	// Decode TransferBatch log
+	var event utils.Erc1155TransferBatchEvent
+	err := utils.ERC1155ABI.UnpackIntoInterface(&event, "TransferBatch", l.Data)
+	if err != nil {
+		sugar.Errorw("Failed to unpack TransferBatch log:", "err", err)
+	}
+
+	// Decode the indexed fields for TransferBatch
+	event.Operator = common.BytesToAddress(l.Topics[1].Bytes())
+	event.From = common.BytesToAddress(l.Topics[2].Bytes())
+	event.To = common.BytesToAddress(l.Topics[3].Bytes())
+
+	for i := range event.Ids {
+		amount, _ := event.Values[i].Float64()
+		if err = q.AddOnchainTransaction(ctx, db.AddOnchainTransactionParams{
+			From:      event.From.Hex(),
+			To:        event.To.Hex(),
+			AssetID:   contractType[chain.ID][l.Address.Hex()].ID,
+			TokenID:   event.Ids[i].String(),
+			Amount:    amount,
+			TxHash:    l.TxHash.Hex(),
+			Timestamp: time.Now(),
+		}); err != nil {
+			return err
+		}
+		if err = q.Add1155Asset(ctx, db.Add1155AssetParams{
+			AssetID:    contractType[chain.ID][l.Address.Hex()].ID,
+			ChainID:    chain.ID,
+			TokenID:    event.Ids[i].String(),
+			Owner:      event.To.Hex(),
+			Balance:    event.Values[i].String(),
+			Attributes: pqtype.NullRawMessage{},
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func handleErc1155TransferSingle(ctx context.Context, sugar *zap.SugaredLogger, q *db.Queries, chain *db.Chain, l *utypes.Log) error {
+	// Decode TransferSingle log
+	var event utils.Erc1155TransferSingleEvent
+	err := utils.ERC1155ABI.UnpackIntoInterface(&event, "TransferSingle", l.Data)
+	if err != nil {
+		sugar.Errorw("Failed to unpack TransferSingle log:", "err", err)
+	}
+
+	// Decode the indexed fields for TransferSingle
+	event.Operator = common.BytesToAddress(l.Topics[1].Bytes())
+	event.From = common.BytesToAddress(l.Topics[2].Bytes())
+	event.To = common.BytesToAddress(l.Topics[3].Bytes())
+
+	amount, _ := event.Value.Float64()
+	if err = q.AddOnchainTransaction(ctx, db.AddOnchainTransactionParams{
+		From:      event.From.Hex(),
+		To:        event.To.Hex(),
+		AssetID:   contractType[chain.ID][l.Address.Hex()].ID,
+		TokenID:   event.Id.String(),
+		Amount:    amount,
+		TxHash:    l.TxHash.Hex(),
+		Timestamp: time.Now(),
+	}); err != nil {
+		return err
+	}
+	if err = q.Add1155Asset(ctx, db.Add1155AssetParams{
+		AssetID:    contractType[chain.ID][l.Address.Hex()].ID,
+		ChainID:    chain.ID,
+		TokenID:    event.Id.String(),
+		Owner:      event.To.Hex(),
+		Balance:    event.Value.String(),
+		Attributes: pqtype.NullRawMessage{},
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }

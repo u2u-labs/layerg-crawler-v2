@@ -25,10 +25,14 @@ WHERE owner = $1;
 
 -- name: Add1155Asset :exec
 INSERT INTO
-    erc_1155_collection_assets (asset_id, token_id, owner, balance, attributes)
+    erc_1155_collection_assets (asset_id, chain_id, token_id, owner, balance, attributes)
 VALUES (
-    $1, $2, $3, $4, $5
-) RETURNING *;
+    $1, $2, $3, $4, $5, $6
+) ON CONFLICT DO UPDATE SET
+    owner = $4,
+    balance = $5,
+    attributes = $6
+RETURNING *;
 
 -- name: Update1155Asset :exec
 UPDATE erc_1155_collection_assets

@@ -13,20 +13,28 @@ import (
 
 const add20Asset = `-- name: Add20Asset :exec
 INSERT INTO
-    erc_20_collection_assets (asset_id, owner, balance)
+    erc_20_collection_assets (asset_id, chain_id, owner, balance)
 VALUES (
-    $1, $2, $3
-) RETURNING id, chain_id, asset_id, owner, balance, created_at, updated_at
+    $1, $2, $3, $4
+) ON CONFLICT (owner) DO UPDATE SET
+    balance = $4
+RETURNING id, chain_id, asset_id, owner, balance, created_at, updated_at
 `
 
 type Add20AssetParams struct {
 	AssetID string `json:"assetId"`
+	ChainID int32  `json:"chainId"`
 	Owner   string `json:"owner"`
 	Balance string `json:"balance"`
 }
 
 func (q *Queries) Add20Asset(ctx context.Context, arg Add20AssetParams) error {
-	_, err := q.db.ExecContext(ctx, add20Asset, arg.AssetID, arg.Owner, arg.Balance)
+	_, err := q.db.ExecContext(ctx, add20Asset,
+		arg.AssetID,
+		arg.ChainID,
+		arg.Owner,
+		arg.Balance,
+	)
 	return err
 }
 
