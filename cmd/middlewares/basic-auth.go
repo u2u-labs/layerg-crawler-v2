@@ -9,8 +9,8 @@ import (
 	dbCon "github.com/u2u-labs/layerg-crawler/db/sqlc"
 )
 
-// BasicAuth is a middleware for Basic Authentication
-func BasicAuth(db *dbCon.Queries) gin.HandlerFunc {
+// ApiKeyAuth is a middleware for Basic Authentication
+func ApiKeyAuth(db *dbCon.Queries) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get the Authorization header
 

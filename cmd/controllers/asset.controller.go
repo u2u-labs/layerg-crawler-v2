@@ -30,7 +30,7 @@ func NewAssetController(db *db.Queries, rawDb *sql.DB, ctx context.Context) *Ass
 // @Accept       json
 // @Produce      json
 // @Param chain_id path string true "Chain ID"
-// @Security     BasicAuth
+// @Security     ApiKeyAuth
 // @Param body body utils.AddNewAssetParamsSwagger true "Asset collection information"
 // @Example      { "id": 1, "chain": "U2U", "name": "Nebulas Testnet", "RpcUrl": "sre", "ChainId": 2484, "Explorer": "str", "BlockTime": 500 }
 // @Router       /chain/{chain_id}/collection [post]
@@ -125,7 +125,7 @@ func (cc *AssetController) GetAssetByChainId(ctx *gin.Context) {
 // @Tags         asset
 // @Accept       json
 // @Produce      json
-// @Security     BasicAuth
+// @Security     ApiKeyAuth
 // @Param chain_id path string true "Chain ID"
 // @Param collection_address query string false "Collection Address"
 // @Param page query int false "Page number"
@@ -167,7 +167,7 @@ func (cc *AssetController) GetAssetCollectionByChainIdAndContractAddress(ctx *gi
 // @Tags         asset
 // @Accept       json
 // @Produce      json
-// @Security     BasicAuth
+// @Security     ApiKeyAuth
 // @Param chain_id path int true "Chain ID"
 // @Param collection_address path string true "Collection Address"
 // @Param page query int false "Page number"

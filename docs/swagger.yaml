@@ -87,7 +87,7 @@ paths:
       - application/json
       responses: {}
       security:
-      - BasicAuth: []
+      - ApiKeyAuth: []
       summary: Get all supported chains
       tags:
       - chains
@@ -114,7 +114,7 @@ paths:
           schema:
             $ref: '#/definitions/response.ErrorResponse'
       security:
-      - BasicAuth: []
+      - ApiKeyAuth: []
       summary: Add a new chain
       tags:
       - chains
@@ -146,7 +146,7 @@ paths:
       - application/json
       responses: {}
       security:
-      - BasicAuth: []
+      - ApiKeyAuth: []
       summary: Get all asset in a collection of the chain
       tags:
       - asset
@@ -170,7 +170,7 @@ paths:
       - application/json
       responses: {}
       security:
-      - BasicAuth: []
+      - ApiKeyAuth: []
       summary: Add a new asset collection to the chain
       tags:
       - asset
@@ -213,7 +213,7 @@ paths:
       - application/json
       responses: {}
       security:
-      - BasicAuth: []
+      - ApiKeyAuth: []
       summary: Get all asset collection of the chain
       tags:
       - asset
@@ -221,6 +221,8 @@ schemes:
 - http
 - https
 securityDefinitions:
-  BasicAuth:
-    type: basic
+  ApiKeyAuth:
+    in: header
+    name: X-API-KEY
+    type: apiKey
 swagger: "2.0"

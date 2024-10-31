@@ -26,7 +26,7 @@ func NewChainController(db *db.Queries, ctx context.Context) *ChainController {
 // @Accept       json
 // @Produce      json
 // @Param body body db.AddChainParams true "Add a new chain"
-// @Security     BasicAuth
+// @Security     ApiKeyAuth
 // @Success      200 {object} response.ResponseData
 // @Failure      500 {object} response.ErrorResponse
 // @Example      { "id": 1, "chain": "U2U", "name": "Nebulas Testnet", "RpcUrl": "sre", "ChainId": 2484, "Explorer": "str", "BlockTime": 500 }
@@ -61,7 +61,7 @@ func (cc *ChainController) AddNewChain(ctx *gin.Context) {
 // @Tags         chains
 // @Accept       json
 // @Produce      json
-// @Security     BasicAuth
+// @Security     ApiKeyAuth
 // @Param chain_id query string false "Chain ID"
 // @Router       /chain [get]
 func (cc *ChainController) GetAllChains(ctx *gin.Context) {

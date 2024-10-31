@@ -51,11 +51,13 @@ func startApi(cmd *cobra.Command, args []string) {
 
 // @host      localhost:8085
 
-// @securityDefinitions.basic  BasicAuth
-
 // @externalDocs.description  OpenAPI
 // @externalDocs.url          https://swagger.io/resources/open-api/
 // @schemes http https
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name X-API-KEY
+// @Security ApiKeyAuth
 func serveApi(db *dbCon.Queries, rawDb *sql.DB, ctx context.Context) {
 
 	// Create a default Gin router
@@ -68,7 +70,7 @@ func serveApi(db *dbCon.Queries, rawDb *sql.DB, ctx context.Context) {
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Apply the basic authentication middleware
-	router.Use(middleware.BasicAuth(db))
+	router.Use(middleware.ApiKeyAuth(db))
 
 	// Chain routes
 	router.POST("/chain", chainController.AddNewChain)
