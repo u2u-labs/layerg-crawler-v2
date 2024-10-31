@@ -2,60 +2,85 @@ package controllers
 
 import (
 	"context"
-	"database/sql"
-	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
-	db "github.com/u2u-labs/layerg-crawler/db/sqlc"
+	"github.com/u2u-labs/layerg-crawler/cmd/services"
+	"github.com/u2u-labs/layerg-crawler/cmd/utils"
 )
 
 type AssetController struct {
-	db  *db.Queries
-	ctx context.Context
+	service *services.AssetService
+	ctx     context.Context
 }
 
-func NewAssetController(db *db.Queries, ctx context.Context) *AssetController {
-	return &AssetController{db, ctx}
+func NewAssetController(service *services.AssetService, ctx context.Context) *AssetController {
+	return &AssetController{service, ctx}
 }
 
-// Get a single handler
-func (cc *AssetController) GetAssetByChainIdAddress(ctx *gin.Context) {
-	chainIdStr := ctx.Query("chainId")
-	chainId, err := strconv.Atoi(chainIdStr)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"status": "failed", "message": "Invalid chainId"})
-		return
-	}
-	contractAddress := ctx.Param("contractAddress")
+// AddNewAsset godoc
+// @Summary      Add a new asset collection to the chain
+// @Description  Add a new asset collection to the chain
+// @Tags         asset
+// @Accept       json
+// @Produce      json
+// @Param chain_id path string true "Chain ID"
+// @Security     ApiKeyAuth
+// @Param body body utils.AddNewAssetParamsSwagger true "Asset collection information"
+// @Example      { "id": 1, "chain": "U2U", "name": "Nebulas Testnet", "RpcUrl": "sre", "ChainId": 2484, "Explorer": "str", "BlockTime": 500 }
+// @Router       /chain/{chain_id}/collection [post]
+func (ac *AssetController) AddAssetCollection(ctx *gin.Context) {
+	ac.service.AddNewAsset(ctx)
+}
 
-	args := &db.GetAssetByChainIdAndContractAddressParams{
-		ChainID:           int32(chainId),
-		CollectionAddress: contractAddress,
+// GetAssetCollection godoc
+// @Summary      Get all asset in a collection of the chain
+// @Description  Retrieve all asset collections associated with the specified chain ID.
+// @Tags         asset
+// @Accept       json
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Param chain_id path string true "Chain ID"
+// @Param collection_address query string false "Collection Address"
+// @Param page query int false "Page number"
+// @Param limit query int false "Number of items per page"
+// @Router       /chain/{chain_id}/collection [get]
+func (ac *AssetController) GetAssetCollection(ctx *gin.Context) {
+
+	hasQuery, collectionAddress := utils.GetAssetCollectionFilterParam(ctx)
+	if !hasQuery {
+		ac.service.GetAssetByChainId(ctx)
+	} else {
+		ac.service.GetAssetCollectionByChainIdAndContractAddress(ctx, collectionAddress)
 	}
 
-	assetCollection, err := cc.db.GetAssetByChainIdAndContractAddress(ctx, *args)
+}
 
-	switch assetType := assetCollection.Type; assetType {
-	case db.AssetTypeERC721:
-		erc721Assets, _ := cc.db.Get721AssetByAssetId(ctx, assetCollection.ID)
-		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC721", "asset": erc721Assets})
-	case db.AssetTypeERC1155:
-		erc1155Assets, _ := cc.db.Get1155AssetByAssetId(ctx, assetCollection.ID)
-		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC1155", "asset": erc1155Assets})
-	case db.AssetTypeERC20:
-		erc20Assets, _ := cc.db.Get20AssetByAssetId(ctx, assetCollection.ID)
-		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC20", "asset": erc20Assets})
-	default:
-		ctx.JSON(http.StatusNotFound, gin.H{"status": "failed", "message": "Failed to retrieve NFT with this contract address in the chain"})
-	}
-	if err != nil {
-		if err == sql.ErrNoRows {
-			ctx.JSON(http.StatusNotFound, gin.H{"status": "failed", "message": "Failed to retrieve NFT with this contract address in the chain"})
-			return
-		}
-		ctx.JSON(http.StatusBadGateway, gin.H{"status": "Failed retrieving Asset", "error": err.Error()})
-		return
+// GetAssetCollectionAByChainIdAndContractAddress godoc
+// @Summary      Get all asset collection of the chain
+// @Description  Get all asset collection of the chain
+// @Tags         asset
+// @Accept       json
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Param chain_id path int true "Chain ID"
+// @Param collection_address path string true "Collection Address"
+// @Param page query int false "Page number"
+// @Param limit query int false "Number of items per page"
+// @Param token_id query []string false "Token IDs" collectionFormat(multi)
+// @Param owner query string false "Owner Address"
+// @Router       /chain/{chain_id}/collection/{collection_address}/assets [get]
+func (ac *AssetController) GetAssetByChainIdAndContractAddress(ctx *gin.Context) {
+	chainIdStr := ctx.Param("chain_id")
+	collectionAddress := ctx.Param("collection_address")
+
+	assetId := chainIdStr + ":" + collectionAddress
+
+	hasFilterParam, tokenIds, owner := utils.GetAssetFilterParam(ctx)
+
+	if !hasFilterParam {
+		ac.service.GetAssetsFromAssetCollectionId(ctx, assetId)
+	} else {
+		ac.service.GetAssetsFromCollectionWithFilter(ctx, assetId, tokenIds, owner)
 	}
 
 }

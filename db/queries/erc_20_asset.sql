@@ -1,5 +1,12 @@
--- name: Get20AssetByAssetId :many
-SELECT * FROM erc_20_collection_assets WHERE asset_id = $1;
+-- name: GetPaginated20AssetByAssetId :many
+SELECT * FROM erc_20_collection_assets 
+WHERE asset_id = $1
+LIMIT $2 OFFSET $3;
+;
+
+-- name: Count20AssetByAssetId :one
+SELECT COUNT(*) FROM erc_20_collection_assets 
+WHERE asset_id = $1;
 
 -- name: Get20AssetByAssetIdAndTokenId :one
 SELECT * FROM erc_20_collection_assets
@@ -7,10 +14,16 @@ WHERE
     asset_id = $1
     AND owner = $2;
 
--- name: Get20AssetByOwner :many
+-- name: GetPaginated20AssetByOwnerAddress :many
 SELECT * FROM erc_20_collection_assets
 WHERE
-    owner = $1;
+    owner = $1
+LIMIT $2 OFFSET $3;
+
+-- name: Count20AssetByOwner :one
+SELECT COUNT(*) FROM erc_20_collection_assets 
+WHERE owner = $1;
+
 
 -- name: Add20Asset :exec
 INSERT INTO
