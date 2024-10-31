@@ -1,5 +1,12 @@
--- name: Get721AssetByAssetId :many
-SELECT * FROM erc_721_collection_assets WHERE asset_id = $1;
+-- name: GetPaginated721AssetByAssetId :many
+SELECT * FROM erc_721_collection_assets 
+WHERE asset_id = $1
+LIMIT $2 OFFSET $3;
+
+-- name: Count721AssetByAssetId :one
+SELECT COUNT(*) FROM erc_721_collection_assets 
+WHERE asset_id = $1;
+
 
 -- name: Get721AssetByAssetIdAndTokenId :one
 SELECT * FROM erc_721_collection_assets
@@ -7,10 +14,17 @@ WHERE
     asset_id = $1
     AND token_id = $2;
 
--- name: Get721AssetByOwner :many
+
+-- name: GetPaginated721AssetByOwnerAddress :many
 SELECT * FROM erc_721_collection_assets
 WHERE
-    owner = $1;
+    owner = $1
+LIMIT $2 OFFSET $3;
+
+-- name: Count721AssetByOwnerAddress :one
+SELECT COUNT(*) FROM erc_721_collection_assets 
+WHERE owner = $1;
+
 
 -- name: Add721Asset :exec
 INSERT INTO

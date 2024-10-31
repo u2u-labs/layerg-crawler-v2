@@ -79,10 +79,16 @@ func crawlSupportedChains(ctx context.Context, sugar *zap.SugaredLogger, q *dbCo
 		if err = db.DeleteChainAssetsInCache(ctx, rdb, c.ID); err != nil {
 			return err
 		}
-		assets, err := q.GetAssetByChainId(ctx, c.ID)
+
+		assets, err := q.GetPaginatedAssetsByChainId(ctx, dbCon.GetPaginatedAssetsByChainIdParams{
+			ChainID: c.ID,
+			Limit:   0,
+			Offset:  0,
+		})
 		if err != nil {
 			return err
 		}
+
 		if err = db.SetChainToCache(ctx, rdb, &c); err != nil {
 			return err
 		}

@@ -1,5 +1,11 @@
--- name: Get1155AssetByAssetId :many
-SELECT * FROM erc_1155_collection_assets WHERE asset_id = $1;
+-- name: GetPaginated1155AssetByAssetId :many
+SELECT * FROM erc_1155_collection_assets 
+WHERE asset_id = $1
+LIMIT $2 OFFSET $3;
+
+-- name: Count1155AssetByAssetId :one
+SELECT COUNT(*) FROM erc_1155_collection_assets 
+WHERE asset_id = $1;
 
 -- name: Get1155AssetByAssetIdAndTokenId :one
 SELECT * FROM erc_1155_collection_assets
@@ -7,10 +13,15 @@ WHERE
     asset_id = $1
     AND token_id = $2;
 
--- name: Get1155AssetByOwner :many
+-- name: GetPaginated1155AssetByOwnerAddress :many
 SELECT * FROM erc_1155_collection_assets
 WHERE
-    owner = $1;
+    owner = $1
+LIMIT $2 OFFSET $3;
+
+-- name: Count1155AssetByOwner :one
+SELECT COUNT(*) FROM erc_1155_collection_assets 
+WHERE owner = $1;
 
 -- name: Add1155Asset :exec
 INSERT INTO

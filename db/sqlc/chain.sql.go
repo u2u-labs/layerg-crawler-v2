@@ -9,6 +9,40 @@ import (
 	"context"
 )
 
+const addChain = `-- name: AddChain :exec
+INSERT INTO chains (
+    id, chain, name, rpc_url, chain_id,explorer, latest_block, block_time   
+)
+VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8
+) RETURNING id, chain, name, rpc_url, chain_id, explorer, latest_block, block_time
+`
+
+type AddChainParams struct {
+	ID          int32  `json:"id"`
+	Chain       string `json:"chain"`
+	Name        string `json:"name"`
+	RpcUrl      string `json:"rpcUrl"`
+	ChainID     int64  `json:"chainId"`
+	Explorer    string `json:"explorer"`
+	LatestBlock int64  `json:"latestBlock"`
+	BlockTime   int32  `json:"blockTime"`
+}
+
+func (q *Queries) AddChain(ctx context.Context, arg AddChainParams) error {
+	_, err := q.db.ExecContext(ctx, addChain,
+		arg.ID,
+		arg.Chain,
+		arg.Name,
+		arg.RpcUrl,
+		arg.ChainID,
+		arg.Explorer,
+		arg.LatestBlock,
+		arg.BlockTime,
+	)
+	return err
+}
+
 const getAllChain = `-- name: GetAllChain :many
 SELECT id, chain, name, rpc_url, chain_id, explorer, latest_block, block_time FROM chains
 `
@@ -74,8 +108,8 @@ WHERE
 `
 
 type UpdateChainLatestBlockParams struct {
-	ID          int32
-	LatestBlock int64
+	ID          int32 `json:"id"`
+	LatestBlock int64 `json:"latestBlock"`
 }
 
 func (q *Queries) UpdateChainLatestBlock(ctx context.Context, arg UpdateChainLatestBlockParams) error {
