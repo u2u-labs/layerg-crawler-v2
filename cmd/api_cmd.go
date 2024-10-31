@@ -15,6 +15,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/u2u-labs/layerg-crawler/cmd/controllers"
 	middleware "github.com/u2u-labs/layerg-crawler/cmd/middlewares"
+	"github.com/u2u-labs/layerg-crawler/cmd/services"
 	dbCon "github.com/u2u-labs/layerg-crawler/db/sqlc"
 )
 
@@ -63,9 +64,13 @@ func serveApi(db *dbCon.Queries, rawDb *sql.DB, ctx context.Context) {
 	// Create a default Gin router
 	router := gin.Default()
 
+	// new Service
+	chainService := services.NewChainService(db, rawDb, ctx)
+	assetService := services.NewAssetService(db, rawDb, ctx)
+
 	// new Controller
-	assetController := controllers.NewAssetController(db, rawDb, ctx)
-	chainController := controllers.NewChainController(db, ctx)
+	chainController := controllers.NewChainController(chainService, ctx)
+	assetController := controllers.NewAssetController(assetService, ctx)
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -77,7 +82,7 @@ func serveApi(db *dbCon.Queries, rawDb *sql.DB, ctx context.Context) {
 	router.GET("/chain", chainController.GetAllChains)
 
 	// Asset routes
-	router.POST("/chain/:chain_id/collection", assetController.AddNewAsset)
+	router.POST("/chain/:chain_id/collection", assetController.AddAssetCollection)
 	router.GET("/chain/:chain_id/collection", assetController.GetAssetCollection)
 	router.GET("/chain/:chain_id/collection/:collection_address/assets", assetController.GetAssetByChainIdAndContractAddress)
 
