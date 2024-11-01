@@ -1,4 +1,4 @@
-FROM golang:1.22.8-alpine as builder
+FROM golang:1.22.8-alpine AS builder
 RUN apk update && apk add build-base cmake gcc git
 WORKDIR /go/src/github.com/u2u-labs/layerg-crawler
 ADD . .
@@ -15,4 +15,5 @@ RUN apk add ca-certificates curl
 ENV PATH="${PATH}:/go/bin"
 WORKDIR /go/bin
 COPY --from=builder /go/bin/* /go/bin/
-ENTRYPOINT ./layerg-crawler
+ENTRYPOINT ["./layerg-crawler"]
+
