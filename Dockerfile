@@ -15,3 +15,4 @@ RUN apk add ca-certificates curl
 ENV PATH="${PATH}:/go/bin"
 WORKDIR /go/bin
 COPY --from=builder /go/bin/* /go/bin/
+ENTRYPOINT ./layerg-crawler
