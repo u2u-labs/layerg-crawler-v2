@@ -1,6 +1,38 @@
 version: '3.5'
 
 services:
+  crawler:
+   image: u2labs/layerg-crawler:latest
+   build:
+     context: .
+   container_name: layerg-crawler
+   restart: always
+   depends_on:
+     - crdb
+   command: "--config config.yaml"
+   volumes:
+     - ./config.yaml:/go/bin/config.yaml  
+   logging:
+     driver: "json-file"
+     options:
+       max-size: 300m
+  api:
+   image: u2labs/layerg-crawler:latest
+   build:
+     context: .
+   container_name: layerg-api
+   restart: always
+   depends_on:
+     - crdb
+   ports:
+     - 8085:8085
+   command: "api --config config.yaml"  
+   volumes:
+     - ./config.yaml:/go/bin/config.yaml
+   logging:
+     driver: "json-file"
+     options:
+       max-size: 300m   
   crdb:
    image: cockroachdb/cockroach:v24.2.1
    ports:
@@ -8,7 +40,7 @@ services:
      - "8080:8080"
    command: start-single-node --insecure
    volumes:
-     - "~/.data/crdb:/cockroach/cockroach-data"
+     - ../data/crdb:/cockroach/cockroach-data
   redis:
     image: bitnami/redis:latest
     environment:
@@ -18,8 +50,4 @@ services:
     ports:
       - '6379:6379'
     volumes:
-      - 'redis_data:/bitnami/redis/data'
-
-volumes:
-  redis_data:
-    driver: local
+      - ../redis_data:/bitnami/redis/data
