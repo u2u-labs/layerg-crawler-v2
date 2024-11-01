@@ -2,7 +2,7 @@ FROM golang:1.22.8-alpine as builder
 RUN apk update && apk add build-base cmake gcc git
 WORKDIR /go/src/github.com/u2u-labs/layerg-crawler
 ADD . .
-RUN go instal
+RUN go install
 #RUN go build -ldflags -w
 #RUN chmod +x layerg-crawler
 WORKDIR /go/bin
