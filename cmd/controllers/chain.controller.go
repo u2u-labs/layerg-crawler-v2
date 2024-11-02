@@ -6,6 +6,8 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
+
 	"github.com/u2u-labs/layerg-crawler/cmd/response"
 	"github.com/u2u-labs/layerg-crawler/cmd/services"
 )
@@ -13,10 +15,11 @@ import (
 type ChainController struct {
 	service *services.ChainService
 	ctx     context.Context
+	rdb     *redis.Client
 }
 
-func NewChainController(service *services.ChainService, ctx context.Context) *ChainController {
-	return &ChainController{service, ctx}
+func NewChainController(service *services.ChainService, ctx context.Context, rdb *redis.Client) *ChainController {
+	return &ChainController{service, ctx, rdb}
 }
 
 // AddNewChain godoc

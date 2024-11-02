@@ -4,6 +4,9 @@ import (
 	"context"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
+	"github.com/unicornultrafoundation/go-u2u/common"
+
 	"github.com/u2u-labs/layerg-crawler/cmd/services"
 	"github.com/u2u-labs/layerg-crawler/cmd/utils"
 )
@@ -11,10 +14,11 @@ import (
 type AssetController struct {
 	service *services.AssetService
 	ctx     context.Context
+	rdb     *redis.Client
 }
 
-func NewAssetController(service *services.AssetService, ctx context.Context) *AssetController {
-	return &AssetController{service, ctx}
+func NewAssetController(service *services.AssetService, ctx context.Context, rdb *redis.Client) *AssetController {
+	return &AssetController{service, ctx, rdb}
 }
 
 // AddNewAsset godoc
@@ -72,9 +76,8 @@ func (ac *AssetController) GetAssetCollection(ctx *gin.Context) {
 func (ac *AssetController) GetAssetByChainIdAndContractAddress(ctx *gin.Context) {
 	chainIdStr := ctx.Param("chain_id")
 	collectionAddress := ctx.Param("collection_address")
-
+	collectionAddress = common.HexToAddress(collectionAddress).Hex()
 	assetId := chainIdStr + ":" + collectionAddress
-
 	hasFilterParam, tokenIds, owner := utils.GetAssetFilterParam(ctx)
 
 	if !hasFilterParam {

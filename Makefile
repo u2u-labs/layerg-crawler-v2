@@ -2,7 +2,8 @@ GOOSE_DRIVER='postgres'
 GOOSE_DBSTRING='postgres://root@localhost:26257/layerg?sslmode=disable'
 GOOSE_MIGRATION_DIR='./db/migrations'
 
-
+build:
+	go build -ldflags -w
 all:
 	go build -ldflags -w
 	chmod +x layerg-crawler

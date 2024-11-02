@@ -3,6 +3,7 @@ package utils
 import (
 	"database/sql"
 	"encoding/json"
+	"github.com/unicornultrafoundation/go-u2u/common"
 	"time"
 
 	"github.com/google/uuid"
@@ -118,7 +119,7 @@ func ConvertCustomTypeToSqlParams(param *AddNewAssetParamsUtil) db.AddNewAssetPa
 	return db.AddNewAssetParams{
 		ID:                param.ID,
 		ChainID:           param.ChainID,
-		CollectionAddress: param.CollectionAddress,
+		CollectionAddress: common.HexToAddress(param.CollectionAddress).Hex(),
 		Type:              param.Type,
 		DecimalData:       sql.NullInt16{Int16: param.DecimalData.Int16, Valid: param.DecimalData.Valid},
 		InitialBlock:      sql.NullInt64{Int64: param.InitialBlock.Int64, Valid: param.InitialBlock.Valid},

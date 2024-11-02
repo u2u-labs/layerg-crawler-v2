@@ -33,6 +33,14 @@ func AssetCacheKey(chainId int32) string {
 	return "assets:" + strconv.Itoa(int(chainId))
 }
 
+func PendingChainKey() string {
+	return "pendingChains"
+}
+
+func PendingAssetKey() string {
+	return "pendingAssets"
+}
+
 func GetCachedChain(ctx context.Context, rdb *redis.Client, chainId int32) (*db.Chain, error) {
 	res := rdb.Get(ctx, ChainCacheKey(chainId))
 	if res.Err() != nil {
@@ -88,4 +96,70 @@ func SetAssetsToCache(ctx context.Context, rdb *redis.Client, assets []db.Asset)
 
 func DeleteChainAssetsInCache(ctx context.Context, rdb *redis.Client, chainId int32) error {
 	return rdb.Del(ctx, AssetCacheKey(chainId)).Err()
+}
+
+func GetCachedPendingAsset(ctx context.Context, rdb *redis.Client, assetId string) ([]db.Asset, error) {
+	assetsStr, err := rdb.LRange(ctx, PendingAssetKey(), 0, -1).Result()
+	if err != nil {
+		return nil, err
+	}
+	var assets []db.Asset
+	for _, a := range assetsStr {
+		var asset db.Asset
+		err = json.Unmarshal([]byte(a), &asset)
+		if err != nil {
+			return nil, err
+		}
+		assets = append(assets, asset)
+	}
+	return assets, err
+}
+
+func SetPendingAssetToCache(ctx context.Context, rdb *redis.Client, asset db.Asset) error {
+	jsonAsset, err := json.Marshal(asset)
+	if err != nil {
+		return err
+	}
+	err = rdb.LPush(ctx, PendingAssetKey(), string(jsonAsset), 0).Err()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DeletePendingAssetsInCache(ctx context.Context, rdb *redis.Client, assetId string) error {
+	return rdb.Del(ctx, PendingAssetKey()).Err()
+}
+
+func GetCachedPendingChain(ctx context.Context, rdb *redis.Client, chainId int32) ([]db.Chain, error) {
+	chainStr, err := rdb.LRange(ctx, PendingChainKey(), 0, -1).Result()
+	if err != nil {
+		return nil, err
+	}
+	var chains []db.Chain
+	for _, c := range chainStr {
+		var chain db.Chain
+		err = json.Unmarshal([]byte(c), &chain)
+		if err != nil {
+			return nil, err
+		}
+		chains = append(chains, chain)
+	}
+	return chains, err
+}
+
+func SetPendingChainToCache(ctx context.Context, rdb *redis.Client, chain db.Chain) error {
+	jsonChain, err := json.Marshal(chain)
+	if err != nil {
+		return err
+	}
+	err = rdb.LPush(ctx, PendingChainKey(), string(jsonChain), 0).Err()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DeletePendingChainsInCache(ctx context.Context, rdb *redis.Client) error {
+	return rdb.Del(ctx, PendingChainKey()).Err()
 }
