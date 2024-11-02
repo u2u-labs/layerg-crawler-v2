@@ -73,7 +73,7 @@ func GetCachedAssets(ctx context.Context, rdb *redis.Client, chainId int32) ([]d
 		var asset db.Asset
 		err = json.Unmarshal([]byte(a), &asset)
 		if err != nil {
-			return nil, err
+			continue
 		}
 		assets = append(assets, asset)
 	}
@@ -98,7 +98,7 @@ func DeleteChainAssetsInCache(ctx context.Context, rdb *redis.Client, chainId in
 	return rdb.Del(ctx, AssetCacheKey(chainId)).Err()
 }
 
-func GetCachedPendingAsset(ctx context.Context, rdb *redis.Client, assetId string) ([]db.Asset, error) {
+func GetCachedPendingAsset(ctx context.Context, rdb *redis.Client) ([]db.Asset, error) {
 	assetsStr, err := rdb.LRange(ctx, PendingAssetKey(), 0, -1).Result()
 	if err != nil {
 		return nil, err
@@ -108,7 +108,7 @@ func GetCachedPendingAsset(ctx context.Context, rdb *redis.Client, assetId strin
 		var asset db.Asset
 		err = json.Unmarshal([]byte(a), &asset)
 		if err != nil {
-			return nil, err
+			continue
 		}
 		assets = append(assets, asset)
 	}
@@ -127,11 +127,11 @@ func SetPendingAssetToCache(ctx context.Context, rdb *redis.Client, asset db.Ass
 	return nil
 }
 
-func DeletePendingAssetsInCache(ctx context.Context, rdb *redis.Client, assetId string) error {
+func DeletePendingAssetsInCache(ctx context.Context, rdb *redis.Client) error {
 	return rdb.Del(ctx, PendingAssetKey()).Err()
 }
 
-func GetCachedPendingChain(ctx context.Context, rdb *redis.Client, chainId int32) ([]db.Chain, error) {
+func GetCachedPendingChain(ctx context.Context, rdb *redis.Client) ([]db.Chain, error) {
 	chainStr, err := rdb.LRange(ctx, PendingChainKey(), 0, -1).Result()
 	if err != nil {
 		return nil, err
@@ -141,7 +141,7 @@ func GetCachedPendingChain(ctx context.Context, rdb *redis.Client, chainId int32
 		var chain db.Chain
 		err = json.Unmarshal([]byte(c), &chain)
 		if err != nil {
-			return nil, err
+			continue
 		}
 		chains = append(chains, chain)
 	}
