@@ -234,7 +234,7 @@ func ConvertToErc721CollectionAssetResponses(assets []db.Erc721CollectionAsset) 
 			AssetID:    asset.AssetID,
 			TokenID:    asset.TokenID,
 			Owner:      asset.Owner,
-			Attributes: asset.AttributesMetadata.String,
+			Attributes: asset.Attributes.String,
 			CreatedAt:  asset.CreatedAt,
 			UpdatedAt:  asset.UpdatedAt,
 		}
@@ -268,7 +268,7 @@ func ConvertToErc1155CollectionAssetResponses(assets []db.Erc1155CollectionAsset
 			TokenID:    asset.TokenID,
 			Owner:      asset.Owner,
 			Balance:    asset.Balance,
-			Attributes: asset.AttributesMetadata.String,
+			Attributes: asset.Attributes.String,
 			CreatedAt:  asset.CreatedAt,
 			UpdatedAt:  asset.UpdatedAt,
 		}

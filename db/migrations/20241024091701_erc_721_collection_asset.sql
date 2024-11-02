@@ -7,7 +7,7 @@ CREATE TABLE
         asset_id VARCHAR NOT NULL,
         token_id DECIMAL(78, 0) NOT NULL,
         owner VARCHAR(42) NOT NULL,
-        attributes_metadata VARCHAR,
+        attributes VARCHAR,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (asset_id) REFERENCES assets (id),

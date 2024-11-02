@@ -86,15 +86,15 @@ type Chain struct {
 }
 
 type Erc1155CollectionAsset struct {
-	ID                 uuid.UUID      `json:"id"`
-	ChainID            int32          `json:"chainId"`
-	AssetID            string         `json:"assetId"`
-	TokenID            string         `json:"tokenId"`
-	Owner              string         `json:"owner"`
-	Balance            string         `json:"balance"`
-	AttributesMetadata sql.NullString `json:"attributesMetadata"`
-	CreatedAt          time.Time      `json:"createdAt"`
-	UpdatedAt          time.Time      `json:"updatedAt"`
+	ID         uuid.UUID      `json:"id"`
+	ChainID    int32          `json:"chainId"`
+	AssetID    string         `json:"assetId"`
+	TokenID    string         `json:"tokenId"`
+	Owner      string         `json:"owner"`
+	Balance    string         `json:"balance"`
+	Attributes sql.NullString `json:"attributes"`
+	CreatedAt  time.Time      `json:"createdAt"`
+	UpdatedAt  time.Time      `json:"updatedAt"`
 }
 
 type Erc20CollectionAsset struct {
@@ -108,14 +108,14 @@ type Erc20CollectionAsset struct {
 }
 
 type Erc721CollectionAsset struct {
-	ID                 uuid.UUID      `json:"id"`
-	ChainID            int32          `json:"chainId"`
-	AssetID            string         `json:"assetId"`
-	TokenID            string         `json:"tokenId"`
-	Owner              string         `json:"owner"`
-	AttributesMetadata sql.NullString `json:"attributesMetadata"`
-	CreatedAt          time.Time      `json:"createdAt"`
-	UpdatedAt          time.Time      `json:"updatedAt"`
+	ID         uuid.UUID      `json:"id"`
+	ChainID    int32          `json:"chainId"`
+	AssetID    string         `json:"assetId"`
+	TokenID    string         `json:"tokenId"`
+	Owner      string         `json:"owner"`
+	Attributes sql.NullString `json:"attributes"`
+	CreatedAt  time.Time      `json:"createdAt"`
+	UpdatedAt  time.Time      `json:"updatedAt"`
 }
 
 type OnchainHistory struct {

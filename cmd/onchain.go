@@ -183,7 +183,7 @@ func handleErc721Transfer(ctx context.Context, sugar *zap.SugaredLogger, q *db.Q
 		ChainID: chain.ID,
 		TokenID: event.TokenID.String(),
 		Owner:   event.To.Hex(),
-		AttributesMetadata: sql.NullString{
+		Attributes: sql.NullString{
 			String: uri,
 			Valid:  true,
 		},
@@ -229,7 +229,7 @@ func handleErc1155TransferBatch(ctx context.Context, sugar *zap.SugaredLogger, q
 			TokenID: event.Ids[i].String(),
 			Owner:   event.To.Hex(),
 			Balance: event.Values[i].String(),
-			AttributesMetadata: sql.NullString{
+			Attributes: sql.NullString{
 				String: uri,
 				Valid:  true,
 			},
@@ -275,7 +275,7 @@ func handleErc1155TransferSingle(ctx context.Context, sugar *zap.SugaredLogger, 
 		TokenID: event.Id.String(),
 		Owner:   event.To.Hex(),
 		Balance: event.Value.String(),
-		AttributesMetadata: sql.NullString{
+		Attributes: sql.NullString{
 			String: uri,
 			Valid:  true,
 		},

@@ -27,12 +27,12 @@ WHERE owner = $1;
 
 -- name: Add721Asset :exec
 INSERT INTO
-    erc_721_collection_assets (asset_id, chain_id, token_id, owner, attributes_metadata)
+    erc_721_collection_assets (asset_id, chain_id, token_id, owner, attributes)
 VALUES (
     $1, $2, $3, $4, $5
 ) ON CONFLICT ON CONSTRAINT UC_ERC721 DO UPDATE SET
     owner = $4,
-    attributes_metadata = $5
+    attributes = $5
 RETURNING *;
 
 -- name: Update721Asset :exec
