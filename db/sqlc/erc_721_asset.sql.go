@@ -7,28 +7,28 @@ package db
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
-	"github.com/sqlc-dev/pqtype"
 )
 
 const add721Asset = `-- name: Add721Asset :exec
 INSERT INTO
-    erc_721_collection_assets (asset_id, chain_id, token_id, owner, attributes)
+    erc_721_collection_assets (asset_id, chain_id, token_id, owner, attributes_metadata)
 VALUES (
     $1, $2, $3, $4, $5
 ) ON CONFLICT ON CONSTRAINT UC_ERC721 DO UPDATE SET
     owner = $4,
-    attributes = $5
-RETURNING id, chain_id, asset_id, token_id, owner, attributes, created_at, updated_at
+    attributes_metadata = $5
+RETURNING id, chain_id, asset_id, token_id, owner, attributes_metadata, created_at, updated_at
 `
 
 type Add721AssetParams struct {
-	AssetID    string                `json:"assetId"`
-	ChainID    int32                 `json:"chainId"`
-	TokenID    string                `json:"tokenId"`
-	Owner      string                `json:"owner"`
-	Attributes pqtype.NullRawMessage `json:"attributes"`
+	AssetID            string         `json:"assetId"`
+	ChainID            int32          `json:"chainId"`
+	TokenID            string         `json:"tokenId"`
+	Owner              string         `json:"owner"`
+	AttributesMetadata sql.NullString `json:"attributesMetadata"`
 }
 
 func (q *Queries) Add721Asset(ctx context.Context, arg Add721AssetParams) error {
@@ -37,7 +37,7 @@ func (q *Queries) Add721Asset(ctx context.Context, arg Add721AssetParams) error 
 		arg.ChainID,
 		arg.TokenID,
 		arg.Owner,
-		arg.Attributes,
+		arg.AttributesMetadata,
 	)
 	return err
 }
@@ -79,7 +79,7 @@ func (q *Queries) Delete721Asset(ctx context.Context, id uuid.UUID) error {
 }
 
 const get721AssetByAssetIdAndTokenId = `-- name: Get721AssetByAssetIdAndTokenId :one
-SELECT id, chain_id, asset_id, token_id, owner, attributes, created_at, updated_at FROM erc_721_collection_assets
+SELECT id, chain_id, asset_id, token_id, owner, attributes_metadata, created_at, updated_at FROM erc_721_collection_assets
 WHERE
     asset_id = $1
     AND token_id = $2
@@ -99,7 +99,7 @@ func (q *Queries) Get721AssetByAssetIdAndTokenId(ctx context.Context, arg Get721
 		&i.AssetID,
 		&i.TokenID,
 		&i.Owner,
-		&i.Attributes,
+		&i.AttributesMetadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -107,7 +107,7 @@ func (q *Queries) Get721AssetByAssetIdAndTokenId(ctx context.Context, arg Get721
 }
 
 const getPaginated721AssetByAssetId = `-- name: GetPaginated721AssetByAssetId :many
-SELECT id, chain_id, asset_id, token_id, owner, attributes, created_at, updated_at FROM erc_721_collection_assets 
+SELECT id, chain_id, asset_id, token_id, owner, attributes_metadata, created_at, updated_at FROM erc_721_collection_assets 
 WHERE asset_id = $1
 LIMIT $2 OFFSET $3
 `
@@ -133,7 +133,7 @@ func (q *Queries) GetPaginated721AssetByAssetId(ctx context.Context, arg GetPagi
 			&i.AssetID,
 			&i.TokenID,
 			&i.Owner,
-			&i.Attributes,
+			&i.AttributesMetadata,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -151,7 +151,7 @@ func (q *Queries) GetPaginated721AssetByAssetId(ctx context.Context, arg GetPagi
 }
 
 const getPaginated721AssetByOwnerAddress = `-- name: GetPaginated721AssetByOwnerAddress :many
-SELECT id, chain_id, asset_id, token_id, owner, attributes, created_at, updated_at FROM erc_721_collection_assets
+SELECT id, chain_id, asset_id, token_id, owner, attributes_metadata, created_at, updated_at FROM erc_721_collection_assets
 WHERE
     owner = $1
 LIMIT $2 OFFSET $3
@@ -178,7 +178,7 @@ func (q *Queries) GetPaginated721AssetByOwnerAddress(ctx context.Context, arg Ge
 			&i.AssetID,
 			&i.TokenID,
 			&i.Owner,
-			&i.Attributes,
+			&i.AttributesMetadata,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
