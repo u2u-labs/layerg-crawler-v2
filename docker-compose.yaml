@@ -9,7 +9,7 @@ services:
    restart: always
    depends_on:
      - crdb
-   command: "--config config.yaml"
+   command: "layer-crawler --config config.yaml"
    volumes:
      - ./config.yaml:/go/bin/config.yaml  
    logging:
@@ -26,7 +26,7 @@ services:
      - crdb
    ports:
      - 8085:8085
-   command: "api --config config.yaml"  
+   command: "layer-crawler api --config config.yaml"  
    volumes:
      - ./config.yaml:/go/bin/config.yaml
    logging:
