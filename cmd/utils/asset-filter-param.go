@@ -2,9 +2,10 @@ package utils
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/unicornultrafoundation/go-u2u/common"
 )
 
-// get asset filter parameters
+// GetAssetFilterParam get asset filter parameters
 func GetAssetFilterParam(ctx *gin.Context) (bool, []string, string) {
 	// Get the query parameters
 	tokenIds := ctx.QueryArray("token_id")
@@ -18,11 +19,11 @@ func GetAssetFilterParam(ctx *gin.Context) (bool, []string, string) {
 	return hasQuery, tokenIds, owner
 }
 
-// get asset collection filter parameters
+// GetAssetCollectionFilterParam get asset collection filter parameters
 func GetAssetCollectionFilterParam(ctx *gin.Context) (bool, string) {
 	// Get the query parameters
 	collectionAddress := ctx.Query("collection_address")
-
+	collectionAddress = common.HexToAddress(collectionAddress).Hex()
 	hasQuery := false
 	if collectionAddress != "" {
 		hasQuery = true

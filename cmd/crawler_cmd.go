@@ -3,9 +3,10 @@ package cmd
 import (
 	"context"
 	"database/sql"
-	"github.com/u2u-labs/layerg-crawler/cmd/utils"
+	"github.com/u2u-labs/layerg-crawler/config"
 	"log"
 	"strings"
+	"time"
 
 	_ "github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
@@ -14,6 +15,7 @@ import (
 	"github.com/unicornultrafoundation/go-u2u/accounts/abi"
 	"go.uber.org/zap"
 
+	"github.com/u2u-labs/layerg-crawler/cmd/utils"
 	"github.com/u2u-labs/layerg-crawler/db"
 	dbCon "github.com/u2u-labs/layerg-crawler/db/sqlc"
 )
@@ -70,7 +72,60 @@ func startCrawler(cmd *cobra.Command, args []string) {
 		sugar.Errorw("Error init supported chains", "err", err)
 		return
 	}
-	select {}
+
+	timer := time.NewTimer(config.RetriveAddedChainsAndAssetsInterval)
+	defer timer.Stop()
+	for {
+		select {
+		case <-timer.C:
+			// Process new chains
+			ProcessNewChains(ctx, sugar, rdb, sqlDb)
+			// Process new assets
+			ProcessNewChainAssets(ctx, sugar, rdb)
+			timer.Reset(config.RetriveAddedChainsAndAssetsInterval)
+		}
+	}
+}
+
+func ProcessNewChains(ctx context.Context, sugar *zap.SugaredLogger, rdb *redis.Client, q *dbCon.Queries) {
+	chains, err := db.GetCachedPendingChain(ctx, rdb)
+	if err != nil {
+		sugar.Errorw("ProcessNewChains failed to get cached pending chains", "err", err)
+		return
+	}
+	if err = db.DeletePendingChainsInCache(ctx, rdb); err != nil {
+		sugar.Errorw("ProcessNewChains failed to delete cached pending chains", "err", err)
+		return
+	}
+	for _, c := range chains {
+		client, err := initChainClient(&c)
+		if err != nil {
+			sugar.Errorw("ProcessNewChains failed to init chain client", "err", err, "chain", c)
+			return
+		}
+		go StartChainCrawler(ctx, sugar, client, q, &c)
+		sugar.Infow("Initiated new chain, start crawling", "chain", c)
+	}
+}
+
+func ProcessNewChainAssets(ctx context.Context, sugar *zap.SugaredLogger, rdb *redis.Client) {
+	assets, err := db.GetCachedPendingAsset(ctx, rdb)
+	if err != nil {
+		sugar.Errorw("ProcessNewChainAssets failed to get cached pending assets", "err", err)
+		return
+	}
+	if err = db.DeletePendingAssetsInCache(ctx, rdb); err != nil {
+		sugar.Errorw("ProcessNewChainAssets failed to delete cached pending assets", "err", err)
+		return
+	}
+	for _, a := range assets {
+		contractType[a.ChainID][a.CollectionAddress] = a
+		sugar.Infow("Initiated new assets, start crawling",
+			"chain", a.ChainID,
+			"address", a.CollectionAddress,
+			"type", a.Type,
+		)
+	}
 }
 
 func crawlSupportedChains(ctx context.Context, sugar *zap.SugaredLogger, q *dbCon.Queries, rdb *redis.Client) error {

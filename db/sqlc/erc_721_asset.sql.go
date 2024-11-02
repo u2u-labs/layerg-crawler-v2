@@ -7,9 +7,9 @@ package db
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
-	"github.com/sqlc-dev/pqtype"
 )
 
 const add721Asset = `-- name: Add721Asset :exec
@@ -24,11 +24,11 @@ RETURNING id, chain_id, asset_id, token_id, owner, attributes, created_at, updat
 `
 
 type Add721AssetParams struct {
-	AssetID    string                `json:"assetId"`
-	ChainID    int32                 `json:"chainId"`
-	TokenID    string                `json:"tokenId"`
-	Owner      string                `json:"owner"`
-	Attributes pqtype.NullRawMessage `json:"attributes"`
+	AssetID    string         `json:"assetId"`
+	ChainID    int32          `json:"chainId"`
+	TokenID    string         `json:"tokenId"`
+	Owner      string         `json:"owner"`
+	Attributes sql.NullString `json:"attributes"`
 }
 
 func (q *Queries) Add721Asset(ctx context.Context, arg Add721AssetParams) error {

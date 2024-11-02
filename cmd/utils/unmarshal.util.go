@@ -3,6 +3,7 @@ package utils
 import (
 	"database/sql"
 	"encoding/json"
+	"github.com/unicornultrafoundation/go-u2u/common"
 	"time"
 
 	"github.com/google/uuid"
@@ -118,7 +119,7 @@ func ConvertCustomTypeToSqlParams(param *AddNewAssetParamsUtil) db.AddNewAssetPa
 	return db.AddNewAssetParams{
 		ID:                param.ID,
 		ChainID:           param.ChainID,
-		CollectionAddress: param.CollectionAddress,
+		CollectionAddress: common.HexToAddress(param.CollectionAddress).Hex(),
 		Type:              param.Type,
 		DecimalData:       sql.NullInt16{Int16: param.DecimalData.Int16, Valid: param.DecimalData.Valid},
 		InitialBlock:      sql.NullInt64{Int64: param.InitialBlock.Int64, Valid: param.InitialBlock.Valid},
@@ -213,14 +214,14 @@ func ConvertAssetToAssetResponse(asset db.Asset) AssetResponse {
 }
 
 type Erc721CollectionAssetResponse struct {
-	ID         uuid.UUID       `json:"id"`
-	ChainID    int32           `json:"chainId"`
-	AssetID    string          `json:"assetId"`
-	TokenID    string          `json:"tokenId"`
-	Owner      string          `json:"owner"`
-	Attributes json.RawMessage `json:"attributes"`
-	CreatedAt  time.Time       `json:"createdAt"`
-	UpdatedAt  time.Time       `json:"updatedAt"`
+	ID         uuid.UUID `json:"id"`
+	ChainID    int32     `json:"chainId"`
+	AssetID    string    `json:"assetId"`
+	TokenID    string    `json:"tokenId"`
+	Owner      string    `json:"owner"`
+	Attributes string    `json:"attributes"`
+	CreatedAt  time.Time `json:"createdAt"`
+	UpdatedAt  time.Time `json:"updatedAt"`
 }
 
 func ConvertToErc721CollectionAssetResponses(assets []db.Erc721CollectionAsset) []Erc721CollectionAssetResponse {
@@ -233,7 +234,7 @@ func ConvertToErc721CollectionAssetResponses(assets []db.Erc721CollectionAsset) 
 			AssetID:    asset.AssetID,
 			TokenID:    asset.TokenID,
 			Owner:      asset.Owner,
-			Attributes: asset.Attributes.RawMessage,
+			Attributes: asset.Attributes.String,
 			CreatedAt:  asset.CreatedAt,
 			UpdatedAt:  asset.UpdatedAt,
 		}
@@ -245,15 +246,15 @@ func ConvertToErc721CollectionAssetResponses(assets []db.Erc721CollectionAsset) 
 }
 
 type Erc1155CollectionAssetResponse struct {
-	ID         uuid.UUID       `json:"id"`
-	ChainID    int32           `json:"chainId"`
-	AssetID    string          `json:"assetId"`
-	TokenID    string          `json:"tokenId"`
-	Owner      string          `json:"owner"`
-	Balance    string          `json:"balance"`
-	Attributes json.RawMessage `json:"attributes"`
-	CreatedAt  time.Time       `json:"createdAt"`
-	UpdatedAt  time.Time       `json:"updatedAt"`
+	ID         uuid.UUID `json:"id"`
+	ChainID    int32     `json:"chainId"`
+	AssetID    string    `json:"assetId"`
+	TokenID    string    `json:"tokenId"`
+	Owner      string    `json:"owner"`
+	Balance    string    `json:"balance"`
+	Attributes string    `json:"attributes"`
+	CreatedAt  time.Time `json:"createdAt"`
+	UpdatedAt  time.Time `json:"updatedAt"`
 }
 
 func ConvertToErc1155CollectionAssetResponses(assets []db.Erc1155CollectionAsset) []Erc1155CollectionAssetResponse {
@@ -267,7 +268,7 @@ func ConvertToErc1155CollectionAssetResponses(assets []db.Erc1155CollectionAsset
 			TokenID:    asset.TokenID,
 			Owner:      asset.Owner,
 			Balance:    asset.Balance,
-			Attributes: asset.Attributes.RawMessage,
+			Attributes: asset.Attributes.String,
 			CreatedAt:  asset.CreatedAt,
 			UpdatedAt:  asset.UpdatedAt,
 		}

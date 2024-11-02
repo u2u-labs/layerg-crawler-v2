@@ -1,5 +1,8 @@
 -- +goose Up
 -- +goose StatementBegin
+INSERT INTO apps (id, name, secret_key)
+VALUES ('f3e3bf76-62dc-42a7-ad0d-ef9033bc13a5', '', 'default');
+
 INSERT INTO chains (id, chain, name, rpc_url, chain_id, explorer, latest_block, block_time)
 VALUES (1, 'U2U', 'Nebulas Testnet', 'https://rpc-nebulas-testnet.uniultra.xyz', 2484, 'https://testnet.u2uscan.xyz/', 40984307, 500);
 

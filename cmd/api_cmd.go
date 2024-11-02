@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	swaggerFiles "github.com/swaggo/files"
@@ -15,6 +16,7 @@ import (
 	"github.com/u2u-labs/layerg-crawler/cmd/controllers"
 	middleware "github.com/u2u-labs/layerg-crawler/cmd/middlewares"
 	"github.com/u2u-labs/layerg-crawler/cmd/services"
+	"github.com/u2u-labs/layerg-crawler/db"
 	dbCon "github.com/u2u-labs/layerg-crawler/db/sqlc"
 	_ "github.com/u2u-labs/layerg-crawler/docs"
 )
@@ -28,13 +30,21 @@ func startApi(cmd *cobra.Command, args []string) {
 		log.Fatalf("Could not connect to database: %v", err)
 	}
 
-	db := dbCon.New(conn)
-
+	q := dbCon.New(conn)
 	if err != nil {
 		panic(err)
 	}
 
-	serveApi(db, conn, context.Background())
+	rdb, err := db.NewRedisClient(&db.RedisConfig{
+		Url:      viper.GetString("REDIS_DB_URL"),
+		Db:       viper.GetInt("REDIS_DB"),
+		Password: viper.GetString("REDIS_DB_PASSWORD"),
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	serveApi(q, rdb, conn, context.Background())
 }
 
 // @title           Swagger Example API
@@ -58,19 +68,18 @@ func startApi(cmd *cobra.Command, args []string) {
 // @in header
 // @name X-API-KEY
 // @Security ApiKeyAuth
-func serveApi(db *dbCon.Queries, rawDb *sql.DB, ctx context.Context) {
-
+func serveApi(db *dbCon.Queries, rdb *redis.Client, rawDb *sql.DB, ctx context.Context) {
 	// Create a default Gin router
 	gin.SetMode(viper.GetString("GIN_MODE"))
 	router := gin.Default()
 
 	// new Service
-	chainService := services.NewChainService(db, rawDb, ctx)
-	assetService := services.NewAssetService(db, rawDb, ctx)
+	chainService := services.NewChainService(db, rawDb, ctx, rdb)
+	assetService := services.NewAssetService(db, rawDb, ctx, rdb)
 
 	// new Controller
-	chainController := controllers.NewChainController(chainService, ctx)
-	assetController := controllers.NewAssetController(assetService, ctx)
+	chainController := controllers.NewChainController(chainService, ctx, rdb)
+	assetController := controllers.NewAssetController(assetService, ctx, rdb)
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 

@@ -4,12 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
+
 	"github.com/u2u-labs/layerg-crawler/cmd/response"
 	"github.com/u2u-labs/layerg-crawler/cmd/utils"
+	rdb "github.com/u2u-labs/layerg-crawler/db"
 	db "github.com/u2u-labs/layerg-crawler/db/sqlc"
 )
 
@@ -17,14 +21,14 @@ type AssetService struct {
 	db    *db.Queries
 	rawDb *sql.DB
 	ctx   context.Context
+	rdb   *redis.Client
 }
 
-func NewAssetService(db *db.Queries, rawDb *sql.DB, ctx context.Context) *AssetService {
-	return &AssetService{db, rawDb, ctx}
+func NewAssetService(db *db.Queries, rawDb *sql.DB, ctx context.Context, rdb *redis.Client) *AssetService {
+	return &AssetService{db, rawDb, ctx, rdb}
 }
 
 func (as *AssetService) AddNewAsset(ctx *gin.Context) {
-
 	var params *utils.AddNewAssetParamsUtil
 	chainIdStr := ctx.Param("chain_id")
 	chainId, err := strconv.Atoi(chainIdStr)
@@ -65,8 +69,18 @@ func (as *AssetService) AddNewAsset(ctx *gin.Context) {
 		return
 	}
 
-	response.SuccessReponseData(ctx, http.StatusCreated, jsonResponse)
+	// Cache the new added asset
+	a, err := as.db.GetAssetById(ctx, assetParam.ID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if err = rdb.SetPendingAssetToCache(as.ctx, as.rdb, a); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 
+	response.SuccessReponseData(ctx, http.StatusCreated, jsonResponse)
 }
 
 func (as *AssetService) GetAssetByChainId(ctx *gin.Context) {
@@ -113,13 +127,10 @@ func (as *AssetService) GetAssetByChainId(ctx *gin.Context) {
 
 func (as *AssetService) GetAssetCollectionByChainIdAndContractAddress(ctx *gin.Context, collectionAddress string) {
 	chainIdStr := ctx.Param("chain_id")
-
 	assetId := chainIdStr + ":" + collectionAddress
-
 	assetCollection, err := as.db.GetAssetById(ctx, assetId)
-
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			response.ErrorResponseData(ctx, http.StatusNotFound, "Failed to retrieve asset collection with this contract address in the chain")
 			return
 		}
@@ -132,9 +143,8 @@ func (as *AssetService) GetAssetCollectionByChainIdAndContractAddress(ctx *gin.C
 
 func (as *AssetService) GetAssetsFromAssetCollectionId(ctx *gin.Context, assetId string) {
 	assetCollection, err := as.db.GetAssetById(ctx, assetId)
-
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			ctx.JSON(http.StatusNotFound, gin.H{"status": "failed", "message": "Failed to retrieve asset collection with this contract address in the chain"})
 			return
 		}
@@ -226,7 +236,7 @@ func (as *AssetService) GetAssetsFromCollectionWithFilter(ctx *gin.Context, asse
 	}
 
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			ctx.JSON(http.StatusNotFound, gin.H{"status": "failed", "message": "Failed to retrieve asset collection with this contract address in the chain"})
 			return
 		}

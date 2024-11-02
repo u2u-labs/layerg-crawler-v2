@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/spf13/viper"
+
 	dbCon "github.com/u2u-labs/layerg-crawler/db/sqlc"
 )
 
@@ -49,5 +50,4 @@ func ApiKeyAuth(db *dbCon.Queries) gin.HandlerFunc {
 		// Continue down the chain to handler etc
 		c.Next()
 	}
-
 }

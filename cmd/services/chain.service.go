@@ -6,7 +6,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
+
 	"github.com/u2u-labs/layerg-crawler/cmd/response"
+	rdb "github.com/u2u-labs/layerg-crawler/db"
 	db "github.com/u2u-labs/layerg-crawler/db/sqlc"
 )
 
@@ -14,10 +17,11 @@ type ChainService struct {
 	db    *db.Queries
 	rawDb *sql.DB
 	ctx   context.Context
+	rdb   *redis.Client
 }
 
-func NewChainService(db *db.Queries, rawDb *sql.DB, ctx context.Context) *ChainService {
-	return &ChainService{db, rawDb, ctx}
+func NewChainService(db *db.Queries, rawDb *sql.DB, ctx context.Context, rdb *redis.Client) *ChainService {
+	return &ChainService{db, rawDb, ctx, rdb}
 }
 
 func (cs *ChainService) AddNewChain(ctx *gin.Context) {
@@ -36,12 +40,19 @@ func (cs *ChainService) AddNewChain(ctx *gin.Context) {
 	}
 
 	// response
-	resData, err := cs.db.GetChainById(ctx, params.ID)
+	c, err := cs.db.GetChainById(ctx, params.ID)
 	if err != nil {
 		response.ErrorResponseData(ctx, http.StatusInternalServerError, err.Error())
 		return
 	}
-	response.SuccessReponseData(ctx, http.StatusOK, resData)
+
+	// Cache new added chain
+	if err = rdb.SetPendingChainToCache(cs.ctx, cs.rdb, c); err != nil {
+		response.ErrorResponseData(ctx, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.SuccessReponseData(ctx, http.StatusOK, c)
 
 }
 
