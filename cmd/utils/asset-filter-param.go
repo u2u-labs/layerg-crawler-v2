@@ -25,7 +25,7 @@ func GetAssetCollectionFilterParam(ctx *gin.Context) (bool, string) {
 	collectionAddress := ctx.Query("collection_address")
 	collectionAddress = common.HexToAddress(collectionAddress).Hex()
 	hasQuery := false
-	if collectionAddress != "" {
+	if collectionAddress != "" && collectionAddress != "0x0000000000000000000000000000000000000000" {
 		hasQuery = true
 	}
 

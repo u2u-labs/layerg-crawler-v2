@@ -273,12 +273,12 @@ func (as *AssetService) GetAssetsFromCollectionWithFilter(ctx *gin.Context, asse
 
 		assets, _ := db.QueryWithDynamicFilter[db.Erc1155CollectionAsset](as.rawDb, "erc_1155_collection_assets", limit, offset, filterConditions)
 
-		paginationResponse := db.Pagination[db.Erc1155CollectionAsset]{
+		paginationResponse := db.Pagination[utils.Erc1155CollectionAssetResponse]{
 			Page:       page,
 			Limit:      limit,
 			TotalItems: int64(totalAssets),
 			TotalPages: int64(totalAssets+(limit)-1) / int64(limit),
-			Data:       assets,
+			Data:       utils.ConvertToErc1155CollectionAssetResponses(assets),
 		}
 
 		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC721", "asset": paginationResponse})
