@@ -40,3 +40,25 @@ func (q *Queries) AddOnchainTransaction(ctx context.Context, arg AddOnchainTrans
 	)
 	return err
 }
+
+const getOnchainHistoryByTxHash = `-- name: GetOnchainHistoryByTxHash :one
+SELECT id, "from", "to", asset_id, token_id, amount, tx_hash, timestamp, created_at, updated_at FROM onchain_histories WHERE tx_hash = $1
+`
+
+func (q *Queries) GetOnchainHistoryByTxHash(ctx context.Context, txHash string) (OnchainHistory, error) {
+	row := q.db.QueryRowContext(ctx, getOnchainHistoryByTxHash, txHash)
+	var i OnchainHistory
+	err := row.Scan(
+		&i.ID,
+		&i.From,
+		&i.To,
+		&i.AssetID,
+		&i.TokenID,
+		&i.Amount,
+		&i.TxHash,
+		&i.Timestamp,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}

@@ -79,7 +79,7 @@ paths:
       - application/json
       description: Get all supported chains
       parameters:
-      - description: Chain ID
+      - description: Chain Id
         in: query
         name: chain_id
         type: string
@@ -123,9 +123,9 @@ paths:
       consumes:
       - application/json
       description: Retrieve all asset collections associated with the specified chain
-        ID.
+        Id.
       parameters:
-      - description: Chain ID
+      - description: Chain Id
         in: path
         name: chain_id
         required: true
@@ -155,7 +155,7 @@ paths:
       - application/json
       description: Add a new asset collection to the chain
       parameters:
-      - description: Chain ID
+      - description: Chain Id
         in: path
         name: chain_id
         required: true
@@ -180,7 +180,7 @@ paths:
       - application/json
       description: Get all asset collection of the chain
       parameters:
-      - description: Chain ID
+      - description: Chain Id
         in: path
         name: chain_id
         required: true
@@ -199,7 +199,7 @@ paths:
         name: limit
         type: integer
       - collectionFormat: multi
-        description: Token IDs
+        description: Token Ids
         in: query
         items:
           type: string
@@ -217,6 +217,29 @@ paths:
       summary: Get all asset collection of the chain
       tags:
       - asset
+  /history:
+    get:
+      consumes:
+      - application/json
+      description: Get History of a transaction
+      parameters:
+      - description: Tx Hash
+        in: query
+        name: tx_hash
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.ResponseData'
+      security:
+      - ApiKeyAuth: []
+      summary: Get History of a transaction
+      tags:
+      - history
 schemes:
 - http
 - https

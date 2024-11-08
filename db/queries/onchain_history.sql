@@ -4,3 +4,7 @@ INSERT INTO
 VALUES (
     $1, $2, $3, $4, $5, $6, $7
 ) RETURNING *;
+
+
+-- name: GetOnchainHistoryByTxHash :one
+SELECT * FROM onchain_histories WHERE tx_hash = $1;
