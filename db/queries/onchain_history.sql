@@ -1,4 +1,4 @@
--- name: AddOnchainTransaction :exec
+-- name: AddOnchainTransaction :one
 INSERT INTO 
     onchain_histories("from","to",asset_id,token_id,amount,tx_hash,timestamp)
 VALUES (
@@ -6,5 +6,5 @@ VALUES (
 ) RETURNING *;
 
 
--- name: GetOnchainHistoryByTxHash :one
+-- name: GetOnchainHistoriesByTxHash :many
 SELECT * FROM onchain_histories WHERE tx_hash = $1;

@@ -169,6 +169,13 @@ func DeletePendingChainsInCache(ctx context.Context, rdb *redis.Client) error {
 	return rdb.Del(ctx, PendingChainKey()).Err()
 }
 
+func SetHistoriesCache(ctx context.Context, rdb *redis.Client, onChainHistories []db.OnchainHistory) error {
+	for _, history := range onChainHistories {
+		SetHistoryCache(ctx, rdb, history)
+	}
+	return nil
+}
+
 // SetHistoryCache stores a transaction hash in Redis with an expiration time of 15 minutes.
 func SetHistoryCache(ctx context.Context, rdb *redis.Client, onChainHistory db.OnchainHistory) error {
 	jsonHistory, err := json.Marshal(onChainHistory)
@@ -177,18 +184,36 @@ func SetHistoryCache(ctx context.Context, rdb *redis.Client, onChainHistory db.O
 	}
 
 	// Store the JSON string in Redis with an expiration of 15 minutes
-	return rdb.Set(ctx, OnchainHistoryKey(onChainHistory.TxHash), string(jsonHistory), 15*time.Minute).Err()
+	onchainHistoryKey := OnchainHistoryKey(onChainHistory.TxHash)
+	err = rdb.LPush(ctx, onchainHistoryKey, string(jsonHistory)).Err()
+	if err != nil {
+		return err
+	}
+
+	err = rdb.Expire(ctx, onchainHistoryKey, 15*time.Minute).Err()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // GetHistoryCache retrieves a transaction hash from Redis.
-func GetHistoryCache(ctx context.Context, rdb *redis.Client, txHash string) (*db.OnchainHistory, error) {
+func GetHistoryCache(ctx context.Context, rdb *redis.Client, txHash string) ([]db.OnchainHistory, error) {
+	histories, err := rdb.LRange(ctx, OnchainHistoryKey(txHash), 0, -1).Result()
 
-	res := rdb.Get(ctx, OnchainHistoryKey(txHash))
-	if res.Err() != nil {
-		return nil, res.Err()
+	if err != nil {
+		return nil, err
 	}
 
-	var history *db.OnchainHistory
-	err := json.Unmarshal([]byte(res.Val()), &history)
-	return history, err
+	onchainHistories := make([]db.OnchainHistory, 0, len(histories))
+	for _, history := range histories {
+
+		var onchainHistory db.OnchainHistory
+		err = json.Unmarshal([]byte(history), &onchainHistory)
+		if err != nil {
+			return nil, err
+		}
+		onchainHistories = append(onchainHistories, onchainHistory)
+	}
+	return onchainHistories, nil
 }

@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const addOnchainTransaction = `-- name: AddOnchainTransaction :exec
+const addOnchainTransaction = `-- name: AddOnchainTransaction :one
 INSERT INTO 
     onchain_histories("from","to",asset_id,token_id,amount,tx_hash,timestamp)
 VALUES (
@@ -28,8 +28,8 @@ type AddOnchainTransactionParams struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-func (q *Queries) AddOnchainTransaction(ctx context.Context, arg AddOnchainTransactionParams) error {
-	_, err := q.db.ExecContext(ctx, addOnchainTransaction,
+func (q *Queries) AddOnchainTransaction(ctx context.Context, arg AddOnchainTransactionParams) (OnchainHistory, error) {
+	row := q.db.QueryRowContext(ctx, addOnchainTransaction,
 		arg.From,
 		arg.To,
 		arg.AssetID,
@@ -38,15 +38,6 @@ func (q *Queries) AddOnchainTransaction(ctx context.Context, arg AddOnchainTrans
 		arg.TxHash,
 		arg.Timestamp,
 	)
-	return err
-}
-
-const getOnchainHistoryByTxHash = `-- name: GetOnchainHistoryByTxHash :one
-SELECT id, "from", "to", asset_id, token_id, amount, tx_hash, timestamp, created_at, updated_at FROM onchain_histories WHERE tx_hash = $1
-`
-
-func (q *Queries) GetOnchainHistoryByTxHash(ctx context.Context, txHash string) (OnchainHistory, error) {
-	row := q.db.QueryRowContext(ctx, getOnchainHistoryByTxHash, txHash)
 	var i OnchainHistory
 	err := row.Scan(
 		&i.ID,
@@ -61,4 +52,42 @@ func (q *Queries) GetOnchainHistoryByTxHash(ctx context.Context, txHash string) 
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getOnchainHistoriesByTxHash = `-- name: GetOnchainHistoriesByTxHash :many
+SELECT id, "from", "to", asset_id, token_id, amount, tx_hash, timestamp, created_at, updated_at FROM onchain_histories WHERE tx_hash = $1
+`
+
+func (q *Queries) GetOnchainHistoriesByTxHash(ctx context.Context, txHash string) ([]OnchainHistory, error) {
+	rows, err := q.db.QueryContext(ctx, getOnchainHistoriesByTxHash, txHash)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []OnchainHistory
+	for rows.Next() {
+		var i OnchainHistory
+		if err := rows.Scan(
+			&i.ID,
+			&i.From,
+			&i.To,
+			&i.AssetID,
+			&i.TokenID,
+			&i.Amount,
+			&i.TxHash,
+			&i.Timestamp,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

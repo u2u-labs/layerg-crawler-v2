@@ -38,27 +38,27 @@ func (hc *HistoryController) GetHistory(ctx *gin.Context) {
 
 	// get onchain history in cache or db
 
-	history, err := rdb.GetHistoryCache(ctx, hc.rdb, txHash)
-	if err != nil {
-		if err == redis.Nil {
-			tx, err := hc.db.GetOnchainHistoryByTxHash(ctx, txHash)
-			if err != nil {
-				response.ErrorResponseData(ctx, http.StatusInternalServerError, err.Error())
-				return
-			}
-			// Cache new added chain
-			if err = rdb.SetHistoryCache(hc.ctx, hc.rdb, tx); err != nil {
-				response.ErrorResponseData(ctx, http.StatusInternalServerError, err.Error())
-				return
-			}
-			response.SuccessReponseData(ctx, http.StatusOK, tx)
-			return
+	histories, err := rdb.GetHistoryCache(ctx, hc.rdb, txHash)
 
-		} else {
-			response.ErrorResponseData(ctx, http.StatusInternalServerError, err.Error())
-			return
-		}
+	if err != nil {
+		response.ErrorResponseData(ctx, http.StatusInternalServerError, err.Error())
+		return
 	}
 
-	response.SuccessReponseData(ctx, http.StatusOK, history)
+	if len(histories) != 0 {
+		response.SuccessReponseData(ctx, http.StatusOK, histories)
+		return
+	}
+
+	tx, err := hc.db.GetOnchainHistoriesByTxHash(ctx, txHash)
+	if err != nil {
+		response.ErrorResponseData(ctx, http.StatusInternalServerError, err.Error())
+		return
+	}
+	// Cache new added chain
+	if err = rdb.SetHistoriesCache(hc.ctx, hc.rdb, tx); err != nil {
+		response.ErrorResponseData(ctx, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.SuccessReponseData(ctx, http.StatusOK, tx)
 }

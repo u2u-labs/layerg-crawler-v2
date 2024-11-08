@@ -71,29 +71,29 @@ func ProcessLatestBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *
 }
 
 func FilterEvents(ctx context.Context, sugar *zap.SugaredLogger, q *db.Queries, client *ethclient.Client,
-	chain *db.Chain, rc *redis.Client, receipts utypes.Receipts) error {
+	chain *db.Chain, rdb *redis.Client, receipts utypes.Receipts) error {
 	for _, r := range receipts {
 		for _, l := range r.Logs { //sugar.Debugw("FilterEvents", "txHash", r.TxHash.Hex(), "l.Address.Hex", l.Address.Hex(), "info", contractType[chain.ID][l.Address.Hex()])
 			switch contractType[chain.ID][l.Address.Hex()].Type {
 			case db.AssetTypeERC20:
-				if err := handleErc20Transfer(ctx, sugar, q, client, chain, rc, l); err != nil {
+				if err := handleErc20Transfer(ctx, sugar, q, client, chain, rdb, l); err != nil {
 					sugar.Errorw("handleErc20Transfer", "err", err)
 					return err
 				}
 			case db.AssetTypeERC721:
-				if err := handleErc721Transfer(ctx, sugar, q, client, chain, rc, l); err != nil {
+				if err := handleErc721Transfer(ctx, sugar, q, client, chain, rdb, l); err != nil {
 					sugar.Errorw("handleErc721Transfer", "err", err)
 					return err
 				}
 			case db.AssetTypeERC1155:
 				if l.Topics[0].Hex() == utils.TransferSingleSig {
-					if err := handleErc1155TransferSingle(ctx, sugar, q, client, chain, rc, l); err != nil {
+					if err := handleErc1155TransferSingle(ctx, sugar, q, client, chain, rdb, l); err != nil {
 						sugar.Errorw("handleErc1155TransferSingle", "err", err)
 						return err
 					}
 				}
 				if l.Topics[0].Hex() == utils.TransferBatchSig {
-					if err := handleErc1155TransferBatch(ctx, sugar, q, client, chain, rc, l); err != nil {
+					if err := handleErc1155TransferBatch(ctx, sugar, q, client, chain, rdb, l); err != nil {
 						sugar.Errorw("handleErc1155TransferBatch", "err", err)
 						return err
 					}
@@ -123,7 +123,7 @@ func handleErc20Transfer(ctx context.Context, sugar *zap.SugaredLogger, q *db.Qu
 	event.To = common.BytesToAddress(l.Topics[2].Bytes())
 	amount, _ := event.Value.Float64()
 
-	if err = q.AddOnchainTransaction(ctx, db.AddOnchainTransactionParams{
+	history, err := q.AddOnchainTransaction(ctx, db.AddOnchainTransactionParams{
 		From:      event.From.Hex(),
 		To:        event.To.Hex(),
 		AssetID:   contractType[chain.ID][l.Address.Hex()].ID,
@@ -131,16 +131,13 @@ func handleErc20Transfer(ctx context.Context, sugar *zap.SugaredLogger, q *db.Qu
 		Amount:    amount,
 		TxHash:    l.TxHash.Hex(),
 		Timestamp: time.Now(),
-	}); err != nil {
-		return err
-	}
+	})
 
-	// Cache the new onchain transaction
-	a, err := q.GetOnchainHistoryByTxHash(ctx, l.TxHash.Hex())
 	if err != nil {
 		return err
 	}
-	if err = rdb.SetHistoryCache(ctx, rc, a); err != nil {
+
+	if err = rdb.SetHistoryCache(ctx, rc, history); err != nil {
 		return err
 	}
 
@@ -176,7 +173,7 @@ func handleErc721Transfer(ctx context.Context, sugar *zap.SugaredLogger, q *db.Q
 		To:      common.BytesToAddress(l.Topics[2].Bytes()),
 		TokenID: l.Topics[3].Big(),
 	}
-	err := q.AddOnchainTransaction(ctx, db.AddOnchainTransactionParams{
+	history, err := q.AddOnchainTransaction(ctx, db.AddOnchainTransactionParams{
 		From:      event.From.Hex(),
 		To:        event.To.Hex(),
 		AssetID:   contractType[chain.ID][l.Address.Hex()].ID,
@@ -190,11 +187,7 @@ func handleErc721Transfer(ctx context.Context, sugar *zap.SugaredLogger, q *db.Q
 	}
 
 	// Cache the new onchain transaction
-	a, err := q.GetOnchainHistoryByTxHash(ctx, l.TxHash.Hex())
-	if err != nil {
-		return err
-	}
-	if err = rdb.SetHistoryCache(ctx, rc, a); err != nil {
+	if err = rdb.SetHistoryCache(ctx, rc, history); err != nil {
 		return err
 	}
 
@@ -232,7 +225,7 @@ func handleErc1155TransferBatch(ctx context.Context, sugar *zap.SugaredLogger, q
 
 	for i := range event.Ids {
 		amount, _ := event.Values[i].Float64()
-		if err = q.AddOnchainTransaction(ctx, db.AddOnchainTransactionParams{
+		history, err := q.AddOnchainTransaction(ctx, db.AddOnchainTransactionParams{
 			From:      event.From.Hex(),
 			To:        event.To.Hex(),
 			AssetID:   contractType[chain.ID][l.Address.Hex()].ID,
@@ -240,16 +233,12 @@ func handleErc1155TransferBatch(ctx context.Context, sugar *zap.SugaredLogger, q
 			Amount:    amount,
 			TxHash:    l.TxHash.Hex(),
 			Timestamp: time.Now(),
-		}); err != nil {
-			return err
-		}
-
-		a, err := q.GetOnchainHistoryByTxHash(ctx, l.TxHash.Hex())
+		})
 		if err != nil {
 			return err
 		}
 
-		if err = rdb.SetHistoryCache(ctx, rc, a); err != nil {
+		if err = rdb.SetHistoryCache(ctx, rc, history); err != nil {
 			return err
 		}
 
@@ -287,7 +276,7 @@ func handleErc1155TransferSingle(ctx context.Context, sugar *zap.SugaredLogger, 
 	event.To = common.BytesToAddress(l.Topics[3].Bytes())
 
 	amount, _ := event.Value.Float64()
-	if err = q.AddOnchainTransaction(ctx, db.AddOnchainTransactionParams{
+	history, err := q.AddOnchainTransaction(ctx, db.AddOnchainTransactionParams{
 		From:      event.From.Hex(),
 		To:        event.To.Hex(),
 		AssetID:   contractType[chain.ID][l.Address.Hex()].ID,
@@ -295,16 +284,12 @@ func handleErc1155TransferSingle(ctx context.Context, sugar *zap.SugaredLogger, 
 		Amount:    amount,
 		TxHash:    l.TxHash.Hex(),
 		Timestamp: time.Now(),
-	}); err != nil {
-		return err
-	}
-
-	a, err := q.GetOnchainHistoryByTxHash(ctx, l.TxHash.Hex())
+	})
 	if err != nil {
 		return err
 	}
 
-	if err = rdb.SetHistoryCache(ctx, rc, a); err != nil {
+	if err = rdb.SetHistoryCache(ctx, rc, history); err != nil {
 		return err
 	}
 
