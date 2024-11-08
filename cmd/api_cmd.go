@@ -80,6 +80,7 @@ func serveApi(db *dbCon.Queries, rdb *redis.Client, rawDb *sql.DB, ctx context.C
 	// new Controller
 	chainController := controllers.NewChainController(chainService, ctx, rdb)
 	assetController := controllers.NewAssetController(assetService, ctx, rdb)
+	historyController := controllers.NewHistoryController(db, rawDb, ctx, rdb)
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -94,6 +95,9 @@ func serveApi(db *dbCon.Queries, rdb *redis.Client, rawDb *sql.DB, ctx context.C
 	router.POST("/chain/:chain_id/collection", assetController.AddAssetCollection)
 	router.GET("/chain/:chain_id/collection", assetController.GetAssetCollection)
 	router.GET("/chain/:chain_id/collection/:collection_address/assets", assetController.GetAssetByChainIdAndContractAddress)
+
+	// History routes
+	router.GET("/history", historyController.GetHistory)
 
 	// Run the server
 

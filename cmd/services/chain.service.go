@@ -74,5 +74,4 @@ func (cs *ChainService) GetChainById(chainId int, ctx *gin.Context) {
 		return
 	}
 	response.SuccessReponseData(ctx, http.StatusOK, chain)
-
 }

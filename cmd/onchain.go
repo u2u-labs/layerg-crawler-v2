@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	u2u "github.com/unicornultrafoundation/go-u2u"
 	"github.com/unicornultrafoundation/go-u2u/common"
 	utypes "github.com/unicornultrafoundation/go-u2u/core/types"
@@ -18,10 +19,11 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/u2u-labs/layerg-crawler/cmd/utils"
+	rdb "github.com/u2u-labs/layerg-crawler/db"
 	db "github.com/u2u-labs/layerg-crawler/db/sqlc"
 )
 
-func StartChainCrawler(ctx context.Context, sugar *zap.SugaredLogger, client *ethclient.Client, q *db.Queries, chain *db.Chain) {
+func StartChainCrawler(ctx context.Context, sugar *zap.SugaredLogger, client *ethclient.Client, q *db.Queries, chain *db.Chain, rdb *redis.Client) {
 	sugar.Infow("Start chain crawler", "chain", chain)
 	timer := time.NewTimer(time.Duration(chain.BlockTime) * time.Millisecond)
 	defer timer.Stop()
@@ -29,13 +31,13 @@ func StartChainCrawler(ctx context.Context, sugar *zap.SugaredLogger, client *et
 		select {
 		case <-timer.C:
 			// Process new blocks
-			ProcessLatestBlocks(ctx, sugar, client, q, chain)
+			ProcessLatestBlocks(ctx, sugar, client, q, chain, rdb)
 			timer.Reset(time.Duration(chain.BlockTime) * time.Millisecond)
 		}
 	}
 }
 
-func ProcessLatestBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *ethclient.Client, q *db.Queries, chain *db.Chain) error {
+func ProcessLatestBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *ethclient.Client, q *db.Queries, chain *db.Chain, rdb *redis.Client) error {
 	latest, err := client.BlockNumber(ctx)
 	if err != nil {
 		sugar.Errorw("Failed to fetch latest blocks", "err", err, "chain", chain)
@@ -51,7 +53,7 @@ func ProcessLatestBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *
 			sugar.Errorw("Failed to fetch latest block receipts", "err", err, "height", i, "chain", chain)
 			return err
 		}
-		if err = FilterEvents(ctx, sugar, q, client, chain, receipts); err != nil {
+		if err = FilterEvents(ctx, sugar, q, client, chain, rdb, receipts); err != nil {
 			sugar.Errorw("Failed to filter events", "err", err, "height", i, "chain", chain)
 			return err
 		}
@@ -69,29 +71,29 @@ func ProcessLatestBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *
 }
 
 func FilterEvents(ctx context.Context, sugar *zap.SugaredLogger, q *db.Queries, client *ethclient.Client,
-	chain *db.Chain, receipts utypes.Receipts) error {
+	chain *db.Chain, rdb *redis.Client, receipts utypes.Receipts) error {
 	for _, r := range receipts {
 		for _, l := range r.Logs { //sugar.Debugw("FilterEvents", "txHash", r.TxHash.Hex(), "l.Address.Hex", l.Address.Hex(), "info", contractType[chain.ID][l.Address.Hex()])
 			switch contractType[chain.ID][l.Address.Hex()].Type {
 			case db.AssetTypeERC20:
-				if err := handleErc20Transfer(ctx, sugar, q, client, chain, l); err != nil {
+				if err := handleErc20Transfer(ctx, sugar, q, client, chain, rdb, l); err != nil {
 					sugar.Errorw("handleErc20Transfer", "err", err)
 					return err
 				}
 			case db.AssetTypeERC721:
-				if err := handleErc721Transfer(ctx, sugar, q, client, chain, l); err != nil {
+				if err := handleErc721Transfer(ctx, sugar, q, client, chain, rdb, l); err != nil {
 					sugar.Errorw("handleErc721Transfer", "err", err)
 					return err
 				}
 			case db.AssetTypeERC1155:
 				if l.Topics[0].Hex() == utils.TransferSingleSig {
-					if err := handleErc1155TransferSingle(ctx, sugar, q, client, chain, l); err != nil {
+					if err := handleErc1155TransferSingle(ctx, sugar, q, client, chain, rdb, l); err != nil {
 						sugar.Errorw("handleErc1155TransferSingle", "err", err)
 						return err
 					}
 				}
 				if l.Topics[0].Hex() == utils.TransferBatchSig {
-					if err := handleErc1155TransferBatch(ctx, sugar, q, client, chain, l); err != nil {
+					if err := handleErc1155TransferBatch(ctx, sugar, q, client, chain, rdb, l); err != nil {
 						sugar.Errorw("handleErc1155TransferBatch", "err", err)
 						return err
 					}
@@ -105,7 +107,7 @@ func FilterEvents(ctx context.Context, sugar *zap.SugaredLogger, q *db.Queries, 
 }
 
 func handleErc20Transfer(ctx context.Context, sugar *zap.SugaredLogger, q *db.Queries, client *ethclient.Client,
-	chain *db.Chain, l *utypes.Log) error {
+	chain *db.Chain, rc *redis.Client, l *utypes.Log) error {
 	if l.Topics[0].Hex() != utils.TransferEventSig {
 		return nil
 	}
@@ -121,7 +123,7 @@ func handleErc20Transfer(ctx context.Context, sugar *zap.SugaredLogger, q *db.Qu
 	event.To = common.BytesToAddress(l.Topics[2].Bytes())
 	amount, _ := event.Value.Float64()
 
-	if err = q.AddOnchainTransaction(ctx, db.AddOnchainTransactionParams{
+	history, err := q.AddOnchainTransaction(ctx, db.AddOnchainTransactionParams{
 		From:      event.From.Hex(),
 		To:        event.To.Hex(),
 		AssetID:   contractType[chain.ID][l.Address.Hex()].ID,
@@ -129,9 +131,16 @@ func handleErc20Transfer(ctx context.Context, sugar *zap.SugaredLogger, q *db.Qu
 		Amount:    amount,
 		TxHash:    l.TxHash.Hex(),
 		Timestamp: time.Now(),
-	}); err != nil {
+	})
+
+	if err != nil {
 		return err
 	}
+
+	if err = rdb.SetHistoryCache(ctx, rc, history); err != nil {
+		return err
+	}
+
 	// Update holders without balances
 	if err = q.Add20Asset(ctx, db.Add20AssetParams{
 		AssetID: contractType[chain.ID][l.Address.Hex()].ID,
@@ -154,7 +163,7 @@ func handleErc20Transfer(ctx context.Context, sugar *zap.SugaredLogger, q *db.Qu
 }
 
 func handleErc721Transfer(ctx context.Context, sugar *zap.SugaredLogger, q *db.Queries, client *ethclient.Client,
-	chain *db.Chain, l *utypes.Log) error {
+	chain *db.Chain, rc *redis.Client, l *utypes.Log) error {
 	if l.Topics[0].Hex() != utils.TransferEventSig {
 		return nil
 	}
@@ -164,7 +173,7 @@ func handleErc721Transfer(ctx context.Context, sugar *zap.SugaredLogger, q *db.Q
 		To:      common.BytesToAddress(l.Topics[2].Bytes()),
 		TokenID: l.Topics[3].Big(),
 	}
-	err := q.AddOnchainTransaction(ctx, db.AddOnchainTransactionParams{
+	history, err := q.AddOnchainTransaction(ctx, db.AddOnchainTransactionParams{
 		From:      event.From.Hex(),
 		To:        event.To.Hex(),
 		AssetID:   contractType[chain.ID][l.Address.Hex()].ID,
@@ -176,6 +185,12 @@ func handleErc721Transfer(ctx context.Context, sugar *zap.SugaredLogger, q *db.Q
 	if err != nil {
 		return err
 	}
+
+	// Cache the new onchain transaction
+	if err = rdb.SetHistoryCache(ctx, rc, history); err != nil {
+		return err
+	}
+
 	// Update NFT holder
 	uri, err := getErc721TokenURI(ctx, sugar, client, &l.Address, event.TokenID)
 	if err = q.Add721Asset(ctx, db.Add721AssetParams{
@@ -195,7 +210,7 @@ func handleErc721Transfer(ctx context.Context, sugar *zap.SugaredLogger, q *db.Q
 }
 
 func handleErc1155TransferBatch(ctx context.Context, sugar *zap.SugaredLogger, q *db.Queries, client *ethclient.Client,
-	chain *db.Chain, l *utypes.Log) error {
+	chain *db.Chain, rc *redis.Client, l *utypes.Log) error {
 	// Decode TransferBatch log
 	var event utils.Erc1155TransferBatchEvent
 	err := utils.ERC1155ABI.UnpackIntoInterface(&event, "TransferBatch", l.Data)
@@ -210,7 +225,7 @@ func handleErc1155TransferBatch(ctx context.Context, sugar *zap.SugaredLogger, q
 
 	for i := range event.Ids {
 		amount, _ := event.Values[i].Float64()
-		if err = q.AddOnchainTransaction(ctx, db.AddOnchainTransactionParams{
+		history, err := q.AddOnchainTransaction(ctx, db.AddOnchainTransactionParams{
 			From:      event.From.Hex(),
 			To:        event.To.Hex(),
 			AssetID:   contractType[chain.ID][l.Address.Hex()].ID,
@@ -218,7 +233,12 @@ func handleErc1155TransferBatch(ctx context.Context, sugar *zap.SugaredLogger, q
 			Amount:    amount,
 			TxHash:    l.TxHash.Hex(),
 			Timestamp: time.Now(),
-		}); err != nil {
+		})
+		if err != nil {
+			return err
+		}
+
+		if err = rdb.SetHistoryCache(ctx, rc, history); err != nil {
 			return err
 		}
 
@@ -242,7 +262,7 @@ func handleErc1155TransferBatch(ctx context.Context, sugar *zap.SugaredLogger, q
 }
 
 func handleErc1155TransferSingle(ctx context.Context, sugar *zap.SugaredLogger, q *db.Queries, client *ethclient.Client,
-	chain *db.Chain, l *utypes.Log) error {
+	chain *db.Chain, rc *redis.Client, l *utypes.Log) error {
 	// Decode TransferSingle log
 	var event utils.Erc1155TransferSingleEvent
 	err := utils.ERC1155ABI.UnpackIntoInterface(&event, "TransferSingle", l.Data)
@@ -256,7 +276,7 @@ func handleErc1155TransferSingle(ctx context.Context, sugar *zap.SugaredLogger, 
 	event.To = common.BytesToAddress(l.Topics[3].Bytes())
 
 	amount, _ := event.Value.Float64()
-	if err = q.AddOnchainTransaction(ctx, db.AddOnchainTransactionParams{
+	history, err := q.AddOnchainTransaction(ctx, db.AddOnchainTransactionParams{
 		From:      event.From.Hex(),
 		To:        event.To.Hex(),
 		AssetID:   contractType[chain.ID][l.Address.Hex()].ID,
@@ -264,7 +284,12 @@ func handleErc1155TransferSingle(ctx context.Context, sugar *zap.SugaredLogger, 
 		Amount:    amount,
 		TxHash:    l.TxHash.Hex(),
 		Timestamp: time.Now(),
-	}); err != nil {
+	})
+	if err != nil {
+		return err
+	}
+
+	if err = rdb.SetHistoryCache(ctx, rc, history); err != nil {
 		return err
 	}
 

@@ -42,7 +42,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Chain ID",
+                        "description": "Chain Id",
                         "name": "chain_id",
                         "in": "query"
                     }
@@ -100,7 +100,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Retrieve all asset collections associated with the specified chain ID.",
+                "description": "Retrieve all asset collections associated with the specified chain Id.",
                 "consumes": [
                     "application/json"
                 ],
@@ -114,7 +114,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Chain ID",
+                        "description": "Chain Id",
                         "name": "chain_id",
                         "in": "path",
                         "required": true
@@ -160,7 +160,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Chain ID",
+                        "description": "Chain Id",
                         "name": "chain_id",
                         "in": "path",
                         "required": true
@@ -199,7 +199,7 @@
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Chain ID",
+                        "description": "Chain Id",
                         "name": "chain_id",
                         "in": "path",
                         "required": true
@@ -229,7 +229,7 @@
                             "type": "string"
                         },
                         "collectionFormat": "multi",
-                        "description": "Token IDs",
+                        "description": "Token Ids",
                         "name": "token_id",
                         "in": "query"
                     },
@@ -241,6 +241,43 @@
                     }
                 ],
                 "responses": {}
+            }
+        },
+        "/history": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get History of a transaction",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "history"
+                ],
+                "summary": "Get History of a transaction",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tx Hash",
+                        "name": "tx_hash",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.ResponseData"
+                        }
+                    }
+                }
             }
         }
     },
