@@ -3,10 +3,11 @@ package cmd
 import (
 	"context"
 	"database/sql"
-	"github.com/u2u-labs/layerg-crawler/config"
 	"log"
 	"strings"
 	"time"
+
+	"github.com/u2u-labs/layerg-crawler/config"
 
 	_ "github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
@@ -103,7 +104,7 @@ func ProcessNewChains(ctx context.Context, sugar *zap.SugaredLogger, rdb *redis.
 			sugar.Errorw("ProcessNewChains failed to init chain client", "err", err, "chain", c)
 			return
 		}
-		go StartChainCrawler(ctx, sugar, client, q, &c)
+		go StartChainCrawler(ctx, sugar, client, q, &c, rdb)
 		sugar.Infow("Initiated new chain, start crawling", "chain", c)
 	}
 }
@@ -178,7 +179,7 @@ func crawlSupportedChains(ctx context.Context, sugar *zap.SugaredLogger, q *dbCo
 		if err != nil {
 			return err
 		}
-		go StartChainCrawler(ctx, sugar, client, q, &c)
+		go StartChainCrawler(ctx, sugar, client, q, &c, rdb)
 	}
 	return nil
 

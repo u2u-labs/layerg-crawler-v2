@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"github.com/u2u-labs/layerg-crawler/cmd/response"
+	rdb "github.com/u2u-labs/layerg-crawler/db"
 	db "github.com/u2u-labs/layerg-crawler/db/sqlc"
 )
 
@@ -32,13 +33,31 @@ func NewHistoryController(db *db.Queries, rawDb *sql.DB, ctx context.Context, rd
 // @Success      200 {object} response.ResponseData
 // @Security     ApiKeyAuth
 // @Router       /history [get]
-func (hs *HistoryController) GetHistory(ctx *gin.Context) {
+func (hc *HistoryController) GetHistory(ctx *gin.Context) {
 	txHash := ctx.Query("tx_hash")
 
-	history, err := hs.db.GetOnchainHistoryByTxHash(ctx, txHash)
+	// get onchain history in cache or db
+
+	history, err := rdb.GetHistoryCache(ctx, hc.rdb, txHash)
 	if err != nil {
-		response.ErrorResponseData(ctx, http.StatusInternalServerError, err.Error())
-		return
+		if err == redis.Nil {
+			tx, err := hc.db.GetOnchainHistoryByTxHash(ctx, txHash)
+			if err != nil {
+				response.ErrorResponseData(ctx, http.StatusInternalServerError, err.Error())
+				return
+			}
+			// Cache new added chain
+			if err = rdb.SetHistoryCache(hc.ctx, hc.rdb, tx); err != nil {
+				response.ErrorResponseData(ctx, http.StatusInternalServerError, err.Error())
+				return
+			}
+			response.SuccessReponseData(ctx, http.StatusOK, tx)
+			return
+
+		} else {
+			response.ErrorResponseData(ctx, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
 
 	response.SuccessReponseData(ctx, http.StatusOK, history)

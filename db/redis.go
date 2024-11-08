@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 
@@ -39,6 +40,10 @@ func PendingChainKey() string {
 
 func PendingAssetKey() string {
 	return "pendingAssets"
+}
+
+func OnchainHistoryKey(txHash string) string {
+	return "txHash:" + txHash
 }
 
 func GetCachedChain(ctx context.Context, rdb *redis.Client, chainId int32) (*db.Chain, error) {
@@ -162,4 +167,28 @@ func SetPendingChainToCache(ctx context.Context, rdb *redis.Client, chain db.Cha
 
 func DeletePendingChainsInCache(ctx context.Context, rdb *redis.Client) error {
 	return rdb.Del(ctx, PendingChainKey()).Err()
+}
+
+// SetHistoryCache stores a transaction hash in Redis with an expiration time of 15 minutes.
+func SetHistoryCache(ctx context.Context, rdb *redis.Client, onChainHistory db.OnchainHistory) error {
+	jsonHistory, err := json.Marshal(onChainHistory)
+	if err != nil {
+		return err
+	}
+
+	// Store the JSON string in Redis with an expiration of 15 minutes
+	return rdb.Set(ctx, OnchainHistoryKey(onChainHistory.TxHash), string(jsonHistory), 15*time.Minute).Err()
+}
+
+// GetHistoryCache retrieves a transaction hash from Redis.
+func GetHistoryCache(ctx context.Context, rdb *redis.Client, txHash string) (*db.OnchainHistory, error) {
+
+	res := rdb.Get(ctx, OnchainHistoryKey(txHash))
+	if res.Err() != nil {
+		return nil, res.Err()
+	}
+
+	var history *db.OnchainHistory
+	err := json.Unmarshal([]byte(res.Val()), &history)
+	return history, err
 }
