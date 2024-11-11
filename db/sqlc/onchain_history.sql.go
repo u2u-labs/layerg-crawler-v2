@@ -23,7 +23,7 @@ type AddOnchainTransactionParams struct {
 	To        string    `json:"to"`
 	AssetID   string    `json:"assetId"`
 	TokenID   string    `json:"tokenId"`
-	Amount    float64   `json:"amount"`
+	Amount    string    `json:"amount"`
 	TxHash    string    `json:"txHash"`
 	Timestamp time.Time `json:"timestamp"`
 }

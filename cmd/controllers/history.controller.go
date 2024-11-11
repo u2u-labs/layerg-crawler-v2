@@ -51,6 +51,7 @@ func (hc *HistoryController) GetHistory(ctx *gin.Context) {
 	}
 
 	tx, err := hc.db.GetOnchainHistoriesByTxHash(ctx, txHash)
+
 	if err != nil {
 		response.ErrorResponseData(ctx, http.StatusInternalServerError, err.Error())
 		return

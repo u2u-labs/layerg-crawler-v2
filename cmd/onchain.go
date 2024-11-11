@@ -121,8 +121,7 @@ func handleErc20Transfer(ctx context.Context, sugar *zap.SugaredLogger, q *db.Qu
 	// Decode the indexed fields manually
 	event.From = common.BytesToAddress(l.Topics[1].Bytes())
 	event.To = common.BytesToAddress(l.Topics[2].Bytes())
-	amount, _ := event.Value.Float64()
-
+	amount := event.Value.String()
 	history, err := q.AddOnchainTransaction(ctx, db.AddOnchainTransactionParams{
 		From:      event.From.Hex(),
 		To:        event.To.Hex(),
@@ -178,7 +177,7 @@ func handleErc721Transfer(ctx context.Context, sugar *zap.SugaredLogger, q *db.Q
 		To:        event.To.Hex(),
 		AssetID:   contractType[chain.ID][l.Address.Hex()].ID,
 		TokenID:   event.TokenID.String(),
-		Amount:    0,
+		Amount:    "0",
 		TxHash:    l.TxHash.Hex(),
 		Timestamp: time.Now(),
 	})
@@ -224,7 +223,7 @@ func handleErc1155TransferBatch(ctx context.Context, sugar *zap.SugaredLogger, q
 	event.To = common.BytesToAddress(l.Topics[3].Bytes())
 
 	for i := range event.Ids {
-		amount, _ := event.Values[i].Float64()
+		amount := event.Values[i].String()
 		history, err := q.AddOnchainTransaction(ctx, db.AddOnchainTransactionParams{
 			From:      event.From.Hex(),
 			To:        event.To.Hex(),
@@ -275,7 +274,7 @@ func handleErc1155TransferSingle(ctx context.Context, sugar *zap.SugaredLogger, 
 	event.From = common.BytesToAddress(l.Topics[2].Bytes())
 	event.To = common.BytesToAddress(l.Topics[3].Bytes())
 
-	amount, _ := event.Value.Float64()
+	amount := event.Value.String()
 	history, err := q.AddOnchainTransaction(ctx, db.AddOnchainTransactionParams{
 		From:      event.From.Hex(),
 		To:        event.To.Hex(),
