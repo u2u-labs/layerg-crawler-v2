@@ -242,6 +242,10 @@ func handleErc1155TransferBatch(ctx context.Context, sugar *zap.SugaredLogger, q
 		}
 
 		uri, err := getErc1155TokenURI(ctx, sugar, client, &l.Address, event.Ids[i])
+		if err != nil {
+			sugar.Errorw("Failed to get ERC1155 token URI", "err", err, "tokenID", event.Ids[i])
+			return err
+		}
 		if err = q.Add1155Asset(ctx, db.Add1155AssetParams{
 			AssetID: contractType[chain.ID][l.Address.Hex()].ID,
 			ChainID: chain.ID,
@@ -252,6 +256,13 @@ func handleErc1155TransferBatch(ctx context.Context, sugar *zap.SugaredLogger, q
 				String: uri,
 				Valid:  true,
 			},
+		}); err != nil {
+			return err
+		}
+
+		if err = q.Update1155AssetTotalSupply(ctx, db.Update1155AssetTotalSupplyParams{
+			AssetID: contractType[chain.ID][l.Address.Hex()].ID,
+			TokenID: event.Ids[i].String(),
 		}); err != nil {
 			return err
 		}
@@ -293,6 +304,10 @@ func handleErc1155TransferSingle(ctx context.Context, sugar *zap.SugaredLogger, 
 	}
 
 	uri, err := getErc1155TokenURI(ctx, sugar, client, &l.Address, event.Id)
+	if err != nil {
+		sugar.Errorw("Failed to get ERC1155 token URI", "err", err, "tokenID", event.Id)
+		return err
+	}
 	if err = q.Add1155Asset(ctx, db.Add1155AssetParams{
 		AssetID: contractType[chain.ID][l.Address.Hex()].ID,
 		ChainID: chain.ID,
@@ -303,6 +318,13 @@ func handleErc1155TransferSingle(ctx context.Context, sugar *zap.SugaredLogger, 
 			String: uri,
 			Valid:  true,
 		},
+	}); err != nil {
+		return err
+	}
+
+	if err = q.Update1155AssetTotalSupply(ctx, db.Update1155AssetTotalSupplyParams{
+		AssetID: contractType[chain.ID][l.Address.Hex()].ID,
+		TokenID: event.Id.String(),
 	}); err != nil {
 		return err
 	}

@@ -18,10 +18,10 @@ INSERT INTO
 VALUES (
     $1, $2, $3, $4, $5, $6
 ) ON CONFLICT ON CONSTRAINT UC_ERC1155 DO UPDATE SET
-    owner = $4,
     balance = $5,
     attributes = $6
-RETURNING id, chain_id, asset_id, token_id, owner, balance, attributes, created_at, updated_at
+    
+RETURNING id, chain_id, asset_id, token_id, owner, balance, attributes, created_at, updated_at, total_supply
 `
 
 type Add1155AssetParams struct {
@@ -82,7 +82,7 @@ func (q *Queries) Delete1155Asset(ctx context.Context, id uuid.UUID) error {
 }
 
 const get1155AssetByAssetIdAndTokenId = `-- name: Get1155AssetByAssetIdAndTokenId :one
-SELECT id, chain_id, asset_id, token_id, owner, balance, attributes, created_at, updated_at FROM erc_1155_collection_assets
+SELECT id, chain_id, asset_id, token_id, owner, balance, attributes, created_at, updated_at, total_supply FROM erc_1155_collection_assets
 WHERE
     asset_id = $1
     AND token_id = $2
@@ -106,12 +106,13 @@ func (q *Queries) Get1155AssetByAssetIdAndTokenId(ctx context.Context, arg Get11
 		&i.Attributes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TotalSupply,
 	)
 	return i, err
 }
 
 const getPaginated1155AssetByAssetId = `-- name: GetPaginated1155AssetByAssetId :many
-SELECT id, chain_id, asset_id, token_id, owner, balance, attributes, created_at, updated_at FROM erc_1155_collection_assets 
+SELECT id, chain_id, asset_id, token_id, owner, balance, attributes, created_at, updated_at, total_supply FROM erc_1155_collection_assets 
 WHERE asset_id = $1
 LIMIT $2 OFFSET $3
 `
@@ -141,6 +142,7 @@ func (q *Queries) GetPaginated1155AssetByAssetId(ctx context.Context, arg GetPag
 			&i.Attributes,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TotalSupply,
 		); err != nil {
 			return nil, err
 		}
@@ -156,7 +158,7 @@ func (q *Queries) GetPaginated1155AssetByAssetId(ctx context.Context, arg GetPag
 }
 
 const getPaginated1155AssetByOwnerAddress = `-- name: GetPaginated1155AssetByOwnerAddress :many
-SELECT id, chain_id, asset_id, token_id, owner, balance, attributes, created_at, updated_at FROM erc_1155_collection_assets
+SELECT id, chain_id, asset_id, token_id, owner, balance, attributes, created_at, updated_at, total_supply FROM erc_1155_collection_assets
 WHERE
     owner = $1
 LIMIT $2 OFFSET $3
@@ -187,6 +189,7 @@ func (q *Queries) GetPaginated1155AssetByOwnerAddress(ctx context.Context, arg G
 			&i.Attributes,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TotalSupply,
 		); err != nil {
 			return nil, err
 		}
@@ -216,5 +219,28 @@ type Update1155AssetParams struct {
 
 func (q *Queries) Update1155Asset(ctx context.Context, arg Update1155AssetParams) error {
 	_, err := q.db.ExecContext(ctx, update1155Asset, arg.ID, arg.Owner)
+	return err
+}
+
+const update1155AssetTotalSupply = `-- name: Update1155AssetTotalSupply :exec
+WITH total_balance AS (
+  SELECT SUM(balance) AS total_supply
+  FROM erc_1155_collection_assets
+  WHERE asset_id = $1
+  AND token_id = $2
+)
+UPDATE erc_1155_collection_assets erc1155
+SET total_supply = (SELECT total_supply FROM total_balance)
+WHERE erc1155.asset_id = $1
+AND erc1155.token_id = $2
+`
+
+type Update1155AssetTotalSupplyParams struct {
+	AssetID string `json:"assetId"`
+	TokenID string `json:"tokenId"`
+}
+
+func (q *Queries) Update1155AssetTotalSupply(ctx context.Context, arg Update1155AssetTotalSupplyParams) error {
+	_, err := q.db.ExecContext(ctx, update1155AssetTotalSupply, arg.AssetID, arg.TokenID)
 	return err
 }

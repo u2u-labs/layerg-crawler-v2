@@ -9,9 +9,6 @@ ALTER TABLE onchain_histories ALTER column amount TYPE DECIMAL(60,18);
 SET enable_experimental_alter_column_type_general = false;
 
 
-
-
-
 -- +goose Down
 -- +goose StatementBegin
 
