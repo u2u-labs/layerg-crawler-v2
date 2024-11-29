@@ -87,3 +87,18 @@ func (ac *AssetController) GetAssetByChainIdAndContractAddress(ctx *gin.Context)
 	}
 
 }
+
+// GetNFTAssetCollectionByChainId godoc
+// @Summary      Get all NFT asset collection of the chain
+// @Description  Get all NFT asset collection of the chain
+// @Tags         asset
+// @Accept       json
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Param chain_id path int true "Chain Id"
+// @Param page query int false "Page number"
+// @Param limit query int false "Number of items per page"
+// @Router       /chain/{chain_id}/nft-assets [get]
+func (ac *AssetController) GetNFTCombinedAsset(ctx *gin.Context) {
+	ac.service.GetNFTCombinedAsset(ctx)
+}

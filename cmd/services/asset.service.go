@@ -12,6 +12,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/u2u-labs/layerg-crawler/cmd/response"
+	"github.com/u2u-labs/layerg-crawler/cmd/types"
 	"github.com/u2u-labs/layerg-crawler/cmd/utils"
 	rdb "github.com/u2u-labs/layerg-crawler/db"
 	db "github.com/u2u-labs/layerg-crawler/db/sqlc"
@@ -303,5 +304,55 @@ func (as *AssetService) GetAssetsFromCollectionWithFilter(ctx *gin.Context, asse
 		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC721", "asset": paginationResponse})
 
 	}
+}
 
+func (as *AssetService) GetNFTCombinedAsset(ctx *gin.Context) {
+	page, limit, offset := db.GetLimitAndOffset(ctx)
+
+	// get combined asset
+	query, args := utils.GetCombinedNFTAssetQueryScript(ctx, limit, offset)
+
+	rows, err := as.rawDb.QueryContext(ctx, query, args...)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+	defer rows.Close()
+
+	var assets []types.CombinedAsset
+	for rows.Next() {
+		var asset types.CombinedAsset
+
+		// Ensure the order of Scan matches the SELECT statement
+		if err := rows.Scan(&asset.TokenType, &asset.ChainID, &asset.AssetID, &asset.TokenID, &asset.Attributes, &asset.CreatedAt); err != nil {
+			response.ErrorResponseData(ctx, http.StatusInternalServerError, err.Error())
+		}
+		assets = append(assets, asset)
+	}
+
+	// get count of combined asset
+	query, args = utils.GeCountCombinedNFTAssetQueryScript(ctx)
+
+	countRow := as.rawDb.QueryRowContext(ctx, query, args...)
+	var totalAssets int64
+	err = countRow.Scan(&totalAssets)
+
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Check for errors from iterating over rows
+	if err = rows.Err(); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+
+	paginationResponse := db.Pagination[types.CombinedAsset]{
+		Page:       page,
+		Limit:      limit,
+		TotalItems: totalAssets,
+		TotalPages: (totalAssets + int64(limit) - 1) / int64(limit),
+		Data:       assets,
+	}
+
+	response.SuccessReponseData(ctx, http.StatusOK, paginationResponse)
 }

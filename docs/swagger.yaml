@@ -217,6 +217,33 @@ paths:
       summary: Get all asset collection of the chain
       tags:
       - asset
+  /chain/{chain_id}/nft-assets:
+    get:
+      consumes:
+      - application/json
+      description: Get all NFT asset collection of the chain
+      parameters:
+      - description: Chain Id
+        in: path
+        name: chain_id
+        required: true
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Number of items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - ApiKeyAuth: []
+      summary: Get all NFT asset collection of the chain
+      tags:
+      - asset
   /history:
     get:
       consumes:

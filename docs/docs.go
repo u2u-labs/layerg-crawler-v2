@@ -246,6 +246,48 @@ const docTemplate = `{
                 "responses": {}
             }
         },
+        "/chain/{chain_id}/nft-assets": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get all NFT asset collection of the chain",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "asset"
+                ],
+                "summary": "Get all NFT asset collection of the chain",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Chain Id",
+                        "name": "chain_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            }
+        },
         "/history": {
             "get": {
                 "security": [
