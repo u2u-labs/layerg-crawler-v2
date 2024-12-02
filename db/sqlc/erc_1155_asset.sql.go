@@ -115,18 +115,29 @@ const getDetailERC1155Assets = `-- name: GetDetailERC1155Assets :one
 SELECT 
     ts.asset_id,
     ts.token_id,
-    ts.total_supply AS total_supply,
-    json_agg(ca) AS asset_owners
+    ts.attributes,
+    ts.total_supply,
+    json_agg(
+        json_build_object(
+            'id', ca.id,
+            'owner', ca.owner,
+            'balance', ca.balance,
+            'created_at', ca.created_at,
+            'updated_at', ca.updated_at
+        )
+    ) AS asset_owners
 FROM 
     erc_1155_total_supply ts
 JOIN 
     erc_1155_collection_assets ca 
 ON 
     ts.asset_id = ca.asset_id AND ts.token_id = ca.token_id
-WHERE ts.asset_id = $1
-AND ts.token_id = $2
+WHERE 
+    ts.asset_id = $1
+AND 
+    ts.token_id = $2
 GROUP BY 
-    ts.asset_id, ts.token_id, ts.total_supply
+    ts.asset_id, ts.token_id, ts.attributes, ts.total_supply
 `
 
 type GetDetailERC1155AssetsParams struct {
@@ -137,6 +148,7 @@ type GetDetailERC1155AssetsParams struct {
 type GetDetailERC1155AssetsRow struct {
 	AssetID     string          `json:"assetId"`
 	TokenID     string          `json:"tokenId"`
+	Attributes  sql.NullString  `json:"attributes"`
 	TotalSupply int64           `json:"totalSupply"`
 	AssetOwners json.RawMessage `json:"assetOwners"`
 }
@@ -147,6 +159,7 @@ func (q *Queries) GetDetailERC1155Assets(ctx context.Context, arg GetDetailERC11
 	err := row.Scan(
 		&i.AssetID,
 		&i.TokenID,
+		&i.Attributes,
 		&i.TotalSupply,
 		&i.AssetOwners,
 	)

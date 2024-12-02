@@ -12,11 +12,12 @@ CREATE VIEW erc_1155_total_supply AS (
   SELECT 
     asset_id,
     token_id,
+    attributes,
     SUM(balance) AS total_supply
   FROM 
     erc_1155_collection_assets
   GROUP BY 
-    asset_id, token_id
+    asset_id, token_id, attributes
 )
 -- +goose StatementEnd
 

@@ -98,9 +98,10 @@ type Erc1155CollectionAsset struct {
 }
 
 type Erc1155TotalSupply struct {
-	AssetID     string `json:"assetId"`
-	TokenID     string `json:"tokenId"`
-	TotalSupply int64  `json:"totalSupply"`
+	AssetID     string         `json:"assetId"`
+	TokenID     string         `json:"tokenId"`
+	Attributes  sql.NullString `json:"attributes"`
+	TotalSupply int64          `json:"totalSupply"`
 }
 
 type Erc20CollectionAsset struct {

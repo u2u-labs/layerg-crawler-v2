@@ -328,7 +328,7 @@ func (as *AssetService) GetAssetByChainIdAndContractAddressDetail(ctx *gin.Conte
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		}
 
-		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC1155", "asset": assetDetail})
+		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC1155", "asset": utils.ConvertToDetailERC1155AssetResponse(assetDetail)})
 
 	}
 

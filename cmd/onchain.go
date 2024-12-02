@@ -372,7 +372,6 @@ func getErc1155TokenURI(ctx context.Context, sugar *zap.SugaredLogger, client *e
 	// Prepare the function call data
 	data, err := utils.ERC1155ABI.Pack("uri", tokenId)
 
-	fmt.Println(contractAddress)
 	if err != nil {
 		sugar.Errorf("Failed to pack data for tokenURI: %v", err)
 		return "", err

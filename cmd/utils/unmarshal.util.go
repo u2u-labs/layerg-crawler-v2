@@ -279,3 +279,23 @@ func ConvertToErc1155CollectionAssetResponses(assets []db.Erc1155CollectionAsset
 
 	return responses
 }
+
+type GetDetailERC1155Asset struct {
+	AssetID     string          `json:"assetId"`
+	TokenID     string          `json:"tokenId"`
+	Attributes  string          `json:"attributes"`
+	TotalSupply int64           `json:"totalSupply"`
+	AssetOwners json.RawMessage `json:"assetOwners"`
+}
+
+func ConvertToDetailERC1155AssetResponse(asset db.GetDetailERC1155AssetsRow) GetDetailERC1155Asset {
+	response := GetDetailERC1155Asset{
+		AssetID:     asset.AssetID,
+		TokenID:     asset.TokenID,
+		Attributes:  asset.Attributes.String,
+		TotalSupply: asset.TotalSupply,
+		AssetOwners: asset.AssetOwners,
+	}
+
+	return response
+}
