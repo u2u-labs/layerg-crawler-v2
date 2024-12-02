@@ -72,8 +72,10 @@ func ProcessLatestBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *
 
 func FilterEvents(ctx context.Context, sugar *zap.SugaredLogger, q *db.Queries, client *ethclient.Client,
 	chain *db.Chain, rdb *redis.Client, receipts utypes.Receipts) error {
+
 	for _, r := range receipts {
 		for _, l := range r.Logs { //sugar.Debugw("FilterEvents", "txHash", r.TxHash.Hex(), "l.Address.Hex", l.Address.Hex(), "info", contractType[chain.ID][l.Address.Hex()])
+
 			switch contractType[chain.ID][l.Address.Hex()].Type {
 			case db.AssetTypeERC20:
 				if err := handleErc20Transfer(ctx, sugar, q, client, chain, rdb, l); err != nil {
@@ -246,12 +248,19 @@ func handleErc1155TransferBatch(ctx context.Context, sugar *zap.SugaredLogger, q
 			sugar.Errorw("Failed to get ERC1155 token URI", "err", err, "tokenID", event.Ids[i])
 			return err
 		}
+
+		balance, err := getErc1155BalanceOf(ctx, sugar, client, &l.Address, &event.To, event.Ids[i])
+		if err != nil {
+			sugar.Errorw("Failed to get ERC1155 balance", "err", err, "tokenID", event.Ids[i])
+			return err
+		}
+
 		if err = q.Add1155Asset(ctx, db.Add1155AssetParams{
 			AssetID: contractType[chain.ID][l.Address.Hex()].ID,
 			ChainID: chain.ID,
 			TokenID: event.Ids[i].String(),
 			Owner:   event.To.Hex(),
-			Balance: event.Values[i].String(),
+			Balance: balance.String(),
 			Attributes: sql.NullString{
 				String: uri,
 				Valid:  true,
@@ -260,12 +269,6 @@ func handleErc1155TransferBatch(ctx context.Context, sugar *zap.SugaredLogger, q
 			return err
 		}
 
-		if err = q.Update1155AssetTotalSupply(ctx, db.Update1155AssetTotalSupplyParams{
-			AssetID: contractType[chain.ID][l.Address.Hex()].ID,
-			TokenID: event.Ids[i].String(),
-		}); err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -308,23 +311,23 @@ func handleErc1155TransferSingle(ctx context.Context, sugar *zap.SugaredLogger, 
 		sugar.Errorw("Failed to get ERC1155 token URI", "err", err, "tokenID", event.Id)
 		return err
 	}
+
+	balance, err := getErc1155BalanceOf(ctx, sugar, client, &l.Address, &event.To, event.Id)
+	if err != nil {
+		sugar.Errorw("Failed to get ERC1155 balance", "err", err, "tokenID", event.Id)
+		return err
+	}
+
 	if err = q.Add1155Asset(ctx, db.Add1155AssetParams{
 		AssetID: contractType[chain.ID][l.Address.Hex()].ID,
 		ChainID: chain.ID,
 		TokenID: event.Id.String(),
 		Owner:   event.To.Hex(),
-		Balance: event.Value.String(),
+		Balance: balance.String(),
 		Attributes: sql.NullString{
 			String: uri,
 			Valid:  true,
 		},
-	}); err != nil {
-		return err
-	}
-
-	if err = q.Update1155AssetTotalSupply(ctx, db.Update1155AssetTotalSupplyParams{
-		AssetID: contractType[chain.ID][l.Address.Hex()].ID,
-		TokenID: event.Id.String(),
 	}); err != nil {
 		return err
 	}
@@ -368,6 +371,8 @@ func getErc1155TokenURI(ctx context.Context, sugar *zap.SugaredLogger, client *e
 	contractAddress *common.Address, tokenId *big.Int) (string, error) {
 	// Prepare the function call data
 	data, err := utils.ERC1155ABI.Pack("uri", tokenId)
+
+	fmt.Println(contractAddress)
 	if err != nil {
 		sugar.Errorf("Failed to pack data for tokenURI: %v", err)
 		return "", err
@@ -410,4 +415,37 @@ func retrieveNftMetadata(tokenURI string) ([]byte, error) {
 		return nil, err
 	}
 	return io.ReadAll(res.Body)
+}
+
+func getErc1155BalanceOf(ctx context.Context, sugar *zap.SugaredLogger, client *ethclient.Client,
+	contractAddress *common.Address, ownerAddress *common.Address, tokenId *big.Int) (*big.Int, error) {
+	// Prepare the function call data
+	data, err := utils.ERC1155ABI.Pack("balanceOf", ownerAddress, tokenId)
+	if err != nil {
+		sugar.Errorf("Failed to pack data for balanceOf: %v", err)
+		return nil, err
+	}
+
+	// Call the contract
+	msg := u2u.CallMsg{
+		To:   contractAddress,
+		Data: data,
+	}
+
+	// Execute the call
+	result, err := client.CallContract(context.Background(), msg, nil)
+	if err != nil {
+		sugar.Errorf("Failed to call contract: %v", err)
+		return nil, err
+	}
+
+	// Unpack the result to get the balance
+	var balance *big.Int
+	err = utils.ERC1155ABI.UnpackIntoInterface(&balance, "balanceOf", result)
+	if err != nil {
+		sugar.Errorf("Failed to unpack balanceOf: %v", err)
+		return nil, err
+	}
+
+	return balance, nil
 }

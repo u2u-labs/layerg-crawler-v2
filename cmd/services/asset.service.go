@@ -306,11 +306,39 @@ func (as *AssetService) GetAssetsFromCollectionWithFilter(ctx *gin.Context, asse
 	}
 }
 
+func (as *AssetService) GetAssetByChainIdAndContractAddressDetail(ctx *gin.Context, assetId string, tokenId string) {
+	assetCollection, err := as.db.GetAssetById(ctx, assetId)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			ctx.JSON(http.StatusNotFound, gin.H{"status": "failed", "message": "Failed to retrieve asset collection with this contract address in the chain"})
+			return
+		}
+		ctx.JSON(http.StatusBadGateway, gin.H{"status": "Failed retrieving Asset", "error": err.Error()})
+	}
+
+	switch assetType := assetCollection.Type; assetType {
+	case db.AssetTypeERC1155:
+
+		assetDetail, err := as.db.GetDetailERC1155Assets(ctx, db.GetDetailERC1155AssetsParams{
+			AssetID: assetId,
+			TokenID: tokenId,
+		})
+
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC1155", "asset": assetDetail})
+
+	}
+
+}
+
 func (as *AssetService) GetNFTCombinedAsset(ctx *gin.Context) {
 	page, limit, offset := db.GetLimitAndOffset(ctx)
 
 	// get combined asset
-	query, args := utils.GetCombinedNFTAssetQueryScript(ctx, limit, offset)
+	query, args := db.GetCombinedNFTAssetQueryScript(ctx, limit, offset)
 
 	rows, err := as.rawDb.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -330,7 +358,7 @@ func (as *AssetService) GetNFTCombinedAsset(ctx *gin.Context) {
 	}
 
 	// get count of combined asset
-	query, args = utils.GeCountCombinedNFTAssetQueryScript(ctx)
+	query, args = db.GeCountCombinedNFTAssetQueryScript(ctx)
 
 	countRow := as.rawDb.QueryRowContext(ctx, query, args...)
 	var totalAssets int64

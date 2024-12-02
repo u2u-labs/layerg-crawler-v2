@@ -247,16 +247,15 @@ func ConvertToErc721CollectionAssetResponses(assets []db.Erc721CollectionAsset) 
 }
 
 type Erc1155CollectionAssetResponse struct {
-	ID          uuid.UUID `json:"id"`
-	ChainID     int32     `json:"chainId"`
-	AssetID     string    `json:"assetId"`
-	TokenID     string    `json:"tokenId"`
-	Owner       string    `json:"owner"`
-	Balance     string    `json:"balance"`
-	Attributes  string    `json:"attributes"`
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
-	TotalSupply string    `json:"totalSupply"`
+	ID         uuid.UUID `json:"id"`
+	ChainID    int32     `json:"chainId"`
+	AssetID    string    `json:"assetId"`
+	TokenID    string    `json:"tokenId"`
+	Owner      string    `json:"owner"`
+	Balance    string    `json:"balance"`
+	Attributes string    `json:"attributes"`
+	CreatedAt  time.Time `json:"createdAt"`
+	UpdatedAt  time.Time `json:"updatedAt"`
 }
 
 func ConvertToErc1155CollectionAssetResponses(assets []db.Erc1155CollectionAsset) []Erc1155CollectionAssetResponse {
@@ -264,16 +263,15 @@ func ConvertToErc1155CollectionAssetResponses(assets []db.Erc1155CollectionAsset
 
 	for _, asset := range assets {
 		response := Erc1155CollectionAssetResponse{
-			ID:          asset.ID,
-			ChainID:     asset.ChainID,
-			AssetID:     asset.AssetID,
-			TokenID:     asset.TokenID,
-			Owner:       asset.Owner,
-			Balance:     asset.Balance,
-			Attributes:  asset.Attributes.String,
-			CreatedAt:   asset.CreatedAt,
-			UpdatedAt:   asset.UpdatedAt,
-			TotalSupply: asset.TotalSupply,
+			ID:         asset.ID,
+			ChainID:    asset.ChainID,
+			AssetID:    asset.AssetID,
+			TokenID:    asset.TokenID,
+			Owner:      asset.Owner,
+			Balance:    asset.Balance,
+			Attributes: asset.Attributes.String,
+			CreatedAt:  asset.CreatedAt,
+			UpdatedAt:  asset.UpdatedAt,
 		}
 
 		responses = append(responses, response)

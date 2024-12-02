@@ -246,6 +246,50 @@ const docTemplate = `{
                 "responses": {}
             }
         },
+        "/chain/{chain_id}/collection/{collection_address}/{token_id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get detail of asset collection of the chain",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "asset"
+                ],
+                "summary": "Get detail of asset collection of the chain",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Chain Id",
+                        "name": "chain_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Collection Address",
+                        "name": "collection_address",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Token Id",
+                        "name": "token_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
         "/chain/{chain_id}/nft-assets": {
             "get": {
                 "security": [
