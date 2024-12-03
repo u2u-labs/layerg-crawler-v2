@@ -3,8 +3,9 @@ package utils
 import (
 	"database/sql"
 	"encoding/json"
-	"github.com/unicornultrafoundation/go-u2u/common"
 	"time"
+
+	"github.com/unicornultrafoundation/go-u2u/common"
 
 	"github.com/google/uuid"
 	db "github.com/u2u-labs/layerg-crawler/db/sqlc"
@@ -245,6 +246,21 @@ func ConvertToErc721CollectionAssetResponses(assets []db.Erc721CollectionAsset) 
 	return responses
 }
 
+func ConvertToDetailErc721CollectionAssetResponses(asset db.Erc721CollectionAsset) Erc721CollectionAssetResponse {
+	response := Erc721CollectionAssetResponse{
+		ID:         asset.ID,
+		ChainID:    asset.ChainID,
+		AssetID:    asset.AssetID,
+		TokenID:    asset.TokenID,
+		Owner:      asset.Owner,
+		Attributes: asset.Attributes.String,
+		CreatedAt:  asset.CreatedAt,
+		UpdatedAt:  asset.UpdatedAt,
+	}
+
+	return response
+}
+
 type Erc1155CollectionAssetResponse struct {
 	ID         uuid.UUID `json:"id"`
 	ChainID    int32     `json:"chainId"`
@@ -277,4 +293,24 @@ func ConvertToErc1155CollectionAssetResponses(assets []db.Erc1155CollectionAsset
 	}
 
 	return responses
+}
+
+type GetDetailERC1155Asset struct {
+	AssetID     string          `json:"assetId"`
+	TokenID     string          `json:"tokenId"`
+	Attributes  string          `json:"attributes"`
+	TotalSupply int64           `json:"totalSupply"`
+	AssetOwners json.RawMessage `json:"assetOwners"`
+}
+
+func ConvertToDetailERC1155AssetResponse(asset db.GetDetailERC1155AssetsRow) GetDetailERC1155Asset {
+	response := GetDetailERC1155Asset{
+		AssetID:     asset.AssetID,
+		TokenID:     asset.TokenID,
+		Attributes:  asset.Attributes.String,
+		TotalSupply: asset.TotalSupply,
+		AssetOwners: asset.AssetOwners,
+	}
+
+	return response
 }

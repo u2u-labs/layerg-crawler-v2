@@ -8,6 +8,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 
 	"github.com/google/uuid"
 )
@@ -18,9 +19,9 @@ INSERT INTO
 VALUES (
     $1, $2, $3, $4, $5, $6
 ) ON CONFLICT ON CONSTRAINT UC_ERC1155 DO UPDATE SET
-    owner = $4,
     balance = $5,
     attributes = $6
+    
 RETURNING id, chain_id, asset_id, token_id, owner, balance, attributes, created_at, updated_at
 `
 
@@ -106,6 +107,76 @@ func (q *Queries) Get1155AssetByAssetIdAndTokenId(ctx context.Context, arg Get11
 		&i.Attributes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getDetailERC1155Assets = `-- name: GetDetailERC1155Assets :one
+SELECT 
+    ts.asset_id,
+    ts.token_id,
+    ts.attributes,
+    ts.total_supply,
+    json_agg(
+        json_build_object(
+            'id', ca.id,
+            'owner', ca.owner,
+            'balance', ca.balance,
+            'created_at', ca.created_at,
+            'updated_at', ca.updated_at
+        )
+    ) AS asset_owners
+FROM 
+    erc_1155_total_supply ts
+JOIN (
+    SELECT 
+        id,
+        owner,
+        balance,
+        created_at,
+        updated_at,
+        asset_id,
+        token_id
+    FROM 
+        erc_1155_collection_assets
+    WHERE 
+        erc_1155_collection_assets.asset_id = $1 
+        AND erc_1155_collection_assets.token_id = $2
+    ORDER BY 
+        created_at DESC
+    LIMIT 100
+)
+    ca ON ts.asset_id = ca.asset_id AND ts.token_id = ca.token_id
+WHERE 
+    ts.asset_id = $1
+AND 
+    ts.token_id = $2
+GROUP BY 
+    ts.asset_id, ts.token_id, ts.attributes, ts.total_supply
+`
+
+type GetDetailERC1155AssetsParams struct {
+	AssetID string `json:"assetId"`
+	TokenID string `json:"tokenId"`
+}
+
+type GetDetailERC1155AssetsRow struct {
+	AssetID     string          `json:"assetId"`
+	TokenID     string          `json:"tokenId"`
+	Attributes  sql.NullString  `json:"attributes"`
+	TotalSupply int64           `json:"totalSupply"`
+	AssetOwners json.RawMessage `json:"assetOwners"`
+}
+
+func (q *Queries) GetDetailERC1155Assets(ctx context.Context, arg GetDetailERC1155AssetsParams) (GetDetailERC1155AssetsRow, error) {
+	row := q.db.QueryRowContext(ctx, getDetailERC1155Assets, arg.AssetID, arg.TokenID)
+	var i GetDetailERC1155AssetsRow
+	err := row.Scan(
+		&i.AssetID,
+		&i.TokenID,
+		&i.Attributes,
+		&i.TotalSupply,
+		&i.AssetOwners,
 	)
 	return i, err
 }

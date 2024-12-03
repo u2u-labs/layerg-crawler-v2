@@ -85,5 +85,40 @@ func (ac *AssetController) GetAssetByChainIdAndContractAddress(ctx *gin.Context)
 	} else {
 		ac.service.GetAssetsFromCollectionWithFilter(ctx, assetId, tokenIds, owner)
 	}
+}
 
+// GetAssetByChainIdAndContractAddressDetail godoc
+// @Summary      Get detail of asset collection of the chain
+// @Description  Get detail of asset collection of the chain
+// @Tags         asset
+// @Accept       json
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Param chain_id path int true "Chain Id"
+// @Param collection_address path string true "Collection Address"
+// @Param token_id path string true "Token Id"
+// @Router       /chain/{chain_id}/collection/{collection_address}/{token_id} [get]
+func (ac *AssetController) GetAssetByChainIdAndContractAddressDetail(ctx *gin.Context) {
+	chainIdStr := ctx.Param("chain_id")
+	collectionAddress := ctx.Param("collection_address")
+	collectionAddress = common.HexToAddress(collectionAddress).Hex()
+	assetId := chainIdStr + ":" + collectionAddress
+	tokenId := ctx.Param("token_id")
+
+	ac.service.GetAssetByChainIdAndContractAddressDetail(ctx, assetId, tokenId)
+}
+
+// GetNFTAssetCollectionByChainId godoc
+// @Summary      Get all NFT asset collection of the chain
+// @Description  Get all NFT asset collection of the chain
+// @Tags         asset
+// @Accept       json
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Param chain_id path int true "Chain Id"
+// @Param page query int false "Page number"
+// @Param limit query int false "Number of items per page"
+// @Router       /chain/{chain_id}/nft-assets [get]
+func (ac *AssetController) GetNFTCombinedAsset(ctx *gin.Context) {
+	ac.service.GetNFTCombinedAsset(ctx)
 }

@@ -29,9 +29,9 @@ INSERT INTO
 VALUES (
     $1, $2, $3, $4, $5, $6
 ) ON CONFLICT ON CONSTRAINT UC_ERC1155 DO UPDATE SET
-    owner = $4,
     balance = $5,
     attributes = $6
+    
 RETURNING *;
 
 -- name: Update1155Asset :exec
@@ -46,3 +46,47 @@ DELETE
 FROM erc_1155_collection_assets
 WHERE
     id = $1;
+
+-- name: GetDetailERC1155Assets :one
+SELECT 
+    ts.asset_id,
+    ts.token_id,
+    ts.attributes,
+    ts.total_supply,
+    json_agg(
+        json_build_object(
+            'id', ca.id,
+            'owner', ca.owner,
+            'balance', ca.balance,
+            'created_at', ca.created_at,
+            'updated_at', ca.updated_at
+        )
+    ) AS asset_owners
+FROM 
+    erc_1155_total_supply ts
+JOIN (
+    SELECT 
+        id,
+        owner,
+        balance,
+        created_at,
+        updated_at,
+        asset_id,
+        token_id
+    FROM 
+        erc_1155_collection_assets
+    WHERE 
+        erc_1155_collection_assets.asset_id = $1 
+        AND erc_1155_collection_assets.token_id = $2
+    ORDER BY 
+        created_at DESC
+    LIMIT 100
+)
+    ca ON ts.asset_id = ca.asset_id AND ts.token_id = ca.token_id
+WHERE 
+    ts.asset_id = $1
+AND 
+    ts.token_id = $2
+GROUP BY 
+    ts.asset_id, ts.token_id, ts.attributes, ts.total_supply;
+ 

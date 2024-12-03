@@ -97,6 +97,13 @@ type Erc1155CollectionAsset struct {
 	UpdatedAt  time.Time      `json:"updatedAt"`
 }
 
+type Erc1155TotalSupply struct {
+	AssetID     string         `json:"assetId"`
+	TokenID     string         `json:"tokenId"`
+	Attributes  sql.NullString `json:"attributes"`
+	TotalSupply int64          `json:"totalSupply"`
+}
+
 type Erc20CollectionAsset struct {
 	ID        uuid.UUID `json:"id"`
 	ChainID   int32     `json:"chainId"`

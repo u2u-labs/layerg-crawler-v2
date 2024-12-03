@@ -180,6 +180,7 @@ func crawlSupportedChains(ctx context.Context, sugar *zap.SugaredLogger, q *dbCo
 			return err
 		}
 		go StartChainCrawler(ctx, sugar, client, q, &c, rdb)
+
 	}
 	return nil
 
