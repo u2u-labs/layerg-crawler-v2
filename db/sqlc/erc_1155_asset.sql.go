@@ -128,10 +128,25 @@ SELECT
     ) AS asset_owners
 FROM 
     erc_1155_total_supply ts
-JOIN 
-    erc_1155_collection_assets ca 
-ON 
-    ts.asset_id = ca.asset_id AND ts.token_id = ca.token_id
+JOIN (
+    SELECT 
+        id,
+        owner,
+        balance,
+        created_at,
+        updated_at,
+        asset_id,
+        token_id
+    FROM 
+        erc_1155_collection_assets
+    WHERE 
+        erc_1155_collection_assets.asset_id = $1 
+        AND erc_1155_collection_assets.token_id = $2
+    ORDER BY 
+        created_at DESC
+    LIMIT 100
+)
+    ca ON ts.asset_id = ca.asset_id AND ts.token_id = ca.token_id
 WHERE 
     ts.asset_id = $1
 AND 

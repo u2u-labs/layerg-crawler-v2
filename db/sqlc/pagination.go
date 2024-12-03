@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
@@ -43,6 +44,16 @@ func GetLimitAndOffset(ctx *gin.Context) (int, int, int) {
 	}
 	if l, err := strconv.Atoi(limitStr); err == nil {
 		limitNum = l
+	}
+
+	// error if page is less than 1 or limit is greater than 100
+	if pageNum < 1 {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Page number must be greater than 0"})
+		return 0, 0, 0
+	}
+	if limitNum > 100 {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Limit must be less than 100"})
+		return 0, 0, 0
 	}
 
 	// Calculate offset
