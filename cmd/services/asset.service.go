@@ -317,6 +317,18 @@ func (as *AssetService) GetAssetByChainIdAndContractAddressDetail(ctx *gin.Conte
 	}
 
 	switch assetType := assetCollection.Type; assetType {
+	case db.AssetTypeERC721:
+		assetDetail, err := as.db.Get721AssetByAssetIdAndTokenId(ctx, db.Get721AssetByAssetIdAndTokenIdParams{
+			AssetID: assetId,
+			TokenID: tokenId,
+		})
+
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC721", "asset": utils.ConvertToDetailErc721CollectionAssetResponses(assetDetail)})
+
 	case db.AssetTypeERC1155:
 
 		assetDetail, err := as.db.GetDetailERC1155Assets(ctx, db.GetDetailERC1155AssetsParams{

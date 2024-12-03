@@ -246,6 +246,21 @@ func ConvertToErc721CollectionAssetResponses(assets []db.Erc721CollectionAsset) 
 	return responses
 }
 
+func ConvertToDetailErc721CollectionAssetResponses(asset db.Erc721CollectionAsset) Erc721CollectionAssetResponse {
+	response := Erc721CollectionAssetResponse{
+		ID:         asset.ID,
+		ChainID:    asset.ChainID,
+		AssetID:    asset.AssetID,
+		TokenID:    asset.TokenID,
+		Owner:      asset.Owner,
+		Attributes: asset.Attributes.String,
+		CreatedAt:  asset.CreatedAt,
+		UpdatedAt:  asset.UpdatedAt,
+	}
+
+	return response
+}
+
 type Erc1155CollectionAssetResponse struct {
 	ID         uuid.UUID `json:"id"`
 	ChainID    int32     `json:"chainId"`
