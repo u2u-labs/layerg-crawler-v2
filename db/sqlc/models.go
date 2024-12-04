@@ -56,6 +56,48 @@ func (ns NullAssetType) Value() (driver.Value, error) {
 	return string(ns.AssetType), nil
 }
 
+type CrawlerStatus string
+
+const (
+	CrawlerStatusCRAWLING CrawlerStatus = "CRAWLING"
+	CrawlerStatusCRAWLED  CrawlerStatus = "CRAWLED"
+)
+
+func (e *CrawlerStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CrawlerStatus(s)
+	case string:
+		*e = CrawlerStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CrawlerStatus: %T", src)
+	}
+	return nil
+}
+
+type NullCrawlerStatus struct {
+	CrawlerStatus CrawlerStatus `json:"crawlerStatus"`
+	Valid         bool          `json:"valid"` // Valid is true if CrawlerStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCrawlerStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.CrawlerStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CrawlerStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCrawlerStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CrawlerStatus), nil
+}
+
 type App struct {
 	ID        uuid.UUID `json:"id"`
 	Name      string    `json:"name"`
@@ -72,6 +114,15 @@ type Asset struct {
 	DecimalData       sql.NullInt16 `json:"decimalData"`
 	InitialBlock      sql.NullInt64 `json:"initialBlock"`
 	LastUpdated       sql.NullTime  `json:"lastUpdated"`
+}
+
+type BackfillCrawler struct {
+	ID                uuid.UUID         `json:"id"`
+	ChainID           int32             `json:"chainId"`
+	CollectionAddress string            `json:"collectionAddress"`
+	CurrentBlock      int64             `json:"currentBlock"`
+	Status            NullCrawlerStatus `json:"status"`
+	CreatedAt         time.Time         `json:"createdAt"`
 }
 
 type Chain struct {

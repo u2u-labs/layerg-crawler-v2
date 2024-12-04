@@ -30,6 +30,7 @@ func StartChainCrawler(ctx context.Context, sugar *zap.SugaredLogger, client *et
 	for {
 		select {
 		case <-timer.C:
+
 			// Process new blocks
 			ProcessLatestBlocks(ctx, sugar, client, q, chain, rdb)
 			timer.Reset(time.Duration(chain.BlockTime) * time.Millisecond)

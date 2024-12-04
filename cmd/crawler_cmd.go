@@ -100,10 +100,12 @@ func ProcessNewChains(ctx context.Context, sugar *zap.SugaredLogger, rdb *redis.
 	}
 	for _, c := range chains {
 		client, err := initChainClient(&c)
+
 		if err != nil {
 			sugar.Errorw("ProcessNewChains failed to init chain client", "err", err, "chain", c)
 			return
 		}
+
 		go StartChainCrawler(ctx, sugar, client, q, &c, rdb)
 		sugar.Infow("Initiated new chain, start crawling", "chain", c)
 	}

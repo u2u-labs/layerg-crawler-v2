@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/u2u-labs/layerg-crawler/cmd/helpers"
 	"github.com/u2u-labs/layerg-crawler/cmd/response"
 	"github.com/u2u-labs/layerg-crawler/cmd/types"
 	"github.com/u2u-labs/layerg-crawler/cmd/utils"
@@ -30,6 +31,7 @@ func NewAssetService(db *db.Queries, rawDb *sql.DB, ctx context.Context, rdb *re
 }
 
 func (as *AssetService) AddNewAsset(ctx *gin.Context) {
+
 	var params *utils.AddNewAssetParamsUtil
 	chainIdStr := ctx.Param("chain_id")
 	chainId, err := strconv.Atoi(chainIdStr)
@@ -52,8 +54,27 @@ func (as *AssetService) AddNewAsset(ctx *gin.Context) {
 		return
 	}
 
+	// read lastest block number from chain
+	chain, err := as.db.GetChainById(ctx, int32(chainId))
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	latestBlockNumber, err := helpers.GetLastestBlockFromChainUrl(chain.RpcUrl)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 	params.ChainID = int32(chainId)
 	params.ID = strconv.Itoa(int(chainId)) + ":" + params.CollectionAddress
+	params.InitialBlock = utils.JsonNullInt64{
+		NullInt64: sql.NullInt64{
+			Int64: int64(latestBlockNumber),
+			Valid: true,
+		},
+	}
 
 	assetParam := utils.ConvertCustomTypeToSqlParams(params)
 

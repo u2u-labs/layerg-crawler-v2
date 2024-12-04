@@ -81,6 +81,7 @@ func serveApi(db *dbCon.Queries, rdb *redis.Client, rawDb *sql.DB, ctx context.C
 	chainController := controllers.NewChainController(chainService, ctx, rdb)
 	assetController := controllers.NewAssetController(assetService, ctx, rdb)
 	historyController := controllers.NewHistoryController(db, rawDb, ctx, rdb)
+	backfillController := controllers.NewBackFillController(db, rawDb, ctx, rdb)
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -98,6 +99,8 @@ func serveApi(db *dbCon.Queries, rdb *redis.Client, rawDb *sql.DB, ctx context.C
 	router.GET("/chain/:chain_id/collection/:collection_address/:token_id", assetController.GetAssetByChainIdAndContractAddressDetail)
 	router.GET("/chain/:chain_id/nft-assets", assetController.GetNFTCombinedAsset)
 
+	// Backfill routes
+	router.POST("/backfill/:chain_id/:contract_address", backfillController.BackFill)
 	// History routes``
 	router.GET("/history", historyController.GetHistory)
 
