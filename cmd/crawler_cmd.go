@@ -83,6 +83,10 @@ func startCrawler(cmd *cobra.Command, args []string) {
 			ProcessNewChains(ctx, sugar, rdb, sqlDb)
 			// Process new assets
 			ProcessNewChainAssets(ctx, sugar, rdb)
+
+			// Process backfill collection
+			ProcessCrawlingBackfillCollection(ctx, sugar, sqlDb, rdb)
+
 			timer.Reset(config.RetriveAddedChainsAndAssetsInterval)
 		}
 	}
@@ -186,4 +190,25 @@ func crawlSupportedChains(ctx context.Context, sugar *zap.SugaredLogger, q *dbCo
 	}
 	return nil
 
+}
+
+func ProcessCrawlingBackfillCollection(ctx context.Context, sugar *zap.SugaredLogger, q *dbCon.Queries, rdb *redis.Client) error {
+	// Get all Backfill Collection with status CRAWLING
+	crawlingBackfill, err := q.GetCrawlingBackfillCrawler(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	for _, c := range crawlingBackfill {
+		chain, err := q.GetChainById(ctx, c.ChainID)
+
+		client, err := initChainClient(&chain)
+		if err != nil {
+			return err
+		}
+
+		go StartBackfillCrawler(ctx, sugar, client, q, &chain, &c, rdb)
+	}
+	return nil
 }

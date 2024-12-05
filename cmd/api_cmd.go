@@ -100,7 +100,7 @@ func serveApi(db *dbCon.Queries, rdb *redis.Client, rawDb *sql.DB, ctx context.C
 	router.GET("/chain/:chain_id/nft-assets", assetController.GetNFTCombinedAsset)
 
 	// Backfill routes
-	router.POST("/backfill/:chain_id/:contract_address", backfillController.BackFill)
+	router.POST("/backfill", backfillController.AddBackFillTracker)
 	// History routes``
 	router.GET("/history", historyController.GetHistory)
 

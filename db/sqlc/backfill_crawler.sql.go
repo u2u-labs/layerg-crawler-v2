@@ -7,8 +7,8 @@ package db
 
 import (
 	"context"
-
-	"github.com/google/uuid"
+	"database/sql"
+	"time"
 )
 
 const addBackfillCrawler = `-- name: AddBackfillCrawler :exec
@@ -17,7 +17,10 @@ INSERT INTO backfill_crawlers (
 )
 VALUES (
     $1, $2, $3
-) RETURNING id, chain_id, collection_address, current_block, status, created_at
+) ON CONFLICT ON CONSTRAINT BACKFILL_CRAWLERS_PKEY DO UPDATE SET
+    current_block = EXCLUDED.current_block,
+    status = 'CRAWLING'
+RETURNING chain_id, collection_address, current_block, status, created_at
 `
 
 type AddBackfillCrawlerParams struct {
@@ -32,26 +35,47 @@ func (q *Queries) AddBackfillCrawler(ctx context.Context, arg AddBackfillCrawler
 }
 
 const getCrawlingBackfillCrawler = `-- name: GetCrawlingBackfillCrawler :many
-SELECT id, chain_id, collection_address, current_block, status, created_at FROM backfill_crawlers 
-WHERE status = crawler_status('CRAWLING')
+SELECT 
+    bc.chain_id, bc.collection_address, bc.current_block, bc.status, bc.created_at, 
+    a.type, 
+    a.initial_block 
+FROM 
+    backfill_crawlers AS bc
+JOIN 
+    assets AS a 
+    ON a.chain_id = bc.chain_id 
+    AND a.collection_address = bc.collection_address 
+WHERE 
+    bc.status = 'CRAWLING'
 `
 
-func (q *Queries) GetCrawlingBackfillCrawler(ctx context.Context) ([]BackfillCrawler, error) {
+type GetCrawlingBackfillCrawlerRow struct {
+	ChainID           int32         `json:"chainId"`
+	CollectionAddress string        `json:"collectionAddress"`
+	CurrentBlock      int64         `json:"currentBlock"`
+	Status            CrawlerStatus `json:"status"`
+	CreatedAt         time.Time     `json:"createdAt"`
+	Type              AssetType     `json:"type"`
+	InitialBlock      sql.NullInt64 `json:"initialBlock"`
+}
+
+func (q *Queries) GetCrawlingBackfillCrawler(ctx context.Context) ([]GetCrawlingBackfillCrawlerRow, error) {
 	rows, err := q.db.QueryContext(ctx, getCrawlingBackfillCrawler)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []BackfillCrawler
+	var items []GetCrawlingBackfillCrawlerRow
 	for rows.Next() {
-		var i BackfillCrawler
+		var i GetCrawlingBackfillCrawlerRow
 		if err := rows.Scan(
-			&i.ID,
 			&i.ChainID,
 			&i.CollectionAddress,
 			&i.CurrentBlock,
 			&i.Status,
 			&i.CreatedAt,
+			&i.Type,
+			&i.InitialBlock,
 		); err != nil {
 			return nil, err
 		}
@@ -69,18 +93,25 @@ func (q *Queries) GetCrawlingBackfillCrawler(ctx context.Context) ([]BackfillCra
 const updateCrawlingBackfill = `-- name: UpdateCrawlingBackfill :exec
 UPDATE backfill_crawlers
 SET 
-    status = COALESCE($2, status),            
-    current_block = COALESCE($3, current_block)  
-WHERE id = $1
+    status = COALESCE($3, status),            
+    current_block = COALESCE($4, current_block)  
+WHERE chain_id = $1
+AND collection_address = $2
 `
 
 type UpdateCrawlingBackfillParams struct {
-	ID           uuid.UUID         `json:"id"`
-	Status       NullCrawlerStatus `json:"status"`
-	CurrentBlock int64             `json:"currentBlock"`
+	ChainID           int32         `json:"chainId"`
+	CollectionAddress string        `json:"collectionAddress"`
+	Status            CrawlerStatus `json:"status"`
+	CurrentBlock      int64         `json:"currentBlock"`
 }
 
 func (q *Queries) UpdateCrawlingBackfill(ctx context.Context, arg UpdateCrawlingBackfillParams) error {
-	_, err := q.db.ExecContext(ctx, updateCrawlingBackfill, arg.ID, arg.Status, arg.CurrentBlock)
+	_, err := q.db.ExecContext(ctx, updateCrawlingBackfill,
+		arg.ChainID,
+		arg.CollectionAddress,
+		arg.Status,
+		arg.CurrentBlock,
+	)
 	return err
 }

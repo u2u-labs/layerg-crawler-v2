@@ -117,12 +117,11 @@ type Asset struct {
 }
 
 type BackfillCrawler struct {
-	ID                uuid.UUID         `json:"id"`
-	ChainID           int32             `json:"chainId"`
-	CollectionAddress string            `json:"collectionAddress"`
-	CurrentBlock      int64             `json:"currentBlock"`
-	Status            NullCrawlerStatus `json:"status"`
-	CreatedAt         time.Time         `json:"createdAt"`
+	ChainID           int32         `json:"chainId"`
+	CollectionAddress string        `json:"collectionAddress"`
+	CurrentBlock      int64         `json:"currentBlock"`
+	Status            CrawlerStatus `json:"status"`
+	CreatedAt         time.Time     `json:"createdAt"`
 }
 
 type Chain struct {

@@ -117,6 +117,12 @@ type AssetResponse struct {
 
 // Convert function
 func ConvertCustomTypeToSqlParams(param *AddNewAssetParamsUtil) db.AddNewAssetParams {
+	// update lastUpdated to now if null
+	if !param.LastUpdated.Valid {
+		param.LastUpdated.Time = time.Now()
+		param.LastUpdated.Valid = true
+	}
+
 	return db.AddNewAssetParams{
 		ID:                param.ID,
 		ChainID:           param.ChainID,
