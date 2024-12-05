@@ -3,6 +3,8 @@ package utils
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/unicornultrafoundation/go-u2u/common"
@@ -295,21 +297,90 @@ func ConvertToErc1155CollectionAssetResponses(assets []db.Erc1155CollectionAsset
 	return responses
 }
 
+// CustomTime is a wrapper around time.Time to handle custom unmarshalling.
+type CustomTime struct {
+	time.Time
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface for CustomTime.
+func (c *CustomTime) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+
+	// Parse the time string according to the expected layout
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return err
+	}
+
+	c.Time = t
+	return nil
+}
+
+type ERC1155AssetOwner struct {
+	Balance   int        `json:"balance"`
+	CreatedAt CustomTime `json:"createdAt"`
+	Id        uuid.UUID  `json:"id"`
+	Owner     string     `json:"owner"`
+	UpdatedAt CustomTime `json:"updatedAt"`
+}
+
+type ERC1155AssetOwnerResponse struct {
+	Balance   string     `json:"balance"`
+	CreatedAt CustomTime `json:"createdAt"`
+	Id        uuid.UUID  `json:"id"`
+	Owner     string     `json:"owner"`
+	UpdatedAt CustomTime `json:"updatedAt"`
+}
+
 type GetDetailERC1155Asset struct {
-	AssetID     string          `json:"assetId"`
-	TokenID     string          `json:"tokenId"`
-	Attributes  string          `json:"attributes"`
-	TotalSupply int64           `json:"totalSupply"`
-	AssetOwners json.RawMessage `json:"assetOwners"`
+	AssetID     string                      `json:"assetId"`
+	TokenID     string                      `json:"tokenId"`
+	Attributes  string                      `json:"attributes"`
+	TotalSupply string                      `json:"totalSupply"`
+	AssetOwners []ERC1155AssetOwnerResponse `json:"assetOwners"`
+}
+
+func ConvertERC1155Owner(rawData []byte) ([]ERC1155AssetOwnerResponse, error) {
+	var owners []ERC1155AssetOwner
+	var results []ERC1155AssetOwnerResponse
+
+	// Unmarshal the JSON array directly into the slice
+	err := json.Unmarshal(rawData, &owners)
+
+	for _, owner := range owners {
+		results = append(results, ERC1155AssetOwnerResponse{
+			Balance:   strconv.Itoa(owner.Balance),
+			CreatedAt: CustomTime{owner.CreatedAt.Time},
+			Id:        owner.Id,
+			Owner:     owner.Owner,
+			UpdatedAt: CustomTime{owner.UpdatedAt.Time},
+		})
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal ERC1155 owners: %w", err)
+	}
+
+	return results, nil
 }
 
 func ConvertToDetailERC1155AssetResponse(asset db.GetDetailERC1155AssetsRow) GetDetailERC1155Asset {
+
 	response := GetDetailERC1155Asset{
 		AssetID:     asset.AssetID,
 		TokenID:     asset.TokenID,
 		Attributes:  asset.Attributes.String,
-		TotalSupply: asset.TotalSupply,
-		AssetOwners: asset.AssetOwners,
+		TotalSupply: strconv.FormatInt(asset.TotalSupply, 10),
+		AssetOwners: func() []ERC1155AssetOwnerResponse {
+			owners, err := ConvertERC1155Owner(asset.AssetOwners)
+			if err != nil {
+				return nil
+			}
+			return owners
+		}(),
 	}
 
 	return response

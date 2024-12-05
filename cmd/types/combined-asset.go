@@ -1,10 +1,10 @@
 package types
 
 type CombinedAsset struct {
-	TokenType  string `json:"token_type"`
-	ChainID    int    `json:"chain_id"`
-	AssetID    string `json:"asset_id"`
-	TokenID    string `json:"token_id"`
+	TokenType  string `json:"tokenType"`
+	ChainID    int    `json:"chainId"`
+	AssetID    string `json:"assetId"`
+	TokenID    string `json:"tokenId"`
 	Attributes string `json:"attributes"`
-	CreatedAt  string `json:"created_at"`
+	CreatedAt  string `json:"createdAt"`
 }
