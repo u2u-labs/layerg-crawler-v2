@@ -19,6 +19,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/u2u-labs/layerg-crawler/cmd/utils"
+	"github.com/u2u-labs/layerg-crawler/config"
 	rdb "github.com/u2u-labs/layerg-crawler/db"
 	db "github.com/u2u-labs/layerg-crawler/db/sqlc"
 )
@@ -39,14 +40,16 @@ func StartChainCrawler(ctx context.Context, sugar *zap.SugaredLogger, client *et
 }
 
 func StartBackfillCrawler(ctx context.Context, sugar *zap.SugaredLogger, client *ethclient.Client, q *db.Queries, chain *db.Chain, bf *db.GetCrawlingBackfillCrawlerRow, rdb *redis.Client) error {
-	sugar.Infow("Start backfill crawler", "collectionAddress", bf.CollectionAddress, "chain", chain)
-	timer := time.NewTimer(time.Duration(100) * time.Millisecond)
+	if bf.CurrentBlock%1000 == 0 {
+		sugar.Infow("Log backfill crawler", "collectionAddress", bf.CollectionAddress, "block", bf.CurrentBlock, "chain", chain.Chain)
+	}
+
+	timer := time.NewTimer(time.Duration(chain.BlockTime) * time.Millisecond)
 	defer timer.Stop()
 	for {
 		select {
 		case <-timer.C:
-			// scan 1000 blocks at once
-			toScanBlock := bf.CurrentBlock + 1000
+			toScanBlock := bf.CurrentBlock + config.BackfillBlockRangeScan
 			if bf.InitialBlock.Valid && toScanBlock >= bf.InitialBlock.Int64 {
 				toScanBlock = bf.InitialBlock.Int64
 				bf.Status = db.CrawlerStatusCRAWLED
@@ -119,7 +122,7 @@ func StartBackfillCrawler(ctx context.Context, sugar *zap.SugaredLogger, client 
 				return nil
 			}
 
-			timer.Reset(time.Duration(100) * time.Millisecond)
+			timer.Reset(time.Duration(chain.BlockTime) * time.Millisecond)
 		}
 	}
 }
@@ -241,15 +244,13 @@ func handleErc20Transfer(ctx context.Context, sugar *zap.SugaredLogger, q *db.Qu
 	if err != nil {
 		sugar.Errorw("Failed to get ERC20 balance", "err", err)
 	}
-	if balance.Cmp(big.NewInt(0)) != 0 {
-		if err = q.Add20Asset(ctx, db.Add20AssetParams{
-			AssetID: contractType[chain.ID][l.Address.Hex()].ID,
-			ChainID: chain.ID,
-			Owner:   event.From.Hex(),
-			Balance: balance.String(),
-		}); err != nil {
-			return err
-		}
+	if err = q.Add20Asset(ctx, db.Add20AssetParams{
+		AssetID: contractType[chain.ID][l.Address.Hex()].ID,
+		ChainID: chain.ID,
+		Owner:   event.From.Hex(),
+		Balance: balance.String(),
+	}); err != nil {
+		return err
 	}
 
 	// Update receiver's balances
@@ -258,15 +259,13 @@ func handleErc20Transfer(ctx context.Context, sugar *zap.SugaredLogger, q *db.Qu
 	if err != nil {
 		sugar.Errorw("Failed to get ERC20 balance", "err", err)
 	}
-	if balance.Cmp(big.NewInt(0)) != 0 {
-		if err = q.Add20Asset(ctx, db.Add20AssetParams{
-			AssetID: contractType[chain.ID][l.Address.Hex()].ID,
-			ChainID: chain.ID,
-			Owner:   event.To.Hex(),
-			Balance: balance.String(),
-		}); err != nil {
-			return err
-		}
+	if err = q.Add20Asset(ctx, db.Add20AssetParams{
+		AssetID: contractType[chain.ID][l.Address.Hex()].ID,
+		ChainID: chain.ID,
+		Owner:   event.To.Hex(),
+		Balance: balance.String(),
+	}); err != nil {
+		return err
 	}
 
 	return nil
@@ -310,8 +309,15 @@ func handleErc721Transfer(ctx context.Context, sugar *zap.SugaredLogger, q *db.Q
 	// Get owner of the token
 	owner, err := getErc721OwnerOf(ctx, sugar, client, &l.Address, event.TokenID)
 	if err != nil {
-		sugar.Errorw("Failed to get ERC721 owner", "err", err)
+
+		sugar.Errorw("Failed to get ERC721 owner", "err", err, "tokenID", event.TokenID, "contract", l.Address.Hex())
 	}
+
+	if err != nil {
+
+		sugar.Errorw("Failed to get ERC721 owner", "err", err, "tokenID", event.TokenID, "contract", l.Address.Hex())
+	}
+	//
 
 	if err = q.Add721Asset(ctx, db.Add721AssetParams{
 		AssetID: contractType[chain.ID][l.Address.Hex()].ID,
