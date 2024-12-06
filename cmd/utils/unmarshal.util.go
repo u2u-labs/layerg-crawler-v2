@@ -3,7 +3,6 @@ package utils
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -119,6 +118,12 @@ type AssetResponse struct {
 
 // Convert function
 func ConvertCustomTypeToSqlParams(param *AddNewAssetParamsUtil) db.AddNewAssetParams {
+	// update lastUpdated to now if null
+	if !param.LastUpdated.Valid {
+		param.LastUpdated.Time = time.Now()
+		param.LastUpdated.Valid = true
+	}
+
 	return db.AddNewAssetParams{
 		ID:                param.ID,
 		ChainID:           param.ChainID,
@@ -297,42 +302,20 @@ func ConvertToErc1155CollectionAssetResponses(assets []db.Erc1155CollectionAsset
 	return responses
 }
 
-// CustomTime is a wrapper around time.Time to handle custom unmarshalling.
-type CustomTime struct {
-	time.Time
-}
-
-// UnmarshalJSON implements the json.Unmarshaler interface for CustomTime.
-func (c *CustomTime) UnmarshalJSON(b []byte) error {
-	var s string
-	if err := json.Unmarshal(b, &s); err != nil {
-		return err
-	}
-
-	// Parse the time string according to the expected layout
-	t, err := time.Parse(time.RFC3339, s)
-	if err != nil {
-		return err
-	}
-
-	c.Time = t
-	return nil
-}
-
 type ERC1155AssetOwner struct {
-	Balance   int        `json:"balance"`
-	CreatedAt CustomTime `json:"createdAt"`
-	Id        uuid.UUID  `json:"id"`
-	Owner     string     `json:"owner"`
-	UpdatedAt CustomTime `json:"updatedAt"`
+	Balance   int       `json:"balance"`
+	CreatedAt string    `json:"created_at"`
+	Id        uuid.UUID `json:"id"`
+	Owner     string    `json:"owner"`
+	UpdatedAt string    `json:"updated_at"`
 }
 
 type ERC1155AssetOwnerResponse struct {
-	Balance   string     `json:"balance"`
-	CreatedAt CustomTime `json:"createdAt"`
-	Id        uuid.UUID  `json:"id"`
-	Owner     string     `json:"owner"`
-	UpdatedAt CustomTime `json:"updatedAt"`
+	Balance   string    `json:"balance"`
+	CreatedAt string    `json:"createdAt"`
+	Id        uuid.UUID `json:"id"`
+	Owner     string    `json:"owner"`
+	UpdatedAt string    `json:"updatedAt"`
 }
 
 type GetDetailERC1155Asset struct {
@@ -348,20 +331,16 @@ func ConvertERC1155Owner(rawData []byte) ([]ERC1155AssetOwnerResponse, error) {
 	var results []ERC1155AssetOwnerResponse
 
 	// Unmarshal the JSON array directly into the slice
-	err := json.Unmarshal(rawData, &owners)
+	json.Unmarshal(rawData, &owners)
 
 	for _, owner := range owners {
 		results = append(results, ERC1155AssetOwnerResponse{
 			Balance:   strconv.Itoa(owner.Balance),
-			CreatedAt: CustomTime{owner.CreatedAt.Time},
+			CreatedAt: owner.CreatedAt,
 			Id:        owner.Id,
 			Owner:     owner.Owner,
-			UpdatedAt: CustomTime{owner.UpdatedAt.Time},
+			UpdatedAt: owner.UpdatedAt,
 		})
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal ERC1155 owners: %w", err)
 	}
 
 	return results, nil

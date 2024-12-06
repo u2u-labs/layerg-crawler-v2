@@ -39,7 +39,7 @@ func GetCombinedNFTAssetQueryScript(ctx *gin.Context, limit int, offset int) (st
 		%s
 		GROUP BY asset_id, token_id, attributes
 	) combined
-	ORDER BY combined.created_at DESC
+	ORDER BY combined.created_at ASC
 	LIMIT %d OFFSET %d
 	
 	`, whereClause, whereClause, limit, offset)
