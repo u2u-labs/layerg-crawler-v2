@@ -143,7 +143,7 @@ JOIN (
         erc_1155_collection_assets.asset_id = $1 
         AND erc_1155_collection_assets.token_id = $2
     ORDER BY 
-        created_at DESC
+        created_at ASC
     LIMIT 100
 )
     ca ON ts.asset_id = ca.asset_id AND ts.token_id = ca.token_id

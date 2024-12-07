@@ -3,6 +3,7 @@ package utils
 import (
 	"database/sql"
 	"encoding/json"
+	"strconv"
 	"time"
 
 	"github.com/unicornultrafoundation/go-u2u/common"
@@ -117,6 +118,12 @@ type AssetResponse struct {
 
 // Convert function
 func ConvertCustomTypeToSqlParams(param *AddNewAssetParamsUtil) db.AddNewAssetParams {
+	// update lastUpdated to now if null
+	if !param.LastUpdated.Valid {
+		param.LastUpdated.Time = time.Now()
+		param.LastUpdated.Valid = true
+	}
+
 	return db.AddNewAssetParams{
 		ID:                param.ID,
 		ChainID:           param.ChainID,
@@ -295,21 +302,64 @@ func ConvertToErc1155CollectionAssetResponses(assets []db.Erc1155CollectionAsset
 	return responses
 }
 
+type ERC1155AssetOwner struct {
+	Balance   int       `json:"balance"`
+	CreatedAt string    `json:"created_at"`
+	Id        uuid.UUID `json:"id"`
+	Owner     string    `json:"owner"`
+	UpdatedAt string    `json:"updated_at"`
+}
+
+type ERC1155AssetOwnerResponse struct {
+	Balance   string    `json:"balance"`
+	CreatedAt string    `json:"createdAt"`
+	Id        uuid.UUID `json:"id"`
+	Owner     string    `json:"owner"`
+	UpdatedAt string    `json:"updatedAt"`
+}
+
 type GetDetailERC1155Asset struct {
-	AssetID     string          `json:"assetId"`
-	TokenID     string          `json:"tokenId"`
-	Attributes  string          `json:"attributes"`
-	TotalSupply int64           `json:"totalSupply"`
-	AssetOwners json.RawMessage `json:"assetOwners"`
+	AssetID     string                      `json:"assetId"`
+	TokenID     string                      `json:"tokenId"`
+	Attributes  string                      `json:"attributes"`
+	TotalSupply string                      `json:"totalSupply"`
+	AssetOwners []ERC1155AssetOwnerResponse `json:"assetOwners"`
+}
+
+func ConvertERC1155Owner(rawData []byte) ([]ERC1155AssetOwnerResponse, error) {
+	var owners []ERC1155AssetOwner
+	var results []ERC1155AssetOwnerResponse
+
+	// Unmarshal the JSON array directly into the slice
+	json.Unmarshal(rawData, &owners)
+
+	for _, owner := range owners {
+		results = append(results, ERC1155AssetOwnerResponse{
+			Balance:   strconv.Itoa(owner.Balance),
+			CreatedAt: owner.CreatedAt,
+			Id:        owner.Id,
+			Owner:     owner.Owner,
+			UpdatedAt: owner.UpdatedAt,
+		})
+	}
+
+	return results, nil
 }
 
 func ConvertToDetailERC1155AssetResponse(asset db.GetDetailERC1155AssetsRow) GetDetailERC1155Asset {
+
 	response := GetDetailERC1155Asset{
 		AssetID:     asset.AssetID,
 		TokenID:     asset.TokenID,
 		Attributes:  asset.Attributes.String,
-		TotalSupply: asset.TotalSupply,
-		AssetOwners: asset.AssetOwners,
+		TotalSupply: strconv.FormatInt(asset.TotalSupply, 10),
+		AssetOwners: func() []ERC1155AssetOwnerResponse {
+			owners, err := ConvertERC1155Owner(asset.AssetOwners)
+			if err != nil {
+				return nil
+			}
+			return owners
+		}(),
 	}
 
 	return response
