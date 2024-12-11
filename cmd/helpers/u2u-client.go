@@ -5,6 +5,7 @@ import (
 
 	db "github.com/u2u-labs/layerg-crawler/db/sqlc"
 	"github.com/unicornultrafoundation/go-u2u/ethclient"
+	"github.com/unicornultrafoundation/go-u2u/rpc"
 )
 
 func GetLastestBlockFromChainUrl(url string) (uint64, error) {
@@ -24,4 +25,8 @@ func GetLastestBlockFromChainUrl(url string) (uint64, error) {
 
 func InitChainClient(chain db.Chain) (*ethclient.Client, error) {
 	return ethclient.Dial(chain.RpcUrl)
+}
+
+func InitNewRPCClient(url string) (*rpc.Client, error) {
+	return rpc.Dial(url)
 }
