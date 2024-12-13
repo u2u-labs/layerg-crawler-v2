@@ -155,6 +155,13 @@ func (as *AssetService) GetAssetsFromAssetCollectionId(ctx *gin.Context, assetId
 
 	switch assetType := assetCollection.Type; assetType {
 	case db.AssetTypeERC721:
+
+		holdersCount, err := as.db.Count721AssetHolderByAssetId(ctx, assetCollection.ID)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
 		totalAssets, err := as.db.Count721AssetByAssetId(ctx, assetCollection.ID)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -172,11 +179,18 @@ func (as *AssetService) GetAssetsFromAssetCollectionId(ctx *gin.Context, assetId
 			Limit:      limit,
 			TotalItems: totalAssets,
 			TotalPages: (totalAssets + int64(limit) - 1) / int64(limit),
+			Holders:    &holdersCount,
 			Data:       utils.ConvertToErc721CollectionAssetResponses(assets),
 		}
 
 		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC721", "asset": paginationResponse})
 	case db.AssetTypeERC1155:
+		holdersCount, err := as.db.Count1155AssetHolderByAssetId(ctx, assetCollection.ID)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
 		totalAssets, err := as.db.Count1155AssetByAssetId(ctx, assetCollection.ID)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -194,12 +208,19 @@ func (as *AssetService) GetAssetsFromAssetCollectionId(ctx *gin.Context, assetId
 			Limit:      limit,
 			TotalItems: totalAssets,
 			TotalPages: (totalAssets + int64(limit) - 1) / int64(limit),
+			Holders:    &holdersCount,
 			Data:       utils.ConvertToErc1155CollectionAssetResponses(assets),
 		}
 
 		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC1155", "asset": paginationResponse})
 
 	case db.AssetTypeERC20:
+		holdersCount, err := as.db.Count20AssetHoldersByAssetId(ctx, assetCollection.ID)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
 		totalAssets, err := as.db.Count20AssetByAssetId(ctx, assetCollection.ID)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -217,6 +238,7 @@ func (as *AssetService) GetAssetsFromAssetCollectionId(ctx *gin.Context, assetId
 			Limit:      limit,
 			TotalItems: totalAssets,
 			TotalPages: (totalAssets + int64(limit) - 1) / int64(limit),
+			Holders:    &holdersCount,
 			Data:       assets,
 		}
 
@@ -247,7 +269,7 @@ func (as *AssetService) GetAssetsFromCollectionWithFilter(ctx *gin.Context, asse
 
 	switch assetType := assetCollection.Type; assetType {
 	case db.AssetTypeERC721:
-		totalAssets, err := db.CountItemsWithFilter(as.rawDb, "erc_721_collection_assets", filterConditions)
+		totalAssets, holdersCount, err := db.CountItemsWithFilter(as.rawDb, "erc_721_collection_assets", filterConditions)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -260,13 +282,14 @@ func (as *AssetService) GetAssetsFromCollectionWithFilter(ctx *gin.Context, asse
 			Limit:      limit,
 			TotalItems: int64(totalAssets),
 			TotalPages: int64(totalAssets+(limit)-1) / int64(limit),
+			Holders:    &holdersCount,
 			Data:       utils.ConvertToErc721CollectionAssetResponses(assets),
 		}
 
 		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC721", "asset": paginationResponse})
 
 	case db.AssetTypeERC1155:
-		totalAssets, err := db.CountItemsWithFilter(as.rawDb, "erc_1155_collection_assets", filterConditions)
+		totalAssets, holdersCount, err := db.CountItemsWithFilter(as.rawDb, "erc_1155_collection_assets", filterConditions)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -279,13 +302,14 @@ func (as *AssetService) GetAssetsFromCollectionWithFilter(ctx *gin.Context, asse
 			Limit:      limit,
 			TotalItems: int64(totalAssets),
 			TotalPages: int64(totalAssets+(limit)-1) / int64(limit),
+			Holders:    &holdersCount,
 			Data:       utils.ConvertToErc1155CollectionAssetResponses(assets),
 		}
 
 		ctx.JSON(http.StatusOK, gin.H{"status": "Successfully retrived id", "type": "ERC721", "asset": paginationResponse})
 
 	case db.AssetTypeERC20:
-		totalAssets, err := db.CountItemsWithFilter(as.rawDb, "erc_20_collection_assets", filterConditions)
+		totalAssets, holdersCount, err := db.CountItemsWithFilter(as.rawDb, "erc_20_collection_assets", filterConditions)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -298,6 +322,7 @@ func (as *AssetService) GetAssetsFromCollectionWithFilter(ctx *gin.Context, asse
 			Limit:      limit,
 			TotalItems: int64(totalAssets),
 			TotalPages: int64(totalAssets+(limit)-1) / int64(limit),
+			Holders:    &holdersCount,
 			Data:       assets,
 		}
 
