@@ -16,11 +16,13 @@ import (
 
 // Pagination holds the pagination information.
 type Pagination[T any] struct {
-	Page       int   `json:"page"`       // Current page number
-	Limit      int   `json:"limit"`      // Number of items per page
-	TotalItems int64 `json:"totalItems"` // Total number of items available
-	TotalPages int64 `json:"totalPages"` // Total number of pages
-	Data       []T   `json:"data"`       // The paginated items (can be any type)
+	Page       int    `json:"page"`              // Current page number
+	Limit      int    `json:"limit"`             // Number of items per page
+	TotalItems int64  `json:"totalItems"`        // Total number of items available
+	TotalPages int64  `json:"totalPages"`        // Total number of pages
+	Holders    *int64 `json:"holders,omitempty"` // Optional holder field
+	Data       []T    `json:"data"`              // The paginated items (can be any type)
+
 }
 
 type PaginationParams struct {
@@ -182,34 +184,50 @@ func QueryWithDynamicFilter[T any](db *sql.DB, tableName string, limit int, offs
 }
 
 // CountItems counts the number of items in the database based on dynamic filters.
-func CountItemsWithFilter(db *sql.DB, tableName string, filterConditions map[string][]string) (int, error) {
-	psql := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
-
+func CountItemsWithFilter(db *sql.DB, tableName string, filterConditions map[string][]string) (int, int64, error) {
 	// Create a Squirrel query builder for counting items
+	psql := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
 	queryBuilder := psql.Select("COUNT(*)").From(tableName)
+
+	// Create a Squirrel query builder for counting items holder
+	psql2 := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
+	holderQueryBuilder := psql2.Select("COUNT(DISTINCT(owner))").From(tableName)
 
 	// Apply dynamic filters
 	for column, values := range filterConditions {
 		if len(values) == 1 {
 			queryBuilder = queryBuilder.Where(squirrel.Eq{column: values[0]})
+			holderQueryBuilder = holderQueryBuilder.Where(squirrel.Eq{column: values[0]})
 		} else if len(values) > 1 {
 			queryBuilder = queryBuilder.Where(squirrel.Eq{column: values})
+			holderQueryBuilder = holderQueryBuilder.Where(squirrel.Eq{column: values})
 		}
 	}
 
 	// Convert the query to SQL
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {
-		return 0, err
+		return 0, 0, err
+	}
+
+	holderQuery, holderArgs, err := holderQueryBuilder.ToSql()
+	if err != nil {
+		return 0, 0, err
 	}
 
 	// Execute the query
-	var count int
+	var itemCount int
+	var holderCount int64
 
-	err = db.QueryRow(query, args...).Scan(&count)
+	err = db.QueryRow(query, args...).Scan(&itemCount)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
-	return count, nil
+	err = db.QueryRow(holderQuery, holderArgs...).Scan(&holderCount)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return itemCount, holderCount, nil
 }

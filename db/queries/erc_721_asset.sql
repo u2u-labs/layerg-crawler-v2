@@ -7,6 +7,10 @@ LIMIT $2 OFFSET $3;
 SELECT COUNT(*) FROM erc_721_collection_assets 
 WHERE asset_id = $1;
 
+-- name: Count721AssetHolderByAssetId :one
+SELECT COUNT(DISTINCT(owner)) FROM erc_721_collection_assets 
+WHERE asset_id = $1;
+
 
 -- name: Get721AssetByAssetIdAndTokenId :one
 SELECT * FROM erc_721_collection_assets
