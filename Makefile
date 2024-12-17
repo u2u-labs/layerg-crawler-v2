@@ -14,6 +14,10 @@ api:
 	chmod +x layerg-crawler
 	./layerg-crawler api --config .layerg-crawler.yaml
 
+worker:
+	go build -ldflags -w
+	chmod +x layerg-crawler
+	./layerg-crawler worker --config .layerg-crawler.yaml
 
 migrate-up:
 	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) goose -dir $(GOOSE_MIGRATION_DIR) up-to 20241030100023 # schema

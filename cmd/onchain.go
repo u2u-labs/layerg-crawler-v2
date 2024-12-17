@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
 	u2u "github.com/unicornultrafoundation/go-u2u"
 	"github.com/unicornultrafoundation/go-u2u/common"
@@ -41,73 +42,29 @@ func StartChainCrawler(ctx context.Context, sugar *zap.SugaredLogger, client *et
 	}
 }
 
-func StartBackfillCrawler(ctx context.Context, sugar *zap.SugaredLogger, client *ethclient.Client, q *db.Queries, chain *db.Chain, bf *db.GetCrawlingBackfillCrawlerRow, rdb *redis.Client) error {
-	sugar.Infow("Start backfill crawler", "chain", chain)
+func AddBackfillCrawlerTask(ctx context.Context, sugar *zap.SugaredLogger, client *ethclient.Client, q *db.Queries, chain *db.Chain, bf *db.GetCrawlingBackfillCrawlerRow, queueClient *asynq.Client) {
+	blockRangeScan := int64(config.BackfillBlockRangeScan) * 100
+	if bf.CurrentBlock%blockRangeScan == 0 {
+		sugar.Infow("Backfill crawler", "chain", chain, "block", bf.CurrentBlock)
+	}
+
 	timer := time.NewTimer(time.Duration(chain.BlockTime) * time.Millisecond)
 	defer timer.Stop()
+
 	for {
 		select {
 		case <-timer.C:
-			toScanBlock := bf.CurrentBlock + config.BackfillBlockRangeScan
-			if bf.InitialBlock.Valid && toScanBlock >= bf.InitialBlock.Int64 {
-				toScanBlock = bf.InitialBlock.Int64
-				bf.Status = db.CrawlerStatusCRAWLED
+			task, err := NewBackfillCollectionTask(bf)
+			if err != nil {
+				log.Fatalf("could not create task: %v", err)
 			}
-
-			var transferEventSig []string
-
-			if bf.Type == db.AssetTypeERC20 || bf.Type == db.AssetTypeERC721 {
-				transferEventSig = []string{utils.TransferEventSig}
-			} else if bf.Type == db.AssetTypeERC1155 {
-				transferEventSig = []string{utils.TransferSingleSig, utils.TransferBatchSig}
+			_, err = queueClient.Enqueue(task)
+			if err != nil {
+				log.Fatalf("could not enqueue task: %v", err)
 			}
-
-			// Initialize topics slice
-			var topics [][]common.Hash
-
-			// Populate the topics slice
-			innerSlice := make([]common.Hash, len(transferEventSig))
-			for i, sig := range transferEventSig {
-				innerSlice[i] = common.HexToHash(sig) // Convert each signature to common.Hash
-			}
-			topics = append(topics, innerSlice) // Add the inner slice to topics
-
-			logs, _ := client.FilterLogs(ctx, u2u.FilterQuery{
-				Topics:    topics,
-				BlockHash: nil,
-				FromBlock: big.NewInt(bf.CurrentBlock),
-				ToBlock:   big.NewInt(toScanBlock),
-				Addresses: []common.Address{common.HexToAddress(bf.CollectionAddress)},
-			})
-			if bf.CurrentBlock%1000 == 0 {
-				sugar.Infof("Batch Call from block %d to block %d for assetType %s, contractAddress %s", bf.CurrentBlock, toScanBlock, bf.Type, bf.CollectionAddress)
-			}
-
-			switch bf.Type {
-			case db.AssetTypeERC20:
-				handleErc20BackFill(ctx, sugar, q, client, chain, logs)
-			case db.AssetTypeERC721:
-				handleErc721BackFill(ctx, sugar, q, client, chain, logs)
-			case db.AssetTypeERC1155:
-				handleErc1155Backfill(ctx, sugar, q, client, chain, logs)
-			}
-
-			bf.CurrentBlock = toScanBlock
-
-			q.UpdateCrawlingBackfill(ctx, db.UpdateCrawlingBackfillParams{
-				ChainID:           bf.ChainID,
-				CollectionAddress: bf.CollectionAddress,
-				Status:            bf.Status,
-				CurrentBlock:      bf.CurrentBlock,
-			})
-
-			if bf.Status == db.CrawlerStatusCRAWLED {
-				return nil
-			}
-
-			timer.Reset(time.Duration(chain.BlockTime) * time.Millisecond)
 		}
 	}
+
 }
 
 func ProcessLatestBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *ethclient.Client, q *db.Queries, chain *db.Chain, rdb *redis.Client) error {

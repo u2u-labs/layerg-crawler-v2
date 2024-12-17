@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hibiken/asynq"
 	"github.com/u2u-labs/layerg-crawler/config"
 
 	_ "github.com/lib/pq"
@@ -58,6 +59,10 @@ func startCrawler(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 
+	queueClient := asynq.NewClient(asynq.RedisClientOpt{Addr: viper.GetString("REDIS_DB_URL")})
+
+	defer queueClient.Close()
+
 	if utils.ERC20ABI, err = abi.JSON(strings.NewReader(utils.ERC20ABIStr)); err != nil {
 		panic(err)
 	}
@@ -83,9 +88,8 @@ func startCrawler(cmd *cobra.Command, args []string) {
 			ProcessNewChains(ctx, sugar, rdb, sqlDb)
 			// Process new assets
 			ProcessNewChainAssets(ctx, sugar, rdb)
-
 			// Process backfill collection
-			ProcessCrawlingBackfillCollection(ctx, sugar, sqlDb, rdb)
+			ProcessCrawlingBackfillCollection(ctx, sugar, sqlDb, rdb, queueClient)
 
 			timer.Reset(config.RetriveAddedChainsAndAssetsInterval)
 		}
@@ -192,7 +196,7 @@ func crawlSupportedChains(ctx context.Context, sugar *zap.SugaredLogger, q *dbCo
 
 }
 
-func ProcessCrawlingBackfillCollection(ctx context.Context, sugar *zap.SugaredLogger, q *dbCon.Queries, rdb *redis.Client) error {
+func ProcessCrawlingBackfillCollection(ctx context.Context, sugar *zap.SugaredLogger, q *dbCon.Queries, rdb *redis.Client, queueClient *asynq.Client) error {
 	// Get all Backfill Collection with status CRAWLING
 	crawlingBackfill, err := q.GetCrawlingBackfillCrawler(ctx)
 
@@ -207,8 +211,8 @@ func ProcessCrawlingBackfillCollection(ctx context.Context, sugar *zap.SugaredLo
 		if err != nil {
 			return err
 		}
+		go AddBackfillCrawlerTask(ctx, sugar, client, q, &chain, &c, queueClient)
 
-		go StartBackfillCrawler(ctx, sugar, client, q, &chain, &c, rdb)
 	}
 	return nil
 }
