@@ -105,7 +105,9 @@ func (ac *AssetController) GetAssetByChainIdAndContractAddressDetail(ctx *gin.Co
 	assetId := chainIdStr + ":" + collectionAddress
 	tokenId := ctx.Param("token_id")
 
-	ac.service.GetAssetByChainIdAndContractAddressDetail(ctx, assetId, tokenId)
+	owner := ctx.Query("owner")
+
+	ac.service.GetAssetByChainIdAndContractAddressDetail(ctx, assetId, tokenId, owner)
 }
 
 // GetNFTAssetCollectionByChainId godoc
