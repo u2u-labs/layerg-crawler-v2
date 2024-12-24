@@ -33,7 +33,7 @@ INSERT INTO
     erc_1155_collection_assets (asset_id, chain_id, token_id, owner, balance, attributes)
 VALUES (
     $1, $2, $3, $4, $5, $6
-) ON CONFLICT ON CONSTRAINT UC_ERC1155 DO UPDATE SET
+) ON CONFLICT ON CONSTRAINT UC_ERC1155_OWNER DO UPDATE SET
     balance = $5,
     attributes = $6
     
