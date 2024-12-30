@@ -170,15 +170,19 @@ func (processor *BackfillProcessor) ProcessTask(ctx context.Context, t *asynq.Ta
 	}
 	topics = append(topics, innerSlice) // Add the inner slice to topics
 
-	logs, _ := processor.ethClient.FilterLogs(ctx, u2u.FilterQuery{
+	logs, err := processor.ethClient.FilterLogs(ctx, u2u.FilterQuery{
 		Topics:    topics,
 		BlockHash: nil,
 		FromBlock: big.NewInt(bf.CurrentBlock),
 		ToBlock:   big.NewInt(toScanBlock),
 		Addresses: []common.Address{common.HexToAddress(bf.CollectionAddress)},
 	})
+
+	if err != nil {
+		processor.sugar.Errorw("Failed to get filter logs", "err", err)
+	}
 	if bf.CurrentBlock%1000 == 0 {
-		processor.sugar.Infof("Batch Call from block %d to block %d for assetType %s, contractAddress %s", bf.CurrentBlock, toScanBlock, bf.Type, bf.CollectionAddress)
+		processor.sugar.Infof("Get filter logs from block %d to block %d for assetType %s, contractAddress %s", bf.CurrentBlock, toScanBlock, bf.Type, bf.CollectionAddress)
 	}
 
 	switch bf.Type {
