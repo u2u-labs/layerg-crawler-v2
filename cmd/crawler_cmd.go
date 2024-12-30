@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"database/sql"
-	"log"
 	"strings"
 	"time"
 
@@ -42,21 +41,18 @@ func startCrawler(cmd *cobra.Command, args []string) {
 		viper.GetString("COCKROACH_DB_URL"),
 	)
 	if err != nil {
-		log.Fatalf("Could not connect to database: %v", err)
+		sugar.Errorw("Could not connect to database", "err", err)
 	}
 
 	sqlDb := dbCon.New(conn)
 
-	if err != nil {
-		panic(err)
-	}
 	rdb, err := db.NewRedisClient(&db.RedisConfig{
 		Url:      viper.GetString("REDIS_DB_URL"),
 		Db:       viper.GetInt("REDIS_DB"),
 		Password: viper.GetString("REDIS_DB_PASSWORD"),
 	})
 	if err != nil {
-		panic(err)
+		sugar.Errorw("Failed to connect to redis", "err", err)
 	}
 
 	queueClient := asynq.NewClient(asynq.RedisClientOpt{Addr: viper.GetString("REDIS_DB_URL")})
@@ -64,13 +60,13 @@ func startCrawler(cmd *cobra.Command, args []string) {
 	defer queueClient.Close()
 
 	if utils.ERC20ABI, err = abi.JSON(strings.NewReader(utils.ERC20ABIStr)); err != nil {
-		panic(err)
+		sugar.Errorw("Failed to parse ERC20 ABI", "err", err)
 	}
 	if utils.ERC721ABI, err = abi.JSON(strings.NewReader(utils.ERC721ABIStr)); err != nil {
-		panic(err)
+		sugar.Errorw("Failed to parse ERC721 ABI", "err", err)
 	}
 	if utils.ERC1155ABI, err = abi.JSON(strings.NewReader(utils.ERC1155ABIStr)); err != nil {
-		panic(err)
+		sugar.Errorw("Failed to parse ERC1155 ABI", "err", err)
 	}
 
 	err = crawlSupportedChains(ctx, sugar, sqlDb, rdb)
