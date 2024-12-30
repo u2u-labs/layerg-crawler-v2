@@ -179,7 +179,7 @@ func (processor *BackfillProcessor) ProcessTask(ctx context.Context, t *asynq.Ta
 	})
 
 	if err != nil {
-		processor.sugar.Errorw("Failed to get filter logs", "err", err)
+		processor.sugar.Warnw("Failed to get filter logs", "err", err)
 	}
 	if bf.CurrentBlock%1000 == 0 {
 		processor.sugar.Infof("Get filter logs from block %d to block %d for assetType %s, contractAddress %s", bf.CurrentBlock, toScanBlock, bf.Type, bf.CollectionAddress)
