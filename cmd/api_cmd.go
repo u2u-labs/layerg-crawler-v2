@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"database/sql"
-	"log"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
@@ -12,6 +11,7 @@ import (
 	"github.com/spf13/viper"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"go.uber.org/zap"
 
 	"github.com/u2u-labs/layerg-crawler/cmd/controllers"
 	middleware "github.com/u2u-labs/layerg-crawler/cmd/middlewares"
@@ -22,18 +22,20 @@ import (
 )
 
 func startApi(cmd *cobra.Command, args []string) {
+	var (
+		logger = &zap.Logger{}
+	)
 	conn, err := sql.Open(
 		viper.GetString("COCKROACH_DB_DRIVER"),
 		viper.GetString("COCKROACH_DB_URL"),
 	)
+	sugar := logger.Sugar()
+
 	if err != nil {
-		log.Fatalf("Could not connect to database: %v", err)
+		sugar.Errorw("Failed to connect to database", "err", err)
 	}
 
 	q := dbCon.New(conn)
-	if err != nil {
-		panic(err)
-	}
 
 	rdb, err := db.NewRedisClient(&db.RedisConfig{
 		Url:      viper.GetString("REDIS_DB_URL"),
@@ -41,7 +43,7 @@ func startApi(cmd *cobra.Command, args []string) {
 		Password: viper.GetString("REDIS_DB_PASSWORD"),
 	})
 	if err != nil {
-		panic(err)
+		sugar.Errorw("Failed to connect to redis", "err", err)
 	}
 
 	serveApi(q, rdb, conn, context.Background())
@@ -81,6 +83,7 @@ func serveApi(db *dbCon.Queries, rdb *redis.Client, rawDb *sql.DB, ctx context.C
 	chainController := controllers.NewChainController(chainService, ctx, rdb)
 	assetController := controllers.NewAssetController(assetService, ctx, rdb)
 	historyController := controllers.NewHistoryController(db, rawDb, ctx, rdb)
+	backfillController := controllers.NewBackFillController(db, rawDb, ctx, rdb)
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -97,6 +100,9 @@ func serveApi(db *dbCon.Queries, rdb *redis.Client, rawDb *sql.DB, ctx context.C
 	router.GET("/chain/:chain_id/collection/:collection_address/assets", assetController.GetAssetByChainIdAndContractAddress)
 	router.GET("/chain/:chain_id/collection/:collection_address/:token_id", assetController.GetAssetByChainIdAndContractAddressDetail)
 	router.GET("/chain/:chain_id/nft-assets", assetController.GetNFTCombinedAsset)
+
+	// Backfill routes
+	router.POST("/backfill", backfillController.AddBackFillTracker)
 	// History routes``
 	router.GET("/history", historyController.GetHistory)
 

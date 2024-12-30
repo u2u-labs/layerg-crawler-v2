@@ -3,10 +3,10 @@ package cmd
 import (
 	"context"
 	"database/sql"
-	"log"
 	"strings"
 	"time"
 
+	"github.com/hibiken/asynq"
 	"github.com/u2u-labs/layerg-crawler/config"
 
 	_ "github.com/lib/pq"
@@ -41,31 +41,32 @@ func startCrawler(cmd *cobra.Command, args []string) {
 		viper.GetString("COCKROACH_DB_URL"),
 	)
 	if err != nil {
-		log.Fatalf("Could not connect to database: %v", err)
+		sugar.Errorw("Could not connect to database", "err", err)
 	}
 
 	sqlDb := dbCon.New(conn)
 
-	if err != nil {
-		panic(err)
-	}
 	rdb, err := db.NewRedisClient(&db.RedisConfig{
 		Url:      viper.GetString("REDIS_DB_URL"),
 		Db:       viper.GetInt("REDIS_DB"),
 		Password: viper.GetString("REDIS_DB_PASSWORD"),
 	})
 	if err != nil {
-		panic(err)
+		sugar.Errorw("Failed to connect to redis", "err", err)
 	}
 
+	queueClient := asynq.NewClient(asynq.RedisClientOpt{Addr: viper.GetString("REDIS_DB_URL")})
+
+	defer queueClient.Close()
+
 	if utils.ERC20ABI, err = abi.JSON(strings.NewReader(utils.ERC20ABIStr)); err != nil {
-		panic(err)
+		sugar.Errorw("Failed to parse ERC20 ABI", "err", err)
 	}
 	if utils.ERC721ABI, err = abi.JSON(strings.NewReader(utils.ERC721ABIStr)); err != nil {
-		panic(err)
+		sugar.Errorw("Failed to parse ERC721 ABI", "err", err)
 	}
 	if utils.ERC1155ABI, err = abi.JSON(strings.NewReader(utils.ERC1155ABIStr)); err != nil {
-		panic(err)
+		sugar.Errorw("Failed to parse ERC1155 ABI", "err", err)
 	}
 
 	err = crawlSupportedChains(ctx, sugar, sqlDb, rdb)
@@ -83,6 +84,9 @@ func startCrawler(cmd *cobra.Command, args []string) {
 			ProcessNewChains(ctx, sugar, rdb, sqlDb)
 			// Process new assets
 			ProcessNewChainAssets(ctx, sugar, rdb)
+			// Process backfill collection
+			ProcessCrawlingBackfillCollection(ctx, sugar, sqlDb, rdb, queueClient)
+
 			timer.Reset(config.RetriveAddedChainsAndAssetsInterval)
 		}
 	}
@@ -100,10 +104,12 @@ func ProcessNewChains(ctx context.Context, sugar *zap.SugaredLogger, rdb *redis.
 	}
 	for _, c := range chains {
 		client, err := initChainClient(&c)
+
 		if err != nil {
 			sugar.Errorw("ProcessNewChains failed to init chain client", "err", err, "chain", c)
 			return
 		}
+
 		go StartChainCrawler(ctx, sugar, client, q, &c, rdb)
 		sugar.Infow("Initiated new chain, start crawling", "chain", c)
 	}
@@ -184,4 +190,25 @@ func crawlSupportedChains(ctx context.Context, sugar *zap.SugaredLogger, q *dbCo
 	}
 	return nil
 
+}
+
+func ProcessCrawlingBackfillCollection(ctx context.Context, sugar *zap.SugaredLogger, q *dbCon.Queries, rdb *redis.Client, queueClient *asynq.Client) error {
+	// Get all Backfill Collection with status CRAWLING
+	crawlingBackfill, err := q.GetCrawlingBackfillCrawler(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	for _, c := range crawlingBackfill {
+		chain, err := q.GetChainById(ctx, c.ChainID)
+
+		client, err := initChainClient(&chain)
+		if err != nil {
+			return err
+		}
+		go AddBackfillCrawlerTask(ctx, sugar, client, q, &chain, &c, queueClient)
+
+	}
+	return nil
 }
