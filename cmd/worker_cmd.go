@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"strconv"
 	"strings"
 
 	"github.com/hibiken/asynq"
@@ -76,16 +77,12 @@ func startWorker(cmd *cobra.Command, args []string) {
 }
 
 func InitBackfillProcessor(ctx context.Context, sugar *zap.SugaredLogger, q *dbCon.Queries, rdb *redis.Client, queueClient *asynq.Client) error {
-	// Get all Backfill Collection with status CRAWLING
-	crawlingBackfill, err := q.GetCrawlingBackfillCrawler(ctx)
-
+	// Get all chains
+	chains, err := q.GetAllChain(ctx)
 	if err != nil {
 		return err
 	}
-
-	for _, c := range crawlingBackfill {
-		chain, err := q.GetChainById(ctx, c.ChainID)
-
+	for _, chain := range chains {
 		client, err := initChainClient(&chain)
 		if err != nil {
 			return err
@@ -101,13 +98,14 @@ func InitBackfillProcessor(ctx context.Context, sugar *zap.SugaredLogger, q *dbC
 
 		// mux maps a type to a handler
 		mux := asynq.NewServeMux()
-		mux.Handle(BackfillCollection, NewBackfillProcessor(sugar, client, q, &chain))
+		taskName := BackfillCollection + ":" + strconv.Itoa(int(chain.ID))
+		mux.Handle(taskName, NewBackfillProcessor(sugar, client, q, &chain))
 
 		if err := srv.Run(mux); err != nil {
 			log.Fatalf("could not run server: %v", err)
 		}
-
 	}
+
 	return nil
 }
 
@@ -129,7 +127,10 @@ func NewBackfillCollectionTask(bf *dbCon.GetCrawlingBackfillCrawlerRow) (*asynq.
 	if err != nil {
 		return nil, err
 	}
-	return asynq.NewTask(BackfillCollection, payload), nil
+
+	taskName := BackfillCollection + ":" + strconv.Itoa(int(bf.ChainID))
+
+	return asynq.NewTask(taskName, payload), nil
 }
 
 func (processor *BackfillProcessor) ProcessTask(ctx context.Context, t *asynq.Task) error {
