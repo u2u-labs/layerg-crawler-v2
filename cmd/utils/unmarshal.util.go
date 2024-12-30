@@ -319,11 +319,11 @@ type ERC1155AssetOwnerResponse struct {
 }
 
 type GetDetailERC1155Asset struct {
-	AssetID     string                      `json:"assetId"`
-	TokenID     string                      `json:"tokenId"`
-	Attributes  string                      `json:"attributes"`
-	TotalSupply string                      `json:"totalSupply"`
-	AssetOwners []ERC1155AssetOwnerResponse `json:"assetOwners"`
+	AssetID     string                                   `json:"assetId"`
+	TokenID     string                                   `json:"tokenId"`
+	Attributes  string                                   `json:"attributes"`
+	TotalSupply string                                   `json:"totalSupply"`
+	AssetOwners db.Pagination[ERC1155AssetOwnerResponse] `json:"assetOwners"`
 }
 
 func ConvertERC1155Owner(rawData []byte) ([]ERC1155AssetOwnerResponse, error) {
@@ -346,20 +346,16 @@ func ConvertERC1155Owner(rawData []byte) ([]ERC1155AssetOwnerResponse, error) {
 	return results, nil
 }
 
-func ConvertToDetailERC1155AssetResponse(asset db.GetDetailERC1155AssetsRow) GetDetailERC1155Asset {
+func ConvertToDetailERC1155AssetResponse(
+	asset db.Erc1155TotalSupply, ownerPagination db.Pagination[ERC1155AssetOwnerResponse],
+) GetDetailERC1155Asset {
 
 	response := GetDetailERC1155Asset{
 		AssetID:     asset.AssetID,
 		TokenID:     asset.TokenID,
 		Attributes:  asset.Attributes.String,
 		TotalSupply: strconv.FormatInt(asset.TotalSupply, 10),
-		AssetOwners: func() []ERC1155AssetOwnerResponse {
-			owners, err := ConvertERC1155Owner(asset.AssetOwners)
-			if err != nil {
-				return nil
-			}
-			return owners
-		}(),
+		AssetOwners: ownerPagination,
 	}
 
 	return response

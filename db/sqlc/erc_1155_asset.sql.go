@@ -8,7 +8,6 @@ package db
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 
 	"github.com/google/uuid"
 )
@@ -18,7 +17,7 @@ INSERT INTO
     erc_1155_collection_assets (asset_id, chain_id, token_id, owner, balance, attributes)
 VALUES (
     $1, $2, $3, $4, $5, $6
-) ON CONFLICT ON CONSTRAINT UC_ERC1155 DO UPDATE SET
+) ON CONFLICT ON CONSTRAINT UC_ERC1155_OWNER DO UPDATE SET
     balance = $5,
     attributes = $6
     
@@ -82,6 +81,26 @@ func (q *Queries) Count1155AssetHolderByAssetId(ctx context.Context, assetID str
 	return count, err
 }
 
+const count1155AssetHolderByAssetIdAndTokenId = `-- name: Count1155AssetHolderByAssetIdAndTokenId :one
+SELECT COUNT(DISTINCT(owner)) FROM erc_1155_collection_assets 
+WHERE asset_id = $1
+AND token_id = $2
+AND owner = COALESCE($3, owner)
+`
+
+type Count1155AssetHolderByAssetIdAndTokenIdParams struct {
+	AssetID string `json:"assetId"`
+	TokenID string `json:"tokenId"`
+	Owner   string `json:"owner"`
+}
+
+func (q *Queries) Count1155AssetHolderByAssetIdAndTokenId(ctx context.Context, arg Count1155AssetHolderByAssetIdAndTokenIdParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, count1155AssetHolderByAssetIdAndTokenId, arg.AssetID, arg.TokenID, arg.Owner)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const delete1155Asset = `-- name: Delete1155Asset :exec
 DELETE 
 FROM erc_1155_collection_assets
@@ -125,46 +144,16 @@ func (q *Queries) Get1155AssetByAssetIdAndTokenId(ctx context.Context, arg Get11
 
 const getDetailERC1155Assets = `-- name: GetDetailERC1155Assets :one
 SELECT 
-    ts.asset_id,
-    ts.token_id,
-    ts.attributes,
-    ts.total_supply,
-    json_agg(
-        json_build_object(
-            'id', ca.id,
-            'owner', ca.owner,
-            'balance', ca.balance,
-            'created_at', ca.created_at,
-            'updated_at', ca.updated_at
-        )
-    ) AS asset_owners
+    asset_id,
+    token_id,
+    attributes,
+    total_supply
 FROM 
-    erc_1155_total_supply ts
-JOIN (
-    SELECT 
-        id,
-        owner,
-        balance,
-        created_at,
-        updated_at,
-        asset_id,
-        token_id
-    FROM 
-        erc_1155_collection_assets
-    WHERE 
-        erc_1155_collection_assets.asset_id = $1 
-        AND erc_1155_collection_assets.token_id = $2
-    ORDER BY 
-        created_at ASC
-    LIMIT 100
-)
-    ca ON ts.asset_id = ca.asset_id AND ts.token_id = ca.token_id
+    erc_1155_total_supply
 WHERE 
-    ts.asset_id = $1
+    asset_id = $1
 AND 
-    ts.token_id = $2
-GROUP BY 
-    ts.asset_id, ts.token_id, ts.attributes, ts.total_supply
+    token_id = $2
 `
 
 type GetDetailERC1155AssetsParams struct {
@@ -172,23 +161,14 @@ type GetDetailERC1155AssetsParams struct {
 	TokenID string `json:"tokenId"`
 }
 
-type GetDetailERC1155AssetsRow struct {
-	AssetID     string          `json:"assetId"`
-	TokenID     string          `json:"tokenId"`
-	Attributes  sql.NullString  `json:"attributes"`
-	TotalSupply int64           `json:"totalSupply"`
-	AssetOwners json.RawMessage `json:"assetOwners"`
-}
-
-func (q *Queries) GetDetailERC1155Assets(ctx context.Context, arg GetDetailERC1155AssetsParams) (GetDetailERC1155AssetsRow, error) {
+func (q *Queries) GetDetailERC1155Assets(ctx context.Context, arg GetDetailERC1155AssetsParams) (Erc1155TotalSupply, error) {
 	row := q.db.QueryRowContext(ctx, getDetailERC1155Assets, arg.AssetID, arg.TokenID)
-	var i GetDetailERC1155AssetsRow
+	var i Erc1155TotalSupply
 	err := row.Scan(
 		&i.AssetID,
 		&i.TokenID,
 		&i.Attributes,
 		&i.TotalSupply,
-		&i.AssetOwners,
 	)
 	return i, err
 }
