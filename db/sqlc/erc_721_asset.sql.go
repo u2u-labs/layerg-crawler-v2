@@ -66,6 +66,18 @@ func (q *Queries) Count721AssetByOwnerAddress(ctx context.Context, owner string)
 	return count, err
 }
 
+const count721AssetHolderByAssetId = `-- name: Count721AssetHolderByAssetId :one
+SELECT COUNT(DISTINCT(owner)) FROM erc_721_collection_assets 
+WHERE asset_id = $1
+`
+
+func (q *Queries) Count721AssetHolderByAssetId(ctx context.Context, assetID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, count721AssetHolderByAssetId, assetID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const delete721Asset = `-- name: Delete721Asset :exec
 DELETE 
 FROM erc_721_collection_assets
