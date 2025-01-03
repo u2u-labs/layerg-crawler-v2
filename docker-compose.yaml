@@ -37,7 +37,7 @@ services:
     image: u2labs/layerg-crawler:latest
     build:
       context: .
-    container_name: layerg-api
+    container_name: layerg-worker
     restart: always
     depends_on:
       - crdb
