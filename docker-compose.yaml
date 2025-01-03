@@ -41,8 +41,6 @@ services:
     restart: always
     depends_on:
       - crdb
-    ports:
-      - 8085:8085
     command: "layerg-crawler worker --config config.yaml"
     volumes:
       - ./config.yaml:/go/bin/config.yaml
