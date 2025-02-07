@@ -6,6 +6,7 @@ require (
 	github.com/Masterminds/squirrel v1.5.4
 	github.com/gin-gonic/gin v1.10.0
 	github.com/google/uuid v1.6.0
+	github.com/hibiken/asynq v0.25.1
 	github.com/lib/pq v1.10.9
 	github.com/redis/go-redis/v9 v9.7.0
 	github.com/spf13/cobra v1.8.1
@@ -16,7 +17,6 @@ require (
 )
 
 require (
-	github.com/hibiken/asynq v0.25.1 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	golang.org/x/time v0.8.0 // indirect
 )

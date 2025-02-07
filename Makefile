@@ -29,3 +29,7 @@ migrate-reset:
 
 swag:
 	swag init -g cmd/api_cmd.go -o ./docs
+
+prepare:
+	@echo "Running code generation flow..."
+	go run cmd/prepare/main.go -schema=./schema.graphql -out=./generated

@@ -1,0 +1,23 @@
+# schema.graphql
+type User @entity {
+  id: ID!
+  name: String! @index(unique: true)
+  email: String @index
+  createdDate: Date
+  isActive: Boolean
+  profile: UserProfile
+}
+
+type UserProfile @entity {
+  id: ID!
+  bio: String
+  avatarUrl: String
+}
+
+type Post @entity {
+  id: ID!
+  title: String!
+  content: String
+  publishedDate: Date
+  author: User @index
+} 

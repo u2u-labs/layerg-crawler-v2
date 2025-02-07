@@ -1,0 +1,30 @@
+name: "ethereum-starter"
+description: "This project serves as a starting point for an Ethereum indexer."
+schema:
+  file: "./schema.graphql"
+network:
+  chainId: "1"
+  endpoint:
+    - "https://eth.api.onfinality.io/public"
+dataSources:
+  - kind: EthereumDatasourceKind.Runtime
+    startBlock: 4719568
+    options:
+      abi: "erc20"
+      address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+    assets:
+      erc20:
+        file: "./abis/erc20.abi.json"
+    mapping:
+      file: "./dist/index.js"
+      handlers:
+        - kind: EthereumHandlerKind.Call
+          handler: "HandleTransaction"
+          filter:
+            function: "approve(address spender, uint256 rawAmount)"
+        - kind: EthereumHandlerKind.Event
+          handler: "HandleLog"
+          filter:
+            topics:
+              - "Transfer(address indexed from, address indexed to, uint256 amount)"
+repository: "https://github.com/subquery/ethereum-subql-starter" 
