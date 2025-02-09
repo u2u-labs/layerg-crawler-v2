@@ -21,3 +21,9 @@ type Post @entity {
   publishedDate: Date
   author: User @index
 } 
+
+type Collection @entity {
+  id: ID!
+  address: String! @index(unique: true)
+  type: String
+}

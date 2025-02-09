@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -10,9 +11,45 @@ import (
 
 // GenerateMigrationScripts generates a migration script from the schema.
 func GenerateMigrationScripts(entities []Entity, outputDir string) error {
-	// Create a migration file name based on current timestamp.
+	// Create a dedicated subfolder for generated migrations.
+	migrationsDir := outputDir + "/migrations"
+	if err := os.MkdirAll(migrationsDir, os.ModePerm); err != nil {
+		return err
+	}
+
+	// Load previous schema snapshot if it exists.
+	snapshotFile := migrationsDir + "/schema_snapshot.json"
+	var prevEntities []Entity
+	if data, err := os.ReadFile(snapshotFile); err == nil {
+		if err := json.Unmarshal(data, &prevEntities); err != nil {
+			return err
+		}
+	}
+
+	var migrationSQL string
+	if len(prevEntities) > 0 {
+		// Generate an incremental (diff) migration.
+		diffSQL, err := generateDiffMigration(prevEntities, entities)
+		if err != nil {
+			return err
+		}
+		migrationSQL = diffSQL
+	} else {
+		// No previous snapshot exists; generate full migration.
+		fullSQL, err := generateFullMigration(entities)
+		if err != nil {
+			return err
+		}
+		migrationSQL = fullSQL
+	}
+
+	// Ensure migrationSQL is not empty so that a migration file is generated.
+	if strings.TrimSpace(migrationSQL) == "" {
+		migrationSQL = "-- No schema changes detected\n"
+	}
+
 	timestamp := time.Now().Format("20060102150405")
-	filePath := fmt.Sprintf("%s/migration_%s.sql", outputDir, timestamp)
+	filePath := fmt.Sprintf("%s/%s_migration.sql", migrationsDir, timestamp)
 	f, err := os.Create(filePath)
 	if err != nil {
 		return err
@@ -20,32 +57,50 @@ func GenerateMigrationScripts(entities []Entity, outputDir string) error {
 	defer f.Close()
 
 	header := `-- +goose Up
--- Migration script generated from GraphQL schema
+-- Migration script generated from GraphQL schema (incremental)
 
 `
-	_, err = f.WriteString(header)
-	if err != nil {
+	if _, err := f.WriteString(header); err != nil {
+		return err
+	}
+	if _, err := f.WriteString(migrationSQL); err != nil {
+		return err
+	}
+	downFooter := `
+-- +goose Down
+`
+	if _, err := f.WriteString(downFooter); err != nil {
 		return err
 	}
 
-	// Template to generate CREATE TABLE statements.
+	// Update snapshot with current schema.
+	snapshotData, err := json.MarshalIndent(entities, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(snapshotFile, snapshotData, 0644); err != nil {
+		return err
+	}
+	return nil
+}
+
+// generateFullMigration generates a full migration SQL using our template.
+func generateFullMigration(entities []Entity) (string, error) {
 	tmpl := `
 {{- range . }}
 {{$fields := .Fields}}
-CREATE TABLE {{ .Name | toSnakeCase }} (
+CREATE TABLE "{{ .Name | toSnakeCase }}" (
 	{{- range $index, $field := $fields }}
-	{{ $field.Name | toSnakeCase }} {{ sqlType $field.Type }} {{ if $field.IsNonNull }}NOT NULL{{ end }}{{ if not (isLast $index $fields) }},{{ end }}
+	"{{ $field.Name | toSnakeCase }}" {{ sqlType $field.Type }} {{ if $field.IsNonNull }}NOT NULL{{ end }}{{ if not (isLast $index $fields) }},{{ end }}
 	{{- end }}
 );
 {{ end }}
 `
 	funcMap := template.FuncMap{
 		"toSnakeCase": func(name string) string {
-			// Naïve conversion to lower-case (improve as needed).
 			return strings.ToLower(name)
 		},
 		"sqlType": func(gqlType string) string {
-			// Map GraphQL type to SQL types.
 			switch gqlType {
 			case "ID", "String":
 				return "VARCHAR"
@@ -54,7 +109,6 @@ CREATE TABLE {{ .Name | toSnakeCase }} (
 			case "Date":
 				return "TIMESTAMP"
 			default:
-				// For relation types, use VARCHAR (or adjust with proper references).
 				return "VARCHAR"
 			}
 		},
@@ -62,18 +116,39 @@ CREATE TABLE {{ .Name | toSnakeCase }} (
 			return index == len(fields)-1
 		},
 	}
-	tpl, err := template.New("migration").Funcs(funcMap).Parse(tmpl)
+	tpl, err := template.New("fullMigration").Funcs(funcMap).Parse(tmpl)
 	if err != nil {
-		return err
+		return "", err
 	}
-	if err := tpl.Execute(f, entities); err != nil {
-		return err
+	var sb strings.Builder
+	if err := tpl.Execute(&sb, entities); err != nil {
+		return "", err
 	}
+	return sb.String(), nil
+}
 
-	// Footer for migration down (this is a stub; adjust as needed).
-	downFooter := `
--- +goose Down
-`
-	_, err = f.WriteString(downFooter)
-	return err
+// generateDiffMigration generates a migration SQL containing changes between previous and current schema.
+// For simplicity, here we only generate CREATE TABLE statements for new entities.
+func generateDiffMigration(prev, curr []Entity) (string, error) {
+	var sb strings.Builder
+	for _, newEntity := range curr {
+		exists := false
+		for _, oldEntity := range prev {
+			if strings.EqualFold(newEntity.Name, oldEntity.Name) {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			full, err := generateFullMigration([]Entity{newEntity})
+			if err != nil {
+				return "", err
+			}
+			sb.WriteString(full)
+			sb.WriteString("\n")
+		}
+	}
+	// (Optional) Compare existing entities and generate ALTER TABLE statements for new fields.
+	// This example only handles new entities.
+	return sb.String(), nil
 }

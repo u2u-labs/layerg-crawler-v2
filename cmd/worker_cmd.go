@@ -1,220 +1,227 @@
 package cmd
 
-import (
-	"context"
-	"database/sql"
-	"encoding/json"
-	"fmt"
-	"log"
-	"math/big"
-	"strconv"
-	"strings"
+// import (
+// 	"context"
+// 	"database/sql"
+// 	"encoding/json"
+// 	"fmt"
+// 	"log"
+// 	"math/big"
+// 	"strconv"
 
-	"github.com/hibiken/asynq"
-	"github.com/redis/go-redis/v9"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	"github.com/u2u-labs/layerg-crawler/cmd/utils"
-	"github.com/u2u-labs/layerg-crawler/config"
-	"github.com/u2u-labs/layerg-crawler/db"
-	dbCon "github.com/u2u-labs/layerg-crawler/db/sqlc"
-	u2u "github.com/unicornultrafoundation/go-u2u"
-	"github.com/unicornultrafoundation/go-u2u/accounts/abi"
-	"github.com/unicornultrafoundation/go-u2u/common"
-	"github.com/unicornultrafoundation/go-u2u/ethclient"
-	"go.uber.org/zap"
-)
+// 	"github.com/hibiken/asynq"
+// 	"github.com/redis/go-redis/v9"
+// 	"github.com/spf13/cobra"
+// 	"github.com/spf13/viper"
+// 	"github.com/u2u-labs/layerg-crawler/cmd/utils"
+// 	"github.com/u2u-labs/layerg-crawler/config"
+// 	"github.com/u2u-labs/layerg-crawler/db"
+// 	dbCon "github.com/u2u-labs/layerg-crawler/db/sqlc"
+// 	u2u "github.com/unicornultrafoundation/go-u2u"
+// 	"github.com/unicornultrafoundation/go-u2u/common"
+// 	"github.com/unicornultrafoundation/go-u2u/ethclient"
+// 	"go.uber.org/zap"
+// )
 
-func startWorker(cmd *cobra.Command, args []string) {
-	var (
-		ctx    = context.Background()
-		logger = &zap.Logger{}
-	)
-	if viper.GetString("LOG_LEVEL") == "PROD" {
-		logger, _ = zap.NewProduction()
-	} else {
-		logger, _ = zap.NewDevelopment()
-	}
-	defer logger.Sync() // flushes buffer, if any
-	sugar := logger.Sugar()
+// func startWorker(cmd *cobra.Command, args []string) {
+// 	var (
+// 		ctx    = context.Background()
+// 		logger = &zap.Logger{}
+// 	)
+// 	defer logger.Sync()
+// 	sugar := logger.Sugar()
 
-	conn, err := sql.Open(
-		viper.GetString("COCKROACH_DB_DRIVER"),
-		viper.GetString("COCKROACH_DB_URL"),
-	)
-	if err != nil {
-		sugar.Errorw("Failed to connect to database", "err", err)
-	}
+// 	// Initialize DB connection
+// 	conn, err := sql.Open(
+// 		viper.GetString("COCKROACH_DB_DRIVER"),
+// 		viper.GetString("COCKROACH_DB_URL"),
+// 	)
+// 	if err != nil {
+// 		sugar.Fatalw("Could not connect to database", "err", err)
+// 	}
+// 	q := dbCon.New(conn)
 
-	sqlDb := dbCon.New(conn)
+// 	// Create handler registry
+// 	registry := NewHandlerRegistry(sugar)
 
-	rdb, err := db.NewRedisClient(&db.RedisConfig{
-		Url:      viper.GetString("REDIS_DB_URL"),
-		Db:       viper.GetInt("REDIS_DB"),
-		Password: viper.GetString("REDIS_DB_PASSWORD"),
-	})
-	if err != nil {
-		sugar.Errorw("Failed to connect to redis", "err", err)
-	}
+// 	// Load config and register handlers
+// 	config, err := loadCrawlerConfig()
+// 	if err != nil {
+// 		sugar.Fatalw("Failed to load config", "err", err)
+// 	}
 
-	queueClient := asynq.NewClient(asynq.RedisClientOpt{Addr: viper.GetString("REDIS_DB_URL")})
-	defer queueClient.Close()
+// 	// Register handlers from config
+// 	for _, ds := range config.DataSources {
+// 		for _, h := range ds.Mapping.Handlers {
+// 			if h.Kind == "EthereumHandlerKind.Event" && len(h.Filter.Topics) > 0 {
+// 				handler := getHandlerForEvent(h.Handler, sugar)
+// 				registry.RegisterHandler(h.Filter.Topics[0], handler)
+// 			}
+// 		}
+// 	}
 
-	if utils.ERC20ABI, err = abi.JSON(strings.NewReader(utils.ERC20ABIStr)); err != nil {
-		sugar.Errorw("Failed to parse ERC20 ABI", "err", err)
-	}
-	if utils.ERC721ABI, err = abi.JSON(strings.NewReader(utils.ERC721ABIStr)); err != nil {
-		sugar.Errorw("Failed to parse ERC721 ABI", "err", err)
-	}
-	if utils.ERC1155ABI, err = abi.JSON(strings.NewReader(utils.ERC1155ABIStr)); err != nil {
-		sugar.Errorw("Failed to parse ERC1155 ABI", "err", err)
-	}
+// 	// Initialize Redis
+// 	rdb, err := db.NewRedisClient(&db.RedisConfig{
+// 		Url:      viper.GetString("REDIS_DB_URL"),
+// 		Db:       viper.GetInt("REDIS_DB"),
+// 		Password: viper.GetString("REDIS_DB_PASSWORD"),
+// 	})
+// 	if err != nil {
+// 		sugar.Fatalw("Failed to connect to redis", "err", err)
+// 	}
 
-	InitBackfillProcessor(ctx, sugar, sqlDb, rdb, queueClient)
-}
+// 	// Initialize queue client
+// 	queueClient := asynq.NewClient(asynq.RedisClientOpt{Addr: viper.GetString("REDIS_DB_URL")})
+// 	defer queueClient.Close()
 
-func InitBackfillProcessor(ctx context.Context, sugar *zap.SugaredLogger, q *dbCon.Queries, rdb *redis.Client, queueClient *asynq.Client) error {
-	// Get all chains
-	chains, err := q.GetAllChain(ctx)
-	if err != nil {
-		return err
-	}
-	for _, chain := range chains {
-		client, err := initChainClient(&chain)
-		if err != nil {
-			return err
-		}
+// 	// Start the backfill processor
+// 	if err := InitBackfillProcessor(ctx, sugar, q, rdb, queueClient); err != nil {
+// 		sugar.Fatalw("Failed to init backfill processor", "err", err)
+// 	}
+// }
 
-		// handle queue
-		srv := asynq.NewServer(
-			asynq.RedisClientOpt{Addr: viper.GetString("REDIS_DB_URL")},
-			asynq.Config{
-				Concurrency: config.WorkerConcurrency,
-			},
-		)
+// func InitBackfillProcessor(ctx context.Context, sugar *zap.SugaredLogger, q *dbCon.Queries, rdb *redis.Client, queueClient *asynq.Client) error {
+// 	// Get all chains
+// 	chains, err := q.GetAllChain(ctx)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	for _, chain := range chains {
+// 		client, err := initChainClient(&chain)
+// 		if err != nil {
+// 			return err
+// 		}
 
-		// mux maps a type to a handler
-		mux := asynq.NewServeMux()
-		taskName := BackfillCollection + ":" + strconv.Itoa(int(chain.ID))
-		mux.Handle(taskName, NewBackfillProcessor(sugar, client, q, &chain))
+// 		// handle queue
+// 		srv := asynq.NewServer(
+// 			asynq.RedisClientOpt{Addr: viper.GetString("REDIS_DB_URL")},
+// 			asynq.Config{
+// 				Concurrency: config.WorkerConcurrency,
+// 			},
+// 		)
 
-		if err := srv.Run(mux); err != nil {
-			log.Fatalf("could not run server: %v", err)
-		}
-	}
+// 		// mux maps a type to a handler
+// 		mux := asynq.NewServeMux()
+// 		taskName := BackfillCollection + ":" + strconv.Itoa(int(chain.ID))
+// 		mux.Handle(taskName, NewBackfillProcessor(sugar, client, q, &chain))
 
-	return nil
-}
+// 		if err := srv.Run(mux); err != nil {
+// 			log.Fatalf("could not run server: %v", err)
+// 		}
+// 	}
 
-// ----------------------------------------------
-// Task
-// ----------------------------------------------
-const (
-	BackfillCollection = "backfill_collection"
-)
+// 	return nil
+// }
 
-//----------------------------------------------
-// Write a function NewXXXTask to create a task.
-// A task consists of a type and a payload.
-//----------------------------------------------
+// // ----------------------------------------------
+// // Task
+// // ----------------------------------------------
+// const (
+// 	BackfillCollection = "backfill_collection"
+// )
 
-func NewBackfillCollectionTask(bf *dbCon.GetCrawlingBackfillCrawlerRow) (*asynq.Task, error) {
+// //----------------------------------------------
+// // Write a function NewXXXTask to create a task.
+// // A task consists of a type and a payload.
+// //----------------------------------------------
 
-	payload, err := json.Marshal(bf)
-	if err != nil {
-		return nil, err
-	}
+// func NewBackfillCollectionTask(bf *dbCon.GetCrawlingBackfillCrawlerRow) (*asynq.Task, error) {
 
-	taskName := BackfillCollection + ":" + strconv.Itoa(int(bf.ChainID))
+// 	payload, err := json.Marshal(bf)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	return asynq.NewTask(taskName, payload), nil
-}
+// 	taskName := BackfillCollection + ":" + strconv.Itoa(int(bf.ChainID))
 
-func (processor *BackfillProcessor) ProcessTask(ctx context.Context, t *asynq.Task) error {
-	var bf dbCon.GetCrawlingBackfillCrawlerRow
+// 	return asynq.NewTask(taskName, payload), nil
+// }
 
-	if err := json.Unmarshal(t.Payload(), &bf); err != nil {
-		return fmt.Errorf("json.Unmarshal failed: %v: %w", err, asynq.SkipRetry)
-	}
+// func (processor *BackfillProcessor) ProcessTask(ctx context.Context, t *asynq.Task) error {
+// 	var bf dbCon.GetCrawlingBackfillCrawlerRow
 
-	blockRangeScan := int64(config.BackfillBlockRangeScan)
+// 	if err := json.Unmarshal(t.Payload(), &bf); err != nil {
+// 		return fmt.Errorf("json.Unmarshal failed: %v: %w", err, asynq.SkipRetry)
+// 	}
 
-	toScanBlock := bf.CurrentBlock + config.BackfillBlockRangeScan
-	// get the nearest upper block that multiple of blockRangeScan
-	if (bf.CurrentBlock % blockRangeScan) != 0 {
-		toScanBlock = ((bf.CurrentBlock / blockRangeScan) + 1) * blockRangeScan
-	}
-	if bf.InitialBlock.Valid && toScanBlock >= bf.InitialBlock.Int64 {
-		toScanBlock = bf.InitialBlock.Int64
-		bf.Status = dbCon.CrawlerStatusCRAWLED
-	}
+// 	blockRangeScan := int64(config.BackfillBlockRangeScan)
 
-	var transferEventSig []string
+// 	toScanBlock := bf.CurrentBlock + config.BackfillBlockRangeScan
+// 	// get the nearest upper block that multiple of blockRangeScan
+// 	if (bf.CurrentBlock % blockRangeScan) != 0 {
+// 		toScanBlock = ((bf.CurrentBlock / blockRangeScan) + 1) * blockRangeScan
+// 	}
+// 	if bf.InitialBlock.Valid && toScanBlock >= bf.InitialBlock.Int64 {
+// 		toScanBlock = bf.InitialBlock.Int64
+// 		bf.Status = dbCon.CrawlerStatusCRAWLED
+// 	}
 
-	if bf.Type == dbCon.AssetTypeERC20 || bf.Type == dbCon.AssetTypeERC721 {
-		transferEventSig = []string{utils.TransferEventSig}
-	} else if bf.Type == dbCon.AssetTypeERC1155 {
-		transferEventSig = []string{utils.TransferSingleSig, utils.TransferBatchSig}
-	}
+// 	var transferEventSig []string
 
-	// Initialize topics slice
-	var topics [][]common.Hash
+// 	if bf.Type == dbCon.AssetTypeERC20 || bf.Type == dbCon.AssetTypeERC721 {
+// 		transferEventSig = []string{utils.TransferEventSig}
+// 	} else if bf.Type == dbCon.AssetTypeERC1155 {
+// 		transferEventSig = []string{utils.TransferSingleSig, utils.TransferBatchSig}
+// 	}
 
-	// Populate the topics slice
-	innerSlice := make([]common.Hash, len(transferEventSig))
-	for i, sig := range transferEventSig {
-		innerSlice[i] = common.HexToHash(sig) // Convert each signature to common.Hash
-	}
-	topics = append(topics, innerSlice) // Add the inner slice to topics
+// 	// Initialize topics slice
+// 	var topics [][]common.Hash
 
-	logs, err := processor.ethClient.FilterLogs(ctx, u2u.FilterQuery{
-		Topics:    topics,
-		BlockHash: nil,
-		FromBlock: big.NewInt(bf.CurrentBlock),
-		ToBlock:   big.NewInt(toScanBlock),
-		Addresses: []common.Address{common.HexToAddress(bf.CollectionAddress)},
-	})
+// 	// Populate the topics slice
+// 	innerSlice := make([]common.Hash, len(transferEventSig))
+// 	for i, sig := range transferEventSig {
+// 		innerSlice[i] = common.HexToHash(sig) // Convert each signature to common.Hash
+// 	}
+// 	topics = append(topics, innerSlice) // Add the inner slice to topics
 
-	if err != nil {
-		processor.sugar.Warnw("Failed to get filter logs", "err", err)
-	}
-	if bf.CurrentBlock%1000 == 0 {
-		processor.sugar.Infof("Get filter logs from block %d to block %d for assetType %s, contractAddress %s", bf.CurrentBlock, toScanBlock, bf.Type, bf.CollectionAddress)
-	}
+// 	logs, err := processor.ethClient.FilterLogs(ctx, u2u.FilterQuery{
+// 		Topics:    topics,
+// 		BlockHash: nil,
+// 		FromBlock: big.NewInt(bf.CurrentBlock),
+// 		ToBlock:   big.NewInt(toScanBlock),
+// 		Addresses: []common.Address{common.HexToAddress(bf.CollectionAddress)},
+// 	})
 
-	switch bf.Type {
-	case dbCon.AssetTypeERC20:
-		handleErc20BackFill(ctx, processor.sugar, processor.q, processor.ethClient, processor.chain, logs)
-	case dbCon.AssetTypeERC721:
-		handleErc721BackFill(ctx, processor.sugar, processor.q, processor.ethClient, processor.chain, logs)
-	case dbCon.AssetTypeERC1155:
-		handleErc1155Backfill(ctx, processor.sugar, processor.q, processor.ethClient, processor.chain, logs)
-	}
+// 	if err != nil {
+// 		processor.sugar.Warnw("Failed to get filter logs", "err", err)
+// 	}
+// 	if bf.CurrentBlock%1000 == 0 {
+// 		processor.sugar.Infof("Get filter logs from block %d to block %d for assetType %s, contractAddress %s", bf.CurrentBlock, toScanBlock, bf.Type, bf.CollectionAddress)
+// 	}
 
-	bf.CurrentBlock = toScanBlock
+// 	switch bf.Type {
+// 	case dbCon.AssetTypeERC20:
+// 		handleErc20BackFill(ctx, processor.sugar, processor.q, processor.ethClient, processor.chain, logs)
+// 	case dbCon.AssetTypeERC721:
+// 		handleErc721BackFill(ctx, processor.sugar, processor.q, processor.ethClient, processor.chain, logs)
+// 	case dbCon.AssetTypeERC1155:
+// 		handleErc1155Backfill(ctx, processor.sugar, processor.q, processor.ethClient, processor.chain, logs)
+// 	}
 
-	processor.q.UpdateCrawlingBackfill(ctx, dbCon.UpdateCrawlingBackfillParams{
-		ChainID:           bf.ChainID,
-		CollectionAddress: bf.CollectionAddress,
-		Status:            bf.Status,
-		CurrentBlock:      bf.CurrentBlock,
-	})
+// 	bf.CurrentBlock = toScanBlock
 
-	if bf.Status == dbCon.CrawlerStatusCRAWLED {
-		return nil
-	}
-	return nil
-}
+// 	processor.q.UpdateCrawlingBackfill(ctx, dbCon.UpdateCrawlingBackfillParams{
+// 		ChainID:           bf.ChainID,
+// 		CollectionAddress: bf.CollectionAddress,
+// 		Status:            bf.Status,
+// 		CurrentBlock:      bf.CurrentBlock,
+// 	})
 
-// BackfillProcessor implements asynq.Handler interface.
-type BackfillProcessor struct {
-	sugar     *zap.SugaredLogger
-	ethClient *ethclient.Client
-	q         *dbCon.Queries
-	chain     *dbCon.Chain
-}
+// 	if bf.Status == dbCon.CrawlerStatusCRAWLED {
+// 		return nil
+// 	}
+// 	return nil
+// }
 
-func NewBackfillProcessor(sugar *zap.SugaredLogger, ethClient *ethclient.Client, q *dbCon.Queries, chain *dbCon.Chain) *BackfillProcessor {
-	sugar.Infow("Initiated new chain backfill, start crawling", "chain", chain.Chain)
-	return &BackfillProcessor{sugar, ethClient, q, chain}
-}
+// // BackfillProcessor implements asynq.Handler interface.
+// type BackfillProcessor struct {
+// 	sugar     *zap.SugaredLogger
+// 	ethClient *ethclient.Client
+// 	q         *dbCon.Queries
+// 	chain     *dbCon.Chain
+// }
+
+// func NewBackfillProcessor(sugar *zap.SugaredLogger, ethClient *ethclient.Client, q *dbCon.Queries, chain *dbCon.Chain) *BackfillProcessor {
+// 	sugar.Infow("Initiated new chain backfill, start crawling", "chain", chain.Chain)
+// 	return &BackfillProcessor{sugar, ethClient, q, chain}
+// }

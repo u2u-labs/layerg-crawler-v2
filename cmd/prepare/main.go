@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/u2u-labs/layerg-crawler/internal/generator"
+	"gopkg.in/yaml.v3"
 )
 
 func main() {
@@ -42,8 +43,19 @@ func main() {
 		log.Fatalf("ABI check failed: %v", err)
 	}
 
+	// Load subgraph config
+	data, err := os.ReadFile("subgraph.yaml")
+	if err != nil {
+		log.Fatalf("failed to read subgraph.yaml: %v", err)
+	}
+
+	var config generator.CrawlerConfig
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		log.Fatalf("failed to parse subgraph.yaml: %v", err)
+	}
+
 	// Generate event handler skeleton.
-	if err := generator.GenerateEventHandlers(*outputDir); err != nil {
+	if err := generator.GenerateEventHandlers(&config, *outputDir); err != nil {
 		log.Fatalf("failed to generate event handlers: %v", err)
 	}
 

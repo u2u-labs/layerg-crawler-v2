@@ -3,20 +3,20 @@ description: "This project serves as a starting point for an Ethereum indexer."
 schema:
   file: "./schema.graphql"
 network:
-  chainId: "1"
+  chainId: "2484"
   endpoint:
-    - "https://eth.api.onfinality.io/public"
+    - "https://rpc-nebulas-testnet.uniultra.xyz"
 dataSources:
   - kind: EthereumDatasourceKind.Runtime
-    startBlock: 4719568
+    startBlock: 47609080
     options:
       abi: "erc20"
-      address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+      address: "0xd06A82F76d344A3158916034FBb1B9B33E929296"
     assets:
       erc20:
         file: "./abis/erc20.abi.json"
     mapping:
-      file: "./dist/index.js"
+      file: "./cmd/handlers/transfer_handler.go"
       handlers:
         - kind: EthereumHandlerKind.Call
           handler: "HandleTransaction"

@@ -30,3 +30,10 @@ type Post struct {
 	Author *User `gorm:"index"`
 }
 
+// Collection represents the Collection entity.
+type Collection struct {
+	Id string `gorm:"primaryKey;not null"`
+	Address string `gorm:"index;not null"`
+	Type string `gorm:""`
+}
+

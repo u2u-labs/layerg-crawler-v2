@@ -1,6 +1,7 @@
 GOOSE_DRIVER='postgres'
 GOOSE_DBSTRING='postgres://root@localhost:26257/layerg?sslmode=disable'
-GOOSE_MIGRATION_DIR='./db/migrations'
+SYSTEM_MIGRATION_DIR='./db/migrations'
+GENERATED_MIGRATION_DIR='./generated/migrations'
 
 build:
 	go build -ldflags -w
@@ -19,13 +20,21 @@ worker:
 	chmod +x layerg-crawler
 	./layerg-crawler worker --config .layerg-crawler.yaml
 
-migrate-up:
-	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) goose -dir $(GOOSE_MIGRATION_DIR) up-to 20241030100023 # schema
-	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) goose -dir $(GOOSE_MIGRATION_DIR) up-to 20241204092548 # default data
-migrate-down:
-	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) goose -dir $(GOOSE_MIGRATION_DIR) down
-migrate-reset:
-	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) goose -dir $(GOOSE_MIGRATION_DIR) reset	
+system-migrate-up:
+	@echo "Running system migration..."
+	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) goose -dir $(SYSTEM_MIGRATION_DIR) up
+system-migrate-down:
+	@echo "Reverting system migration..."
+	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) goose -dir $(SYSTEM_MIGRATION_DIR) down
+
+generated-migrate-up:
+	@echo "Running generated migration..."
+	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) goose -dir $(GENERATED_MIGRATION_DIR) up
+generated-migrate-down:
+	@echo "Reverting generated migration..."
+	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) goose -dir $(GENERATED_MIGRATION_DIR) down
+generated-migrate-reset:
+	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) goose -dir $(GENERATED_MIGRATION_DIR) reset	
 
 swag:
 	swag init -g cmd/api_cmd.go -o ./docs

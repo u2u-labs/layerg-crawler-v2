@@ -1,0 +1,158 @@
+[
+  {
+    "Name": "User",
+    "Fields": [
+      {
+        "Name": "id",
+        "Type": "ID",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": ""
+      },
+      {
+        "Name": "name",
+        "Type": "String",
+        "IsNonNull": true,
+        "IsIndexed": true,
+        "IsUnique": false,
+        "Relation": ""
+      },
+      {
+        "Name": "email",
+        "Type": "String",
+        "IsNonNull": false,
+        "IsIndexed": true,
+        "IsUnique": false,
+        "Relation": ""
+      },
+      {
+        "Name": "createdDate",
+        "Type": "Date",
+        "IsNonNull": false,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": ""
+      },
+      {
+        "Name": "isActive",
+        "Type": "Boolean",
+        "IsNonNull": false,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": ""
+      },
+      {
+        "Name": "profile",
+        "Type": "UserProfile",
+        "IsNonNull": false,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": "UserProfile"
+      }
+    ]
+  },
+  {
+    "Name": "UserProfile",
+    "Fields": [
+      {
+        "Name": "id",
+        "Type": "ID",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": ""
+      },
+      {
+        "Name": "bio",
+        "Type": "String",
+        "IsNonNull": false,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": ""
+      },
+      {
+        "Name": "avatarUrl",
+        "Type": "String",
+        "IsNonNull": false,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": ""
+      }
+    ]
+  },
+  {
+    "Name": "Post",
+    "Fields": [
+      {
+        "Name": "id",
+        "Type": "ID",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": ""
+      },
+      {
+        "Name": "title",
+        "Type": "String",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": ""
+      },
+      {
+        "Name": "content",
+        "Type": "String",
+        "IsNonNull": false,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": ""
+      },
+      {
+        "Name": "publishedDate",
+        "Type": "Date",
+        "IsNonNull": false,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": ""
+      },
+      {
+        "Name": "author",
+        "Type": "User",
+        "IsNonNull": false,
+        "IsIndexed": true,
+        "IsUnique": false,
+        "Relation": "User"
+      }
+    ]
+  },
+  {
+    "Name": "Collection",
+    "Fields": [
+      {
+        "Name": "id",
+        "Type": "ID",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": ""
+      },
+      {
+        "Name": "address",
+        "Type": "String",
+        "IsNonNull": true,
+        "IsIndexed": true,
+        "IsUnique": false,
+        "Relation": ""
+      },
+      {
+        "Name": "type",
+        "Type": "String",
+        "IsNonNull": false,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": ""
+      }
+    ]
+  }
+]
