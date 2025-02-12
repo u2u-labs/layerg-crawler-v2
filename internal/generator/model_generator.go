@@ -6,9 +6,7 @@ import (
 	"text/template"
 )
 
-// GenerateGoModels generates Go struct definitions from the parsed entities.
 func GenerateGoModels(entities []Entity, outputDir string) error {
-	// Create a subdirectory for models so that this file is generated in a separate package.
 	modelsDir := outputDir + "/models"
 	if err := os.MkdirAll(modelsDir, os.ModePerm); err != nil {
 		return err
@@ -19,41 +17,38 @@ func GenerateGoModels(entities []Entity, outputDir string) error {
 		return err
 	}
 	defer f.Close()
-
-	// Write package declaration and imports.
 	header := `package models
 
 import (
 	"time"
 )
 `
-	_, err = f.WriteString(header)
-	if err != nil {
+	if _, err := f.WriteString(header); err != nil {
 		return err
 	}
-
-	// Template for each struct.
 	tmpl := `
-{{- range . }}
+{{- range .}}
 // {{ .Name }} represents the {{ .Name }} entity.
 type {{ .Name }} struct {
-	{{- range .Fields }}
-	{{ fieldName .Name }} {{ goType .Type .IsNonNull }} ` + "`gorm:\"{{ gormTag . }}\"`" + `
+{{- range .Fields }}
+	{{- if .Relation }}
+	{{ fieldName (printf "%sID" .Name) }} int {{ backtick }}gorm:"{{ gormTagFK . }}"{{ backtick }}
+	{{ fieldName .Name }} *{{ .Relation }} {{ backtick }}gorm:"-"{{ backtick }}
+	{{- else }}
+	{{ fieldName .Name }} {{ goType .Type .IsNonNull }} {{ backtick }}gorm:"{{ gormTag . }}"{{ backtick }}
 	{{- end }}
+{{- end }}
 }
 {{ end }}
 `
-	// Template functions for proper naming, type mapping, and tag generation.
 	funcMap := template.FuncMap{
 		"fieldName": func(name string) string {
-			// Capitalize first letter.
 			return strings.Title(name)
 		},
 		"goType": func(gqlType string, isNonNull bool) string {
-			// Simple mapping from GraphQL type to Go type.
 			switch gqlType {
 			case "ID":
-				return "string"
+				return "int"
 			case "String":
 				return "string"
 			case "Boolean":
@@ -61,13 +56,11 @@ type {{ .Name }} struct {
 			case "Date":
 				return "time.Time"
 			default:
-				// For relations, assume pointer (adjust as needed).
-				return "*" + gqlType
+				return "string"
 			}
 		},
 		"gormTag": func(field Field) string {
-			// Generate gorm tag.
-			tags := []string{}
+			var tags []string
 			if strings.ToLower(field.Name) == "id" {
 				tags = append(tags, "primaryKey")
 			}
@@ -80,6 +73,21 @@ type {{ .Name }} struct {
 				tags = append(tags, "not null")
 			}
 			return strings.Join(tags, ";")
+		},
+		"gormTagFK": func(field Field) string {
+			var tags []string
+			if field.IsUnique {
+				tags = append(tags, "uniqueIndex")
+			} else if field.IsIndexed {
+				tags = append(tags, "index")
+			}
+			if field.IsNonNull {
+				tags = append(tags, "not null")
+			}
+			return strings.Join(tags, ";")
+		},
+		"backtick": func() string {
+			return "`"
 		},
 	}
 	tpl, err := template.New("models").Funcs(funcMap).Parse(tmpl)

@@ -154,5 +154,50 @@
         "Relation": ""
       }
     ]
+  },
+  {
+    "Name": "Transfer",
+    "Fields": [
+      {
+        "Name": "id",
+        "Type": "ID",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": ""
+      },
+      {
+        "Name": "from",
+        "Type": "String",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": ""
+      },
+      {
+        "Name": "to",
+        "Type": "String",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": ""
+      },
+      {
+        "Name": "amount",
+        "Type": "BigInt",
+        "IsNonNull": false,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": ""
+      },
+      {
+        "Name": "timestamp",
+        "Type": "Date",
+        "IsNonNull": false,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": ""
+      }
+    ]
   }
 ]

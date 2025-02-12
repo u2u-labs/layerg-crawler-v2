@@ -53,10 +53,10 @@ func startCrawler(cmd *cobra.Command, args []string) {
 	sqlDb := dbCon.New(conn)
 
 	// Initialize system database from subgraph config
-	if err := InitializeSystemFromConfig(ctx, sqlDb); err != nil {
-		sugar.Errorw("Failed to initialize system from config", "err", err)
-		return
-	}
+	// if err := InitializeSystemFromConfig(ctx, sqlDb); err != nil {
+	// 	sugar.Errorw("Failed to initialize system from config", "err", err)
+	// 	return
+	// }
 
 	rdb, err := db.NewRedisClient(&db.RedisConfig{
 		Url:      viper.GetString("REDIS_DB_URL"),

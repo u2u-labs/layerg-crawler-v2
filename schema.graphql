@@ -27,3 +27,11 @@ type Collection @entity {
   address: String! @index(unique: true)
   type: String
 }
+
+type Transfer @entity {
+  id: ID!
+  from: String!
+  to: String!
+  amount: BigInt
+  timestamp: Date
+}

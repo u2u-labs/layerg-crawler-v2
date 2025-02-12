@@ -44,8 +44,11 @@ CREATE TABLE onchain_histories (
     CONSTRAINT fk_onchain_history_asset FOREIGN KEY (asset_id) REFERENCES assets(id)
 );
 
+INSERT INTO chains (id, chain, name, rpc_url, chain_id, explorer, latest_block, block_time)
+VALUES (1, 'U2U', 'Nebulas Testnet', 'https://rpc-nebulas-testnet.uniultra.xyz', 2484, 'https://testnet.u2uscan.xyz/', 47984307, 500);
 -- Create enumeration type for backfill crawler status.
-CREATE TYPE crawler_status AS ENUM ('CRAWLING', 'CRAWLED');
+-- CREATE TYPE crawler_status AS ENUM ('CRAWLING', 'CRAWLED');
+
 
 -- Create table for backfill crawlers.
 -- Associates a backfill worker with a specific asset (via asset_id) and stores its current block and status.

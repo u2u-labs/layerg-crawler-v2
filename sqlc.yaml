@@ -14,7 +14,7 @@ sql:
         emit_empty_slices: true
 
   - engine: "postgresql"
-    queries: "db/queries/graphql.sql"
+    queries: "db/queries/queries.sql"
     schema: "generated/migrations/"
     gen:
       go:

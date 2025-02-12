@@ -6,18 +6,34 @@ package graphqldb
 
 import (
 	"context"
-	"database/sql"
 )
 
 type Querier interface {
 	CreateCollection(ctx context.Context, arg CreateCollectionParams) (Collection, error)
 	CreatePost(ctx context.Context, arg CreatePostParams) (Post, error)
+	CreateTransfer(ctx context.Context, arg CreateTransferParams) (Transfer, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
-	CreateUserProfile(ctx context.Context, arg CreateUserProfileParams) (Userprofile, error)
-	GetCollectionByAddress(ctx context.Context, address string) (Collection, error)
-	GetPostsByAuthor(ctx context.Context, author sql.NullString) ([]Post, error)
-	GetUserByID(ctx context.Context, id string) (User, error)
-	GetUserByName(ctx context.Context, name string) (User, error)
+	CreateUserProfile(ctx context.Context, arg CreateUserProfileParams) (UserProfile, error)
+	DeleteCollection(ctx context.Context, id int32) error
+	DeletePost(ctx context.Context, id int32) error
+	DeleteTransfer(ctx context.Context, id int32) error
+	DeleteUser(ctx context.Context, id int32) error
+	DeleteUserProfile(ctx context.Context, id int32) error
+	GetCollection(ctx context.Context, id int32) (Collection, error)
+	GetPost(ctx context.Context, id int32) (Post, error)
+	GetTransfer(ctx context.Context, id int32) (Transfer, error)
+	GetUser(ctx context.Context, id int32) (User, error)
+	GetUserProfile(ctx context.Context, id int32) (UserProfile, error)
+	ListCollection(ctx context.Context) ([]Collection, error)
+	ListPost(ctx context.Context) ([]Post, error)
+	ListTransfer(ctx context.Context) ([]Transfer, error)
+	ListUser(ctx context.Context) ([]User, error)
+	ListUserProfile(ctx context.Context) ([]UserProfile, error)
+	UpdateCollection(ctx context.Context, arg UpdateCollectionParams) (Collection, error)
+	UpdatePost(ctx context.Context, arg UpdatePostParams) (Post, error)
+	UpdateTransfer(ctx context.Context, arg UpdateTransferParams) (Transfer, error)
+	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
+	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (UserProfile, error)
 }
 
 var _ Querier = (*Queries)(nil)

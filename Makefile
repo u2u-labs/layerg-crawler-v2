@@ -41,4 +41,4 @@ swag:
 
 prepare:
 	@echo "Running code generation flow..."
-	go run cmd/prepare/main.go -schema=./schema.graphql -out=./generated
+	go run cmd/prepare/main.go -schema=./schema.graphql -out=./generated -queries=./db

@@ -9,30 +9,38 @@ import (
 )
 
 type Collection struct {
-	ID      string         `json:"id"`
+	ID      int32          `json:"id"`
 	Address string         `json:"address"`
 	Type    sql.NullString `json:"type"`
 }
 
 type Post struct {
-	ID            string         `json:"id"`
+	ID            int32          `json:"id"`
 	Title         string         `json:"title"`
 	Content       sql.NullString `json:"content"`
-	Publisheddate sql.NullTime   `json:"publisheddate"`
-	Author        sql.NullString `json:"author"`
+	PublishedDate sql.NullTime   `json:"published_date"`
+	AuthorID      sql.NullInt32  `json:"author_id"`
+}
+
+type Transfer struct {
+	ID        int32          `json:"id"`
+	From      string         `json:"from"`
+	To        string         `json:"to"`
+	Amount    sql.NullString `json:"amount"`
+	Timestamp sql.NullTime   `json:"timestamp"`
 }
 
 type User struct {
-	ID          string         `json:"id"`
+	ID          int32          `json:"id"`
 	Name        string         `json:"name"`
 	Email       sql.NullString `json:"email"`
-	Createddate sql.NullTime   `json:"createddate"`
-	Isactive    sql.NullBool   `json:"isactive"`
-	Profile     sql.NullString `json:"profile"`
+	CreatedDate sql.NullTime   `json:"created_date"`
+	IsActive    sql.NullBool   `json:"is_active"`
+	ProfileID   sql.NullInt32  `json:"profile_id"`
 }
 
-type Userprofile struct {
-	ID        string         `json:"id"`
+type UserProfile struct {
+	ID        int32          `json:"id"`
 	Bio       sql.NullString `json:"bio"`
-	Avatarurl sql.NullString `json:"avatarurl"`
+	AvatarUrl sql.NullString `json:"avatar_url"`
 }

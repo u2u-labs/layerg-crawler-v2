@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/unicornultrafoundation/go-u2u/core/types"
 	"go.uber.org/zap"
 
@@ -56,21 +55,22 @@ func (h *TransferHandler) HandleEvent(ctx context.Context, log *types.Log, logge
 	}
 
 	// Create a Collection record in the GraphQL database
-	_, err = h.gqlQueries.CreateCollection(ctx, graphqldb.CreateCollectionParams{
-		ID:      uuid.New().String(),
-		Address: log.Address.Hex(),
-		Type: sql.NullString{
-			String: "ERC20", // Or determine based on contract type
-			Valid:  true,
-		},
+	_, err = h.gqlQueries.CreateTransfer(ctx, graphqldb.CreateTransferParams{
+		From:      event.From.Hex(),
+		To:        event.To.Hex(),
+		Amount:    sql.NullString{String: event.Amount.String(), Valid: true},
+		Timestamp: sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	if err != nil {
-		logger.Errorw("Failed to create collection",
+		logger.Errorw("Failed to create transfer record",
 			"err", err,
 			"address", log.Address.Hex(),
+			"from", event.From.Hex(),
+			"to", event.To.Hex(),
+			"amount", event.Amount.String(),
 		)
-		return err
+		return fmt.Errorf("failed to create transfer record: %w", err)
 	}
 
 	logger.Infow("Transfer event processed",

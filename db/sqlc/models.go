@@ -6,55 +6,11 @@ package db
 
 import (
 	"database/sql"
-	"database/sql/driver"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 )
-
-type CrawlerStatus string
-
-const (
-	CrawlerStatusCRAWLING CrawlerStatus = "CRAWLING"
-	CrawlerStatusCRAWLED  CrawlerStatus = "CRAWLED"
-)
-
-func (e *CrawlerStatus) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = CrawlerStatus(s)
-	case string:
-		*e = CrawlerStatus(s)
-	default:
-		return fmt.Errorf("unsupported scan type for CrawlerStatus: %T", src)
-	}
-	return nil
-}
-
-type NullCrawlerStatus struct {
-	CrawlerStatus CrawlerStatus `json:"crawler_status"`
-	Valid         bool          `json:"valid"` // Valid is true if CrawlerStatus is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullCrawlerStatus) Scan(value interface{}) error {
-	if value == nil {
-		ns.CrawlerStatus, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.CrawlerStatus.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullCrawlerStatus) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.CrawlerStatus), nil
-}
 
 type Asset struct {
 	ID              string        `json:"id"`

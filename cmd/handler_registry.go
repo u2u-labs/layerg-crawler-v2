@@ -60,12 +60,12 @@ func (r *HandlerRegistry) RouteEvent(ctx context.Context, log *types.Log) error 
 	handler, exists := r.handlers[signature]
 
 	// Add debug logging
-	r.logger.Debugw("Attempting to route event",
-		"incoming_signature", signature,
-		"registered_signatures", r.getRegisteredSignatures(),
-		"handler_exists", exists,
-		"contract", log.Address.Hex(),
-	)
+	// r.logger.Debugw("Attempting to route event",
+	// 	"incoming_signature", signature,
+	// 	"registered_signatures", r.getRegisteredSignatures(),
+	// 	"handler_exists", exists,
+	// 	"contract", log.Address.Hex(),
+	// )
 
 	if !exists {
 		return nil
