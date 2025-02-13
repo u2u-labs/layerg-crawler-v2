@@ -19,11 +19,23 @@ import (
 type TransferHandler struct {
 	*mappings.BaseTransferMapping
 }
+type ApprovalHandler struct {
+	*mappings.BaseApprovalMapping
+}
 
 func NewTransferHandler(queries *db.Queries, gqlQueries *graphqldb.Queries, chainID int32, logger *zap.SugaredLogger) *TransferHandler {
 	return &TransferHandler{
 		BaseTransferMapping: mappings.NewTransferMapping(queries, gqlQueries, chainID, logger),
 	}
+}
+func NewApprovalHandler(queries *db.Queries, gqlQueries *graphqldb.Queries, chainID int32, logger *zap.SugaredLogger) *ApprovalHandler {
+	return &ApprovalHandler{
+		BaseApprovalMapping: mappings.NewApprovalMapping(queries, gqlQueries, chainID, logger),
+	}
+}
+
+func (h *ApprovalHandler) HandleApproval(ctx context.Context, event *eventhandlers.Approval) error {
+	return nil
 }
 
 // HandleTransfer implements mappings.TransferHandler
@@ -54,7 +66,7 @@ func (h *TransferHandler) HandleTransfer(ctx context.Context, event *eventhandle
 		ID:        uuid.New().String(),
 		From:      event.From.Hex(),
 		To:        event.To.Hex(),
-		Amount:    sql.NullString{String: event.Amount.String(), Valid: true},
+		Amount:    sql.NullString{String: event.Value.String(), Valid: true},
 		Timestamp: sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
@@ -64,7 +76,7 @@ func (h *TransferHandler) HandleTransfer(ctx context.Context, event *eventhandle
 			"address", event.Raw.Address.Hex(),
 			"from", event.From.Hex(),
 			"to", event.To.Hex(),
-			"amount", event.Amount.String(),
+			"amount", event.Value.String(),
 		)
 		return fmt.Errorf("failed to create transfer record: %w", err)
 	}
@@ -72,12 +84,10 @@ func (h *TransferHandler) HandleTransfer(ctx context.Context, event *eventhandle
 	h.Logger.Infow("Transfer event processed",
 		"from", event.From.Hex(),
 		"to", event.To.Hex(),
-		"amount", event.Amount.String(),
+		"amount", event.Value.String(),
 		"contract", event.Raw.Address.Hex(),
 		"tx", event.Raw.TxHash.Hex(),
 	)
 
 	return nil
 }
-
-// HandleEvent is no longer needed since we're using the router's direct event handling

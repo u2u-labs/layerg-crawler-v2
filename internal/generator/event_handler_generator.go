@@ -1,7 +1,10 @@
 package generator
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 )
@@ -11,6 +14,31 @@ type EventHandlerConfig struct {
 	Handler  string   // e.g., "HandleTransfer"
 	Function string   // e.g., "approve"
 	Topics   []string // e.g., ["Transfer(address,address,uint256)"]
+}
+
+// ABI type definitions
+type ABIEvent struct {
+	Type      string `json:"type"`
+	Name      string `json:"name"`
+	Anonymous bool   `json:"anonymous"`
+	Inputs    []struct {
+		Name    string `json:"name"`
+		Type    string `json:"type"`
+		Indexed bool   `json:"indexed"`
+	} `json:"inputs"`
+}
+
+type ABI []struct {
+	Type      string     `json:"type"`
+	Name      string     `json:"name"`
+	Inputs    []ABIInput `json:"inputs"`
+	Anonymous bool       `json:"anonymous"`
+}
+
+type ABIInput struct {
+	Name    string `json:"name"`
+	Type    string `json:"type"`
+	Indexed bool   `json:"indexed"`
 }
 
 const eventHandlerTemplate = `
@@ -112,6 +140,38 @@ var {{.Name}}EventSignature = crypto.Keccak256Hash([]byte("{{.Signature}}")).Hex
 {{end}}
 `
 
+func getEventSignatureFromABI(config *CrawlerConfig, eventName string) (string, error) {
+	for _, ds := range config.DataSources {
+		abiPath := ds.Options.File
+		if !filepath.IsAbs(abiPath) {
+			abiPath = filepath.Join("../", abiPath)
+		}
+
+		abiFile, err := os.ReadFile(abiPath)
+		if err != nil {
+			return "", fmt.Errorf("failed to read ABI file %s: %w", abiPath, err)
+		}
+
+		var abi ABI
+		if err := json.Unmarshal(abiFile, &abi); err != nil {
+			return "", fmt.Errorf("failed to parse ABI file %s: %w", abiPath, err)
+		}
+
+		// Find the event in ABI
+		for _, item := range abi {
+			if item.Type == "event" && item.Name == eventName {
+				// Build canonical event signature
+				var inputs []string
+				for _, input := range item.Inputs {
+					inputs = append(inputs, input.Type)
+				}
+				return fmt.Sprintf("%s(%s)", eventName, strings.Join(inputs, ",")), nil
+			}
+		}
+	}
+	return "", fmt.Errorf("event %s not found in ABI", eventName)
+}
+
 func GenerateEventHandlers(config *CrawlerConfig, outputDir string) error {
 	var handlers []EventHandlerConfig
 	var events []struct {
@@ -121,28 +181,71 @@ func GenerateEventHandlers(config *CrawlerConfig, outputDir string) error {
 	}
 
 	for _, ds := range config.DataSources {
+		// Read and parse ABI file
+		abiPath := ds.Options.File
+		if !filepath.IsAbs(abiPath) {
+			abiPath = filepath.Join(".", abiPath)
+		}
+
+		abiFile, err := os.ReadFile(abiPath)
+		if err != nil {
+			return fmt.Errorf("failed to read ABI file %s: %w", abiPath, err)
+		}
+
+		var abi ABI
+		if err := json.Unmarshal(abiFile, &abi); err != nil {
+			return fmt.Errorf("failed to parse ABI file %s: %w", abiPath, err)
+		}
+
+		// Process handlers and match with ABI events
 		for _, h := range ds.Mapping.Handlers {
-			for _, topic := range h.Filter.Topics {
-				name, params := parseEventSignature(topic)
-				if name != "" {
-					events = append(events, struct {
-						Name      string
-						Signature string
-						Params    []EventParam
-					}{
-						Name:      name,
-						Signature: topic,
-						Params:    params,
-					})
+			if h.Kind == "EthereumHandlerKind.Event" {
+				for _, topic := range h.Filter.Topics {
+					name, _ := parseEventSignature(topic)
+					if name == "" {
+						continue
+					}
+
+					// Find event in ABI
+					for _, item := range abi {
+						if item.Type == "event" && item.Name == name {
+							var params []EventParam
+							for _, input := range item.Inputs {
+								params = append(params, EventParam{
+									Name:    input.Name,
+									Type:    input.Type,
+									Indexed: input.Indexed,
+									GoType:  getGoType(input.Type),
+								})
+							}
+
+							// Build canonical signature
+							var types []string
+							for _, input := range item.Inputs {
+								types = append(types, input.Type)
+							}
+							signature := fmt.Sprintf("%s(%s)", name, strings.Join(types, ","))
+
+							events = append(events, struct {
+								Name      string
+								Signature string
+								Params    []EventParam
+							}{
+								Name:      name,
+								Signature: signature,
+								Params:    params,
+							})
+							break
+						}
+					}
 				}
 			}
-			handler := EventHandlerConfig{
+			handlers = append(handlers, EventHandlerConfig{
 				Kind:     h.Kind,
 				Handler:  h.Handler,
 				Function: h.Filter.Function,
 				Topics:   h.Filter.Topics,
-			}
-			handlers = append(handlers, handler)
+			})
 		}
 	}
 

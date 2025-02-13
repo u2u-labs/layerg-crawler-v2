@@ -12,9 +12,7 @@ dataSources:
     options:
       abi: "erc20"
       address: "0xd06A82F76d344A3158916034FBb1B9B33E929296"
-    assets:
-      erc20:
-        file: "./abis/erc20.json"
+      file: "./abis/erc20.json"
     mapping:
       file: "./cmd/handlers/transfer_handler.go"
       handlers:
@@ -27,4 +25,9 @@ dataSources:
           filter:
             topics:
               - "Transfer(address indexed from, address indexed to, uint256 amount)"
+        - kind: EthereumHandlerKind.Event
+          handler: "HandleApprove"
+          filter:
+            topics:
+              - "Approval(address owner, address spender, uint256 value)"
 repository: "https://github.com/subquery/ethereum-subql-starter" 

@@ -6,6 +6,11 @@ import (
 
 // CrawlerConfig represents the subgraph.yaml configuration
 type CrawlerConfig struct {
+	Name        string `yaml:"name"`
+	Description string `yaml:"description"`
+	Schema      struct {
+		File string `yaml:"file"`
+	} `yaml:"schema"`
 	Network struct {
 		ChainId  string   `yaml:"chainId"`
 		Endpoint []string `yaml:"endpoint"`
@@ -15,6 +20,7 @@ type CrawlerConfig struct {
 		Options    ContractConfig `yaml:"options"`
 		StartBlock int64          `yaml:"startBlock"`
 		Mapping    struct {
+			File     string `yaml:"file"`
 			Handlers []struct {
 				Kind    string `yaml:"kind"`
 				Handler string `yaml:"handler"`
@@ -25,11 +31,13 @@ type CrawlerConfig struct {
 			} `yaml:"handlers"`
 		} `yaml:"mapping"`
 	} `yaml:"dataSources"`
+	Repository string `yaml:"repository"`
 }
 
 type ContractConfig struct {
 	Address string `yaml:"address"`
 	Abi     string `yaml:"abi"`
+	File    string `yaml:"file"`
 }
 
 // Event represents a parsed event from the config

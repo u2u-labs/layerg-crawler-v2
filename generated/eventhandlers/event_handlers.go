@@ -33,14 +33,14 @@ func (h *DefaultHandler) HandleEvent(ctx context.Context, log *types.Log, logger
 }
 
 
-// Transfer represents the event data for Transfer(address indexed from, address indexed to, uint256 amount)
+// Transfer represents the event data for Transfer(address,address,uint256)
 type Transfer struct {
 	
 	From common.Address // Capitalize field names
 	
 	To common.Address // Capitalize field names
 	
-	Amount *big.Int // Capitalize field names
+	Value *big.Int // Capitalize field names
 	
 	Raw *types.Log
 }
@@ -69,7 +69,50 @@ func UnpackTransfer(log *types.Log) (*Transfer, error) {
 	
 	
 	
-	event.Amount = new(big.Int).SetBytes(log.Data)
+	event.Value = new(big.Int).SetBytes(log.Data)
+	
+	
+
+	return event, nil
+}
+
+// Approval represents the event data for Approval(address,address,uint256)
+type Approval struct {
+	
+	Owner common.Address // Capitalize field names
+	
+	Spender common.Address // Capitalize field names
+	
+	Value *big.Int // Capitalize field names
+	
+	Raw *types.Log
+}
+
+func UnpackApproval(log *types.Log) (*Approval, error) {
+	event := new(Approval)
+	event.Raw = log
+
+	
+	
+	if len(log.Topics) < 2 {
+		return nil, fmt.Errorf("missing topic for indexed parameter owner")
+	}
+	
+	event.Owner = common.HexToAddress(log.Topics[1].Hex())
+	
+	
+	
+	
+	if len(log.Topics) < 3 {
+		return nil, fmt.Errorf("missing topic for indexed parameter spender")
+	}
+	
+	event.Spender = common.HexToAddress(log.Topics[2].Hex())
+	
+	
+	
+	
+	event.Value = new(big.Int).SetBytes(log.Data)
 	
 	
 
@@ -88,6 +131,12 @@ var EventSignatures = map[string]string{
 	
 
 
+
+	
+	"Approval(address owner, address spender, uint256 value)": common.HexToHash(KeccakHash("Approval(address owner, address spender, uint256 value)")).Hex(),
+	
+
+
 }
 
 // HandlerRegistry maps event signatures to their handlers
@@ -101,6 +150,12 @@ var HandlerRegistry = map[string]EventHandler{
 	
 
 
+
+	
+	EventSignatures["Approval(address owner, address spender, uint256 value)"]: &DefaultHandler{},
+	
+
+
 }
 
 // KeccakHash returns the Keccak256 hash of a string
@@ -111,4 +166,6 @@ func KeccakHash(s string) string {
 // Event signatures
 
 var TransferEventSignature = crypto.Keccak256Hash([]byte("Transfer(address,address,uint256)")).Hex()
+
+var ApprovalEventSignature = crypto.Keccak256Hash([]byte("Approval(address,address,uint256)")).Hex()
 
