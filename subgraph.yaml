@@ -14,7 +14,7 @@ dataSources:
       address: "0xd06A82F76d344A3158916034FBb1B9B33E929296"
     assets:
       erc20:
-        file: "./abis/erc20.abi.json"
+        file: "./abis/erc20.json"
     mapping:
       file: "./cmd/handlers/transfer_handler.go"
       handlers:

@@ -22,42 +22,37 @@ func GenerateSQLCQueries(entities []Entity, outputDir string) error {
 	// For each entity, generate CRUD queries.
 	for _, entity := range entities {
 		tableName := toSnakeCase(entity.Name)
-		// Build insert columns and placeholders (skip auto-generated primary key).
 		var insertCols []string
 		var insertPhs []string
 		var updateAssignments []string
-		// For update queries, $1 is reserved for id.
+
+		// Add id to insert columns
+		insertCols = append(insertCols, "\"id\"")
+		insertPhs = append(insertPhs, "$1")
+
+		// For other fields, start placeholder count from 2
+		phCount := 2
 		for _, field := range entity.Fields {
-			// Skip auto-generated primary key.
-			if strings.ToLower(field.Name) == "id" && field.Relation == "" {
+			if strings.ToLower(field.Name) == "id" {
 				continue
 			}
-			var colName string
 			if field.Relation != "" {
-				colName = toSnakeCase(field.Name) + "_id"
-			} else {
-				colName = toSnakeCase(field.Name)
+				continue
 			}
+
+			colName := toSnakeCase(field.Name)
 			insertCols = append(insertCols, fmt.Sprintf("\"%s\"", colName))
-			// Placeholder index for insert is the current count+1.
-			insertPhs = append(insertPhs, fmt.Sprintf("$%d", len(insertPhs)+1))
-			// For update assignments, placeholders start at $2 (since $1 is id).
-			updateAssignments = append(updateAssignments, fmt.Sprintf("\"%s\" = $%d", colName, len(updateAssignments)+2))
+			insertPhs = append(insertPhs, fmt.Sprintf("$%d", phCount))
+			updateAssignments = append(updateAssignments, fmt.Sprintf("\"%s\" = $%d", colName, phCount))
+			phCount++
 		}
-		// Create query.
-		createQueryName := fmt.Sprintf("Create%s", entity.Name)
-		var createQuery string
-		if len(insertCols) > 0 {
-			createQuery = fmt.Sprintf("-- name: %s :one\nINSERT INTO \"%s\" (%s) VALUES (%s) RETURNING *;\n\n",
-				createQueryName,
-				tableName,
-				strings.Join(insertCols, ", "),
-				strings.Join(insertPhs, ", "))
-		} else {
-			// In case there are no insertable columns.
-			createQuery = fmt.Sprintf("-- name: %s :one\nINSERT INTO \"%s\" DEFAULT VALUES RETURNING *;\n\n",
-				createQueryName, tableName)
-		}
+
+		// Generate CRUD queries
+		createQuery := fmt.Sprintf("-- name: Create%s :one\nINSERT INTO \"%s\" (%s) VALUES (%s) RETURNING *;\n\n",
+			entity.Name, tableName,
+			strings.Join(insertCols, ", "),
+			strings.Join(insertPhs, ", "))
+
 		// Get query.
 		getQueryName := fmt.Sprintf("Get%s", entity.Name)
 		getQuery := fmt.Sprintf("-- name: %s :one\nSELECT * FROM \"%s\" WHERE id = $1;\n\n",

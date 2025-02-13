@@ -9,20 +9,17 @@ import (
 	"go.uber.org/zap"
 
 	db "github.com/u2u-labs/layerg-crawler/db/sqlc"
+	"github.com/u2u-labs/layerg-crawler/generated/router"
 )
 
-func StartChainCrawler(ctx context.Context, sugar *zap.SugaredLogger, client *ethclient.Client, q *db.Queries, chain *db.Chain, registry *HandlerRegistry) {
+func StartChainCrawler(ctx context.Context, sugar *zap.SugaredLogger, client *ethclient.Client, q *db.Queries, chain *db.Chain, registry *router.EventRouter) {
 	sugar.Infow("Start chain crawler", "chain", chain)
 	timer := time.NewTimer(time.Duration(chain.BlockTime) * time.Millisecond)
 	defer timer.Stop()
-	for {
-		select {
-		case <-timer.C:
-
-			// Process new blocks
-			ProcessLatestBlocks(ctx, sugar, client, q, chain, registry)
-			timer.Reset(time.Duration(chain.BlockTime) * time.Millisecond)
-		}
+	for range timer.C {
+		// Process new blocks
+		ProcessLatestBlocks(ctx, sugar, client, q, chain, registry)
+		timer.Reset(time.Duration(chain.BlockTime) * time.Millisecond)
 	}
 }
 
@@ -51,7 +48,7 @@ func StartChainCrawler(ctx context.Context, sugar *zap.SugaredLogger, client *et
 
 // }
 
-func ProcessLatestBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *ethclient.Client, q *db.Queries, chain *db.Chain, registry *HandlerRegistry) error {
+func ProcessLatestBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *ethclient.Client, q *db.Queries, chain *db.Chain, registry *router.EventRouter) error {
 	latest, err := client.BlockNumber(ctx)
 	if err != nil {
 		sugar.Errorw("Failed to fetch latest blocks", "err", err, "chain", chain)
@@ -80,7 +77,7 @@ func ProcessLatestBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *
 
 			// Route each log to its handler
 			for _, log := range receipt.Logs {
-				if err := registry.RouteEvent(ctx, log); err != nil {
+				if err := registry.Route(ctx, log); err != nil {
 					sugar.Debugw("Failed to handle event", "err", err, "tx", tx.Hash())
 					continue
 				}

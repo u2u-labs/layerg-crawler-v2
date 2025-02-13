@@ -107,3 +107,8 @@ var HandlerRegistry = map[string]EventHandler{
 func KeccakHash(s string) string {
 	return common.BytesToHash(crypto.Keccak256([]byte(s))).Hex()
 }
+
+// Event signatures
+
+var TransferEventSignature = crypto.Keccak256Hash([]byte("Transfer(address,address,uint256)")).Hex()
+

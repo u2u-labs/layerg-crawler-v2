@@ -14,16 +14,16 @@ type Querier interface {
 	CreateTransfer(ctx context.Context, arg CreateTransferParams) (Transfer, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateUserProfile(ctx context.Context, arg CreateUserProfileParams) (UserProfile, error)
-	DeleteCollection(ctx context.Context, id int32) error
-	DeletePost(ctx context.Context, id int32) error
-	DeleteTransfer(ctx context.Context, id int32) error
-	DeleteUser(ctx context.Context, id int32) error
-	DeleteUserProfile(ctx context.Context, id int32) error
-	GetCollection(ctx context.Context, id int32) (Collection, error)
-	GetPost(ctx context.Context, id int32) (Post, error)
-	GetTransfer(ctx context.Context, id int32) (Transfer, error)
-	GetUser(ctx context.Context, id int32) (User, error)
-	GetUserProfile(ctx context.Context, id int32) (UserProfile, error)
+	DeleteCollection(ctx context.Context, id string) error
+	DeletePost(ctx context.Context, id string) error
+	DeleteTransfer(ctx context.Context, id string) error
+	DeleteUser(ctx context.Context, id string) error
+	DeleteUserProfile(ctx context.Context, id string) error
+	GetCollection(ctx context.Context, id string) (Collection, error)
+	GetPost(ctx context.Context, id string) (Post, error)
+	GetTransfer(ctx context.Context, id string) (Transfer, error)
+	GetUser(ctx context.Context, id string) (User, error)
+	GetUserProfile(ctx context.Context, id string) (UserProfile, error)
 	ListCollection(ctx context.Context) ([]Collection, error)
 	ListPost(ctx context.Context) ([]Post, error)
 	ListTransfer(ctx context.Context) ([]Transfer, error)

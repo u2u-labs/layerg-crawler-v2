@@ -6,41 +6,48 @@ package graphqldb
 
 import (
 	"database/sql"
+	"time"
 )
 
 type Collection struct {
-	ID      int32          `json:"id"`
-	Address string         `json:"address"`
-	Type    sql.NullString `json:"type"`
+	ID        string         `json:"id"`
+	Address   string         `json:"address"`
+	Type      sql.NullString `json:"type"`
+	CreatedAt time.Time      `json:"created_at"`
 }
 
 type Post struct {
-	ID            int32          `json:"id"`
+	ID            string         `json:"id"`
 	Title         string         `json:"title"`
 	Content       sql.NullString `json:"content"`
 	PublishedDate sql.NullTime   `json:"published_date"`
-	AuthorID      sql.NullInt32  `json:"author_id"`
+	AuthorID      sql.NullString `json:"author_id"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UserID        sql.NullString `json:"user_id"`
 }
 
 type Transfer struct {
-	ID        int32          `json:"id"`
+	ID        string         `json:"id"`
 	From      string         `json:"from"`
 	To        string         `json:"to"`
 	Amount    sql.NullString `json:"amount"`
 	Timestamp sql.NullTime   `json:"timestamp"`
+	CreatedAt time.Time      `json:"created_at"`
 }
 
 type User struct {
-	ID          int32          `json:"id"`
+	ID          string         `json:"id"`
 	Name        string         `json:"name"`
 	Email       sql.NullString `json:"email"`
 	CreatedDate sql.NullTime   `json:"created_date"`
 	IsActive    sql.NullBool   `json:"is_active"`
-	ProfileID   sql.NullInt32  `json:"profile_id"`
+	ProfileID   sql.NullString `json:"profile_id"`
+	CreatedAt   time.Time      `json:"created_at"`
 }
 
 type UserProfile struct {
-	ID        int32          `json:"id"`
+	ID        string         `json:"id"`
 	Bio       sql.NullString `json:"bio"`
 	AvatarUrl sql.NullString `json:"avatar_url"`
+	CreatedAt time.Time      `json:"created_at"`
 }

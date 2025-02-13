@@ -2,7 +2,6 @@ package generator
 
 import (
 	"os"
-	"regexp"
 	"strings"
 	"text/template"
 )
@@ -12,69 +11,6 @@ type EventHandlerConfig struct {
 	Handler  string   // e.g., "HandleTransfer"
 	Function string   // e.g., "approve"
 	Topics   []string // e.g., ["Transfer(address,address,uint256)"]
-}
-
-// EventParam represents a parameter in an event
-type EventParam struct {
-	Name    string
-	Type    string
-	Indexed bool
-	GoType  string // Go equivalent of Solidity type
-}
-
-// getGoType converts Solidity types to Go types
-func getGoType(solidityType string) string {
-	switch solidityType {
-	case "address":
-		return "common.Address"
-	case "uint256":
-		return "*big.Int"
-	case "string":
-		return "string"
-	case "bool":
-		return "bool"
-	default:
-		return "interface{}"
-	}
-}
-
-// parseEventSignature parses event signature into name and parameters
-func parseEventSignature(signature string) (string, []EventParam) {
-	// Extract event name and parameters
-	re := regexp.MustCompile(`(\w+)\((.*)\)`)
-	matches := re.FindStringSubmatch(signature)
-	if len(matches) != 3 {
-		return "", nil
-	}
-
-	eventName := matches[1]
-	paramStr := matches[2]
-
-	// Parse parameters
-	var params []EventParam
-	if paramStr != "" {
-		paramParts := strings.Split(paramStr, ",")
-		for _, part := range paramParts {
-			part = strings.TrimSpace(part)
-			parts := strings.Split(part, " ")
-
-			param := EventParam{}
-			for i, p := range parts {
-				switch {
-				case p == "indexed":
-					param.Indexed = true
-				case i == len(parts)-1:
-					param.Name = strings.TrimPrefix(p, "indexed")
-				default:
-					param.Type = p
-					param.GoType = getGoType(p)
-				}
-			}
-			params = append(params, param)
-		}
-	}
-
-	return eventName, params
 }
 
 const eventHandlerTemplate = `
@@ -169,6 +105,11 @@ var HandlerRegistry = map[string]EventHandler{
 func KeccakHash(s string) string {
 	return common.BytesToHash(crypto.Keccak256([]byte(s))).Hex()
 }
+
+// Event signatures
+{{range .Events}}
+var {{.Name}}EventSignature = crypto.Keccak256Hash([]byte("{{.Signature}}")).Hex()
+{{end}}
 `
 
 func GenerateEventHandlers(config *CrawlerConfig, outputDir string) error {

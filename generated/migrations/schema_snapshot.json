@@ -49,6 +49,14 @@
         "IsIndexed": false,
         "IsUnique": false,
         "Relation": "UserProfile"
+      },
+      {
+        "Name": "posts",
+        "Type": "[Post!]",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": "[Post!]"
       }
     ]
   },

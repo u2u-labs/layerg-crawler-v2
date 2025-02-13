@@ -1,5 +1,5 @@
 -- name: CreateUser :one
-INSERT INTO "user" ("name", "email", "created_date", "is_active", "profile_id") VALUES ($1, $2, $3, $4, $5) RETURNING *;
+INSERT INTO "user" ("id", "name", "email", "created_date", "is_active") VALUES ($1, $2, $3, $4, $5) RETURNING *;
 
 -- name: GetUser :one
 SELECT * FROM "user" WHERE id = $1;
@@ -8,13 +8,13 @@ SELECT * FROM "user" WHERE id = $1;
 SELECT * FROM "user";
 
 -- name: UpdateUser :one
-UPDATE "user" SET "name" = $2, "email" = $3, "created_date" = $4, "is_active" = $5, "profile_id" = $6 WHERE id = $1 RETURNING *;
+UPDATE "user" SET "name" = $2, "email" = $3, "created_date" = $4, "is_active" = $5 WHERE id = $1 RETURNING *;
 
 -- name: DeleteUser :exec
 DELETE FROM "user" WHERE id = $1;
 
 -- name: CreateUserProfile :one
-INSERT INTO "user_profile" ("bio", "avatar_url") VALUES ($1, $2) RETURNING *;
+INSERT INTO "user_profile" ("id", "bio", "avatar_url") VALUES ($1, $2, $3) RETURNING *;
 
 -- name: GetUserProfile :one
 SELECT * FROM "user_profile" WHERE id = $1;
@@ -29,7 +29,7 @@ UPDATE "user_profile" SET "bio" = $2, "avatar_url" = $3 WHERE id = $1 RETURNING 
 DELETE FROM "user_profile" WHERE id = $1;
 
 -- name: CreatePost :one
-INSERT INTO "post" ("title", "content", "published_date", "author_id") VALUES ($1, $2, $3, $4) RETURNING *;
+INSERT INTO "post" ("id", "title", "content", "published_date") VALUES ($1, $2, $3, $4) RETURNING *;
 
 -- name: GetPost :one
 SELECT * FROM "post" WHERE id = $1;
@@ -38,13 +38,13 @@ SELECT * FROM "post" WHERE id = $1;
 SELECT * FROM "post";
 
 -- name: UpdatePost :one
-UPDATE "post" SET "title" = $2, "content" = $3, "published_date" = $4, "author_id" = $5 WHERE id = $1 RETURNING *;
+UPDATE "post" SET "title" = $2, "content" = $3, "published_date" = $4 WHERE id = $1 RETURNING *;
 
 -- name: DeletePost :exec
 DELETE FROM "post" WHERE id = $1;
 
 -- name: CreateCollection :one
-INSERT INTO "collection" ("address", "type") VALUES ($1, $2) RETURNING *;
+INSERT INTO "collection" ("id", "address", "type") VALUES ($1, $2, $3) RETURNING *;
 
 -- name: GetCollection :one
 SELECT * FROM "collection" WHERE id = $1;
@@ -59,7 +59,7 @@ UPDATE "collection" SET "address" = $2, "type" = $3 WHERE id = $1 RETURNING *;
 DELETE FROM "collection" WHERE id = $1;
 
 -- name: CreateTransfer :one
-INSERT INTO "transfer" ("from", "to", "amount", "timestamp") VALUES ($1, $2, $3, $4) RETURNING *;
+INSERT INTO "transfer" ("id", "from", "to", "amount", "timestamp") VALUES ($1, $2, $3, $4, $5) RETURNING *;
 
 -- name: GetTransfer :one
 SELECT * FROM "transfer" WHERE id = $1;

@@ -6,7 +6,7 @@ type User @entity {
   createdDate: Date
   isActive: Boolean
   profile: UserProfile
-  posts: [Post!]! @relation(name: "UserPosts")
+  posts: [Post!]!
 }
 
 type UserProfile @entity {

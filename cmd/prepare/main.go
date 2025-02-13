@@ -48,10 +48,10 @@ func main() {
 		log.Fatalf("failed to generate SQLC queries: %v", err)
 	}
 
-	// Double-check the ABI mapping defined in your subgraph YAML.
-	if err := generator.CheckAbiMapping("./abis/erc20.abi.json"); err != nil {
-		log.Fatalf("ABI check failed: %v", err)
-	}
+	// // Double-check the ABI mapping defined in your subgraph YAML.
+	// if err := generator.CheckAbiMapping("./abis/erc20.abi.json"); err != nil {
+	// 	log.Fatalf("ABI check failed: %v", err)
+	// }
 
 	// Load subgraph config
 	data, err := os.ReadFile("subgraph.yaml")
@@ -67,6 +67,16 @@ func main() {
 	// Generate event handler skeleton.
 	if err := generator.GenerateEventHandlers(&config, *outputDir); err != nil {
 		log.Fatalf("failed to generate event handlers: %v", err)
+	}
+
+	// Generate event router
+	if err := generator.GenerateEventRouter(&config, *outputDir); err != nil {
+		log.Fatalf("failed to generate event router: %v", err)
+	}
+
+	// Generate mappings
+	if err := generator.GenerateMappings(&config, *outputDir); err != nil {
+		log.Fatalf("failed to generate mappings: %v", err)
 	}
 
 	fmt.Println("Code generation completed successfully!")

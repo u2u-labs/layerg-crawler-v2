@@ -11,38 +11,44 @@ import (
 )
 
 const createCollection = `-- name: CreateCollection :one
-INSERT INTO "collection" ("address", "type") VALUES ($1, $2) RETURNING id, address, type
+INSERT INTO "collection" ("id", "address", "type") VALUES ($1, $2, $3) RETURNING id, address, type, created_at
 `
 
 type CreateCollectionParams struct {
+	ID      string         `json:"id"`
 	Address string         `json:"address"`
 	Type    sql.NullString `json:"type"`
 }
 
 func (q *Queries) CreateCollection(ctx context.Context, arg CreateCollectionParams) (Collection, error) {
-	row := q.db.QueryRowContext(ctx, createCollection, arg.Address, arg.Type)
+	row := q.db.QueryRowContext(ctx, createCollection, arg.ID, arg.Address, arg.Type)
 	var i Collection
-	err := row.Scan(&i.ID, &i.Address, &i.Type)
+	err := row.Scan(
+		&i.ID,
+		&i.Address,
+		&i.Type,
+		&i.CreatedAt,
+	)
 	return i, err
 }
 
 const createPost = `-- name: CreatePost :one
-INSERT INTO "post" ("title", "content", "published_date", "author_id") VALUES ($1, $2, $3, $4) RETURNING id, title, content, published_date, author_id
+INSERT INTO "post" ("id", "title", "content", "published_date") VALUES ($1, $2, $3, $4) RETURNING id, title, content, published_date, author_id, created_at, user_id
 `
 
 type CreatePostParams struct {
+	ID            string         `json:"id"`
 	Title         string         `json:"title"`
 	Content       sql.NullString `json:"content"`
 	PublishedDate sql.NullTime   `json:"published_date"`
-	AuthorID      sql.NullInt32  `json:"author_id"`
 }
 
 func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, error) {
 	row := q.db.QueryRowContext(ctx, createPost,
+		arg.ID,
 		arg.Title,
 		arg.Content,
 		arg.PublishedDate,
-		arg.AuthorID,
 	)
 	var i Post
 	err := row.Scan(
@@ -51,15 +57,18 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, e
 		&i.Content,
 		&i.PublishedDate,
 		&i.AuthorID,
+		&i.CreatedAt,
+		&i.UserID,
 	)
 	return i, err
 }
 
 const createTransfer = `-- name: CreateTransfer :one
-INSERT INTO "transfer" ("from", "to", "amount", "timestamp") VALUES ($1, $2, $3, $4) RETURNING id, "from", "to", amount, timestamp
+INSERT INTO "transfer" ("id", "from", "to", "amount", "timestamp") VALUES ($1, $2, $3, $4, $5) RETURNING id, "from", "to", amount, timestamp, created_at
 `
 
 type CreateTransferParams struct {
+	ID        string         `json:"id"`
 	From      string         `json:"from"`
 	To        string         `json:"to"`
 	Amount    sql.NullString `json:"amount"`
@@ -68,6 +77,7 @@ type CreateTransferParams struct {
 
 func (q *Queries) CreateTransfer(ctx context.Context, arg CreateTransferParams) (Transfer, error) {
 	row := q.db.QueryRowContext(ctx, createTransfer,
+		arg.ID,
 		arg.From,
 		arg.To,
 		arg.Amount,
@@ -80,29 +90,30 @@ func (q *Queries) CreateTransfer(ctx context.Context, arg CreateTransferParams) 
 		&i.To,
 		&i.Amount,
 		&i.Timestamp,
+		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO "user" ("name", "email", "created_date", "is_active", "profile_id") VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, created_date, is_active, profile_id
+INSERT INTO "user" ("id", "name", "email", "created_date", "is_active") VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, created_date, is_active, profile_id, created_at
 `
 
 type CreateUserParams struct {
+	ID          string         `json:"id"`
 	Name        string         `json:"name"`
 	Email       sql.NullString `json:"email"`
 	CreatedDate sql.NullTime   `json:"created_date"`
 	IsActive    sql.NullBool   `json:"is_active"`
-	ProfileID   sql.NullInt32  `json:"profile_id"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
 	row := q.db.QueryRowContext(ctx, createUser,
+		arg.ID,
 		arg.Name,
 		arg.Email,
 		arg.CreatedDate,
 		arg.IsActive,
-		arg.ProfileID,
 	)
 	var i User
 	err := row.Scan(
@@ -112,23 +123,30 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.CreatedDate,
 		&i.IsActive,
 		&i.ProfileID,
+		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const createUserProfile = `-- name: CreateUserProfile :one
-INSERT INTO "user_profile" ("bio", "avatar_url") VALUES ($1, $2) RETURNING id, bio, avatar_url
+INSERT INTO "user_profile" ("id", "bio", "avatar_url") VALUES ($1, $2, $3) RETURNING id, bio, avatar_url, created_at
 `
 
 type CreateUserProfileParams struct {
+	ID        string         `json:"id"`
 	Bio       sql.NullString `json:"bio"`
 	AvatarUrl sql.NullString `json:"avatar_url"`
 }
 
 func (q *Queries) CreateUserProfile(ctx context.Context, arg CreateUserProfileParams) (UserProfile, error) {
-	row := q.db.QueryRowContext(ctx, createUserProfile, arg.Bio, arg.AvatarUrl)
+	row := q.db.QueryRowContext(ctx, createUserProfile, arg.ID, arg.Bio, arg.AvatarUrl)
 	var i UserProfile
-	err := row.Scan(&i.ID, &i.Bio, &i.AvatarUrl)
+	err := row.Scan(
+		&i.ID,
+		&i.Bio,
+		&i.AvatarUrl,
+		&i.CreatedAt,
+	)
 	return i, err
 }
 
@@ -136,7 +154,7 @@ const deleteCollection = `-- name: DeleteCollection :exec
 DELETE FROM "collection" WHERE id = $1
 `
 
-func (q *Queries) DeleteCollection(ctx context.Context, id int32) error {
+func (q *Queries) DeleteCollection(ctx context.Context, id string) error {
 	_, err := q.db.ExecContext(ctx, deleteCollection, id)
 	return err
 }
@@ -145,7 +163,7 @@ const deletePost = `-- name: DeletePost :exec
 DELETE FROM "post" WHERE id = $1
 `
 
-func (q *Queries) DeletePost(ctx context.Context, id int32) error {
+func (q *Queries) DeletePost(ctx context.Context, id string) error {
 	_, err := q.db.ExecContext(ctx, deletePost, id)
 	return err
 }
@@ -154,7 +172,7 @@ const deleteTransfer = `-- name: DeleteTransfer :exec
 DELETE FROM "transfer" WHERE id = $1
 `
 
-func (q *Queries) DeleteTransfer(ctx context.Context, id int32) error {
+func (q *Queries) DeleteTransfer(ctx context.Context, id string) error {
 	_, err := q.db.ExecContext(ctx, deleteTransfer, id)
 	return err
 }
@@ -163,7 +181,7 @@ const deleteUser = `-- name: DeleteUser :exec
 DELETE FROM "user" WHERE id = $1
 `
 
-func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
+func (q *Queries) DeleteUser(ctx context.Context, id string) error {
 	_, err := q.db.ExecContext(ctx, deleteUser, id)
 	return err
 }
@@ -172,27 +190,32 @@ const deleteUserProfile = `-- name: DeleteUserProfile :exec
 DELETE FROM "user_profile" WHERE id = $1
 `
 
-func (q *Queries) DeleteUserProfile(ctx context.Context, id int32) error {
+func (q *Queries) DeleteUserProfile(ctx context.Context, id string) error {
 	_, err := q.db.ExecContext(ctx, deleteUserProfile, id)
 	return err
 }
 
 const getCollection = `-- name: GetCollection :one
-SELECT id, address, type FROM "collection" WHERE id = $1
+SELECT id, address, type, created_at FROM "collection" WHERE id = $1
 `
 
-func (q *Queries) GetCollection(ctx context.Context, id int32) (Collection, error) {
+func (q *Queries) GetCollection(ctx context.Context, id string) (Collection, error) {
 	row := q.db.QueryRowContext(ctx, getCollection, id)
 	var i Collection
-	err := row.Scan(&i.ID, &i.Address, &i.Type)
+	err := row.Scan(
+		&i.ID,
+		&i.Address,
+		&i.Type,
+		&i.CreatedAt,
+	)
 	return i, err
 }
 
 const getPost = `-- name: GetPost :one
-SELECT id, title, content, published_date, author_id FROM "post" WHERE id = $1
+SELECT id, title, content, published_date, author_id, created_at, user_id FROM "post" WHERE id = $1
 `
 
-func (q *Queries) GetPost(ctx context.Context, id int32) (Post, error) {
+func (q *Queries) GetPost(ctx context.Context, id string) (Post, error) {
 	row := q.db.QueryRowContext(ctx, getPost, id)
 	var i Post
 	err := row.Scan(
@@ -201,15 +224,17 @@ func (q *Queries) GetPost(ctx context.Context, id int32) (Post, error) {
 		&i.Content,
 		&i.PublishedDate,
 		&i.AuthorID,
+		&i.CreatedAt,
+		&i.UserID,
 	)
 	return i, err
 }
 
 const getTransfer = `-- name: GetTransfer :one
-SELECT id, "from", "to", amount, timestamp FROM "transfer" WHERE id = $1
+SELECT id, "from", "to", amount, timestamp, created_at FROM "transfer" WHERE id = $1
 `
 
-func (q *Queries) GetTransfer(ctx context.Context, id int32) (Transfer, error) {
+func (q *Queries) GetTransfer(ctx context.Context, id string) (Transfer, error) {
 	row := q.db.QueryRowContext(ctx, getTransfer, id)
 	var i Transfer
 	err := row.Scan(
@@ -218,15 +243,16 @@ func (q *Queries) GetTransfer(ctx context.Context, id int32) (Transfer, error) {
 		&i.To,
 		&i.Amount,
 		&i.Timestamp,
+		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, name, email, created_date, is_active, profile_id FROM "user" WHERE id = $1
+SELECT id, name, email, created_date, is_active, profile_id, created_at FROM "user" WHERE id = $1
 `
 
-func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
+func (q *Queries) GetUser(ctx context.Context, id string) (User, error) {
 	row := q.db.QueryRowContext(ctx, getUser, id)
 	var i User
 	err := row.Scan(
@@ -236,23 +262,29 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 		&i.CreatedDate,
 		&i.IsActive,
 		&i.ProfileID,
+		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getUserProfile = `-- name: GetUserProfile :one
-SELECT id, bio, avatar_url FROM "user_profile" WHERE id = $1
+SELECT id, bio, avatar_url, created_at FROM "user_profile" WHERE id = $1
 `
 
-func (q *Queries) GetUserProfile(ctx context.Context, id int32) (UserProfile, error) {
+func (q *Queries) GetUserProfile(ctx context.Context, id string) (UserProfile, error) {
 	row := q.db.QueryRowContext(ctx, getUserProfile, id)
 	var i UserProfile
-	err := row.Scan(&i.ID, &i.Bio, &i.AvatarUrl)
+	err := row.Scan(
+		&i.ID,
+		&i.Bio,
+		&i.AvatarUrl,
+		&i.CreatedAt,
+	)
 	return i, err
 }
 
 const listCollection = `-- name: ListCollection :many
-SELECT id, address, type FROM "collection"
+SELECT id, address, type, created_at FROM "collection"
 `
 
 func (q *Queries) ListCollection(ctx context.Context) ([]Collection, error) {
@@ -264,7 +296,12 @@ func (q *Queries) ListCollection(ctx context.Context) ([]Collection, error) {
 	items := []Collection{}
 	for rows.Next() {
 		var i Collection
-		if err := rows.Scan(&i.ID, &i.Address, &i.Type); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Address,
+			&i.Type,
+			&i.CreatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -279,7 +316,7 @@ func (q *Queries) ListCollection(ctx context.Context) ([]Collection, error) {
 }
 
 const listPost = `-- name: ListPost :many
-SELECT id, title, content, published_date, author_id FROM "post"
+SELECT id, title, content, published_date, author_id, created_at, user_id FROM "post"
 `
 
 func (q *Queries) ListPost(ctx context.Context) ([]Post, error) {
@@ -297,6 +334,8 @@ func (q *Queries) ListPost(ctx context.Context) ([]Post, error) {
 			&i.Content,
 			&i.PublishedDate,
 			&i.AuthorID,
+			&i.CreatedAt,
+			&i.UserID,
 		); err != nil {
 			return nil, err
 		}
@@ -312,7 +351,7 @@ func (q *Queries) ListPost(ctx context.Context) ([]Post, error) {
 }
 
 const listTransfer = `-- name: ListTransfer :many
-SELECT id, "from", "to", amount, timestamp FROM "transfer"
+SELECT id, "from", "to", amount, timestamp, created_at FROM "transfer"
 `
 
 func (q *Queries) ListTransfer(ctx context.Context) ([]Transfer, error) {
@@ -330,6 +369,7 @@ func (q *Queries) ListTransfer(ctx context.Context) ([]Transfer, error) {
 			&i.To,
 			&i.Amount,
 			&i.Timestamp,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -345,7 +385,7 @@ func (q *Queries) ListTransfer(ctx context.Context) ([]Transfer, error) {
 }
 
 const listUser = `-- name: ListUser :many
-SELECT id, name, email, created_date, is_active, profile_id FROM "user"
+SELECT id, name, email, created_date, is_active, profile_id, created_at FROM "user"
 `
 
 func (q *Queries) ListUser(ctx context.Context) ([]User, error) {
@@ -364,6 +404,7 @@ func (q *Queries) ListUser(ctx context.Context) ([]User, error) {
 			&i.CreatedDate,
 			&i.IsActive,
 			&i.ProfileID,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -379,7 +420,7 @@ func (q *Queries) ListUser(ctx context.Context) ([]User, error) {
 }
 
 const listUserProfile = `-- name: ListUserProfile :many
-SELECT id, bio, avatar_url FROM "user_profile"
+SELECT id, bio, avatar_url, created_at FROM "user_profile"
 `
 
 func (q *Queries) ListUserProfile(ctx context.Context) ([]UserProfile, error) {
@@ -391,7 +432,12 @@ func (q *Queries) ListUserProfile(ctx context.Context) ([]UserProfile, error) {
 	items := []UserProfile{}
 	for rows.Next() {
 		var i UserProfile
-		if err := rows.Scan(&i.ID, &i.Bio, &i.AvatarUrl); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Bio,
+			&i.AvatarUrl,
+			&i.CreatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -406,11 +452,11 @@ func (q *Queries) ListUserProfile(ctx context.Context) ([]UserProfile, error) {
 }
 
 const updateCollection = `-- name: UpdateCollection :one
-UPDATE "collection" SET "address" = $2, "type" = $3 WHERE id = $1 RETURNING id, address, type
+UPDATE "collection" SET "address" = $2, "type" = $3 WHERE id = $1 RETURNING id, address, type, created_at
 `
 
 type UpdateCollectionParams struct {
-	ID      int32          `json:"id"`
+	ID      string         `json:"id"`
 	Address string         `json:"address"`
 	Type    sql.NullString `json:"type"`
 }
@@ -418,20 +464,24 @@ type UpdateCollectionParams struct {
 func (q *Queries) UpdateCollection(ctx context.Context, arg UpdateCollectionParams) (Collection, error) {
 	row := q.db.QueryRowContext(ctx, updateCollection, arg.ID, arg.Address, arg.Type)
 	var i Collection
-	err := row.Scan(&i.ID, &i.Address, &i.Type)
+	err := row.Scan(
+		&i.ID,
+		&i.Address,
+		&i.Type,
+		&i.CreatedAt,
+	)
 	return i, err
 }
 
 const updatePost = `-- name: UpdatePost :one
-UPDATE "post" SET "title" = $2, "content" = $3, "published_date" = $4, "author_id" = $5 WHERE id = $1 RETURNING id, title, content, published_date, author_id
+UPDATE "post" SET "title" = $2, "content" = $3, "published_date" = $4 WHERE id = $1 RETURNING id, title, content, published_date, author_id, created_at, user_id
 `
 
 type UpdatePostParams struct {
-	ID            int32          `json:"id"`
+	ID            string         `json:"id"`
 	Title         string         `json:"title"`
 	Content       sql.NullString `json:"content"`
 	PublishedDate sql.NullTime   `json:"published_date"`
-	AuthorID      sql.NullInt32  `json:"author_id"`
 }
 
 func (q *Queries) UpdatePost(ctx context.Context, arg UpdatePostParams) (Post, error) {
@@ -440,7 +490,6 @@ func (q *Queries) UpdatePost(ctx context.Context, arg UpdatePostParams) (Post, e
 		arg.Title,
 		arg.Content,
 		arg.PublishedDate,
-		arg.AuthorID,
 	)
 	var i Post
 	err := row.Scan(
@@ -449,16 +498,18 @@ func (q *Queries) UpdatePost(ctx context.Context, arg UpdatePostParams) (Post, e
 		&i.Content,
 		&i.PublishedDate,
 		&i.AuthorID,
+		&i.CreatedAt,
+		&i.UserID,
 	)
 	return i, err
 }
 
 const updateTransfer = `-- name: UpdateTransfer :one
-UPDATE "transfer" SET "from" = $2, "to" = $3, "amount" = $4, "timestamp" = $5 WHERE id = $1 RETURNING id, "from", "to", amount, timestamp
+UPDATE "transfer" SET "from" = $2, "to" = $3, "amount" = $4, "timestamp" = $5 WHERE id = $1 RETURNING id, "from", "to", amount, timestamp, created_at
 `
 
 type UpdateTransferParams struct {
-	ID        int32          `json:"id"`
+	ID        string         `json:"id"`
 	From      string         `json:"from"`
 	To        string         `json:"to"`
 	Amount    sql.NullString `json:"amount"`
@@ -480,21 +531,21 @@ func (q *Queries) UpdateTransfer(ctx context.Context, arg UpdateTransferParams) 
 		&i.To,
 		&i.Amount,
 		&i.Timestamp,
+		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const updateUser = `-- name: UpdateUser :one
-UPDATE "user" SET "name" = $2, "email" = $3, "created_date" = $4, "is_active" = $5, "profile_id" = $6 WHERE id = $1 RETURNING id, name, email, created_date, is_active, profile_id
+UPDATE "user" SET "name" = $2, "email" = $3, "created_date" = $4, "is_active" = $5 WHERE id = $1 RETURNING id, name, email, created_date, is_active, profile_id, created_at
 `
 
 type UpdateUserParams struct {
-	ID          int32          `json:"id"`
+	ID          string         `json:"id"`
 	Name        string         `json:"name"`
 	Email       sql.NullString `json:"email"`
 	CreatedDate sql.NullTime   `json:"created_date"`
 	IsActive    sql.NullBool   `json:"is_active"`
-	ProfileID   sql.NullInt32  `json:"profile_id"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
@@ -504,7 +555,6 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		arg.Email,
 		arg.CreatedDate,
 		arg.IsActive,
-		arg.ProfileID,
 	)
 	var i User
 	err := row.Scan(
@@ -514,16 +564,17 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.CreatedDate,
 		&i.IsActive,
 		&i.ProfileID,
+		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const updateUserProfile = `-- name: UpdateUserProfile :one
-UPDATE "user_profile" SET "bio" = $2, "avatar_url" = $3 WHERE id = $1 RETURNING id, bio, avatar_url
+UPDATE "user_profile" SET "bio" = $2, "avatar_url" = $3 WHERE id = $1 RETURNING id, bio, avatar_url, created_at
 `
 
 type UpdateUserProfileParams struct {
-	ID        int32          `json:"id"`
+	ID        string         `json:"id"`
 	Bio       sql.NullString `json:"bio"`
 	AvatarUrl sql.NullString `json:"avatar_url"`
 }
@@ -531,6 +582,11 @@ type UpdateUserProfileParams struct {
 func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (UserProfile, error) {
 	row := q.db.QueryRowContext(ctx, updateUserProfile, arg.ID, arg.Bio, arg.AvatarUrl)
 	var i UserProfile
-	err := row.Scan(&i.ID, &i.Bio, &i.AvatarUrl)
+	err := row.Scan(
+		&i.ID,
+		&i.Bio,
+		&i.AvatarUrl,
+		&i.CreatedAt,
+	)
 	return i, err
 }

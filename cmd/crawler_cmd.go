@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/hibiken/asynq"
-	"github.com/unicornultrafoundation/go-u2u/core/types"
 	"github.com/unicornultrafoundation/go-u2u/ethclient"
 
 	_ "github.com/lib/pq"
@@ -18,12 +17,11 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
-	"github.com/u2u-labs/layerg-crawler/cmd/handlers"
 	"github.com/u2u-labs/layerg-crawler/config"
 	"github.com/u2u-labs/layerg-crawler/db"
-	graphqldb "github.com/u2u-labs/layerg-crawler/db/graphqldb"
+	"github.com/u2u-labs/layerg-crawler/db/graphqldb"
 	dbCon "github.com/u2u-labs/layerg-crawler/db/sqlc"
-	"github.com/u2u-labs/layerg-crawler/generated/eventhandlers"
+	"github.com/u2u-labs/layerg-crawler/generated/router"
 )
 
 var contractType = make(map[int32]map[string]dbCon.Asset)
@@ -72,32 +70,33 @@ func startCrawler(cmd *cobra.Command, args []string) {
 	defer queueClient.Close()
 
 	// Initialize event handling system
-	registry := NewHandlerRegistry(sugar)
 	crawlerConfig, err := loadCrawlerConfig()
 	if err != nil {
 		sugar.Errorw("Failed to load crawler config", "err", err)
 		return
 	}
+	chainID, _ := strconv.ParseInt(crawlerConfig.Network.ChainId, 10, 32)
+	router := router.NewEventRouter(sqlDb, graphqldb.New(conn), sugar, int32(chainID))
+	// // Register handlers for each contract/event
+	// for _, ds := range crawlerConfig.DataSources {
+	// 	for _, h := range ds.Mapping.Handlers {
+	// 		if h.Kind == "EthereumHandlerKind.Event" && len(h.Filter.Topics) > 0 {
+	// 			chainID, _ := strconv.ParseInt(crawlerConfig.Network.ChainId, 10, 32)
+	// 			handler := getHandlerForEvent(h.Handler, sugar, sqlDb, graphqldb.New(conn), int32(chainID))
 
-	// Register handlers for each contract/event
-	for _, ds := range crawlerConfig.DataSources {
-		for _, h := range ds.Mapping.Handlers {
-			if h.Kind == "EthereumHandlerKind.Event" && len(h.Filter.Topics) > 0 {
-				chainID, _ := strconv.ParseInt(crawlerConfig.Network.ChainId, 10, 32)
-				handler := getHandlerForEvent(h.Handler, sugar, sqlDb, graphqldb.New(conn), int32(chainID))
+	// 			eventSig := h.Filter.Topics[0]
+	// 			eventHash := eventhandlers.KeccakHash(eventSig)
 
-				// The standard ERC20 Transfer event signature hash
-				transferEventHash := "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
-				registry.RegisterHandler(transferEventHash, handler)
+	// 			registry.RegisterHandler(eventHash, handler)
 
-				sugar.Infow("Registered event handler",
-					"event_hash", transferEventHash,
-					"contract", ds.Options.Address)
-			}
-		}
-	}
+	// 			sugar.Infow("Registered event handler",
+	// 				"event_hash", eventHash,
+	// 				"contract", ds.Options.Address)
+	// 		}
+	// 	}
+	// }
 
-	err = crawlSupportedChains(ctx, sugar, sqlDb, rdb, registry)
+	err = crawlSupportedChains(ctx, sugar, sqlDb, rdb, router)
 	if err != nil {
 		sugar.Errorw("Error init supported chains", "err", err)
 		return
@@ -131,7 +130,7 @@ func startCrawler(cmd *cobra.Command, args []string) {
 		select {
 		case <-timer.C:
 			// Process new chains with the event registry
-			ProcessNewChains(ctx, sugar, rdb, sqlDb, registry)
+			ProcessNewChains(ctx, sugar, rdb, sqlDb, router)
 			// Process new assets
 			ProcessNewChainAssets(ctx, sugar, rdb)
 			timer.Reset(config.RetriveAddedChainsAndAssetsInterval)
@@ -141,7 +140,7 @@ func startCrawler(cmd *cobra.Command, args []string) {
 	}
 }
 
-func ProcessNewChains(ctx context.Context, sugar *zap.SugaredLogger, rdb *redis.Client, q *dbCon.Queries, registry *HandlerRegistry) {
+func ProcessNewChains(ctx context.Context, sugar *zap.SugaredLogger, rdb *redis.Client, q *dbCon.Queries, registry *router.EventRouter) {
 	chains, err := db.GetCachedPendingChain(ctx, rdb)
 	if err != nil {
 		sugar.Errorw("ProcessNewChains failed to get cached pending chains", "err", err)
@@ -183,7 +182,7 @@ func ProcessNewChainAssets(ctx context.Context, sugar *zap.SugaredLogger, rdb *r
 	}
 }
 
-func crawlSupportedChains(ctx context.Context, sugar *zap.SugaredLogger, q *dbCon.Queries, rdb *redis.Client, registry *HandlerRegistry) error {
+func crawlSupportedChains(ctx context.Context, sugar *zap.SugaredLogger, q *dbCon.Queries, rdb *redis.Client, registry *router.EventRouter) error {
 	// Query, flush cache and connect all supported chains
 	chains, err := q.GetAllChain(ctx)
 	if err != nil {
@@ -319,27 +318,27 @@ func watchBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *ethclien
 	}
 }
 
-func getHandlerForEvent(handlerName string, sugar *zap.SugaredLogger, queries *dbCon.Queries, gqlQueries *graphqldb.Queries, chainID int32) EventHandler {
-	switch handlerName {
-	case "HandleLog":
-		return &handlerAdapter{
-			handler: handlers.NewTransferHandler(queries, gqlQueries, chainID),
-			logger:  sugar,
-		}
-	default:
-		return &handlerAdapter{
-			handler: &eventhandlers.DefaultHandler{},
-			logger:  sugar,
-		}
-	}
-}
+// func getHandlerForEvent(handlerName string, sugar *zap.SugaredLogger, queries *dbCon.Queries, gqlQueries *graphqldb.Queries, chainID int32) EventHandler {
+// 	switch handlerName {
+// 	case "HandleLog":
+// 		return &handlerAdapter{
+// 			handler: handlers.NewTransferHandler(queries, gqlQueries, chainID, sugar),
+// 			logger:  sugar,
+// 		}
+// 	default:
+// 		return &handlerAdapter{
+// 			handler: &eventhandlers.DefaultHandler{},
+// 			logger:  sugar,
+// 		}
+// 	}
+// }
 
-// handlerAdapter adapts the generated handler to our local EventHandler interface
-type handlerAdapter struct {
-	handler eventhandlers.EventHandler
-	logger  *zap.SugaredLogger
-}
+// // handlerAdapter adapts the generated handler to our local EventHandler interface
+// type handlerAdapter struct {
+// 	handler eventhandlers.EventHandler
+// 	logger  *zap.SugaredLogger
+// }
 
-func (a *handlerAdapter) HandleEvent(ctx context.Context, log *types.Log) error {
-	return a.handler.HandleEvent(ctx, log, a.logger)
-}
+// func (a *handlerAdapter) HandleEvent(ctx context.Context, log *types.Log) error {
+// 	return a.handler.HandleEvent(ctx, log, a.logger)
+// }
