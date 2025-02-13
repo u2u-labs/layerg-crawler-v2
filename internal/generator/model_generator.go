@@ -32,12 +32,17 @@ import (
 type {{ .Name }} struct {
 {{- range .Fields }}
 	{{- if .Relation }}
-	{{ fieldName (printf "%sID" .Name) }} int {{ backtick }}gorm:"{{ gormTagFK . }}"{{ backtick }}
-	{{ fieldName .Name }} *{{ .Relation }} {{ backtick }}gorm:"-"{{ backtick }}
+		{{- if isArray .Type }}
+	{{ fieldName .Name }} []{{ trimType .Relation }} {{ backtick }}gorm:"-"{{ backtick }}
+		{{- else }}
+	{{ fieldName (printf "%sID" .Name) }} string {{ backtick }}gorm:"{{ gormTagFK . }}"{{ backtick }}
+	{{ fieldName .Name }} *{{ trimType .Relation }} {{ backtick }}gorm:"-"{{ backtick }}
+		{{- end }}
 	{{- else }}
 	{{ fieldName .Name }} {{ goType .Type .IsNonNull }} {{ backtick }}gorm:"{{ gormTag . }}"{{ backtick }}
 	{{- end }}
 {{- end }}
+	CreatedAt time.Time {{ backtick }}gorm:"not null"{{ backtick }}
 }
 {{ end }}
 `
@@ -45,19 +50,35 @@ type {{ .Name }} struct {
 		"fieldName": func(name string) string {
 			return strings.Title(name)
 		},
+		"isArray": func(fieldType string) bool {
+			return strings.HasPrefix(fieldType, "[")
+		},
 		"goType": func(gqlType string, isNonNull bool) string {
-			switch gqlType {
+			baseType := strings.TrimSuffix(strings.TrimPrefix(gqlType, "["), "]")
+			baseType = strings.TrimSuffix(baseType, "!")
+
+			var goType string
+			switch baseType {
 			case "ID":
-				return "int"
+				goType = "string"
 			case "String":
-				return "string"
+				goType = "string"
 			case "Boolean":
-				return "bool"
+				goType = "bool"
+			case "Int":
+				goType = "int"
+			case "BigInt":
+				goType = "string" // Using string for BigInt as it might exceed int64
 			case "Date":
-				return "time.Time"
+				goType = "time.Time"
 			default:
-				return "string"
+				goType = "string"
 			}
+
+			if !isNonNull {
+				goType = "*" + goType
+			}
+			return goType
 		},
 		"gormTag": func(field Field) string {
 			var tags []string
@@ -88,6 +109,12 @@ type {{ .Name }} struct {
 		},
 		"backtick": func() string {
 			return "`"
+		},
+		"trimType": func(t string) string {
+			t = strings.TrimPrefix(t, "[")
+			t = strings.TrimSuffix(t, "]")
+			t = strings.TrimSuffix(t, "!")
+			return t
 		},
 	}
 	tpl, err := template.New("models").Funcs(funcMap).Parse(tmpl)

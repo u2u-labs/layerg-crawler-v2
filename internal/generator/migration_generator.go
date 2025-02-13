@@ -75,102 +75,132 @@ func generateFullMigration(entities []Entity) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// Build a map from entity name to its primary key type.
-	pkMap := make(map[string]string)
-	for _, entity := range sortedEntities {
-		for _, field := range entity.Fields {
-			if strings.ToLower(field.Name) == "id" && field.Relation == "" {
-				switch strings.ToLower(field.Type) {
-				case "id":
-					pkMap[entity.Name] = "SERIAL"
-				case "bigint":
-					pkMap[entity.Name] = "DECIMAL"
-				default:
-					pkMap[entity.Name] = "SERIAL"
-				}
-				break
-			}
-		}
-	}
+
 	var sb strings.Builder
+
+	// First pass: Create all base tables
 	for _, entity := range sortedEntities {
 		tableName := toSnakeCase(entity.Name)
 		sb.WriteString(fmt.Sprintf("CREATE TABLE \"%s\" (\n", tableName))
+		sb.WriteString("    \"id\" TEXT PRIMARY KEY,\n")
+
 		var colDefs []string
 		var foreignKeys []string
+
 		for _, field := range entity.Fields {
-			var colName string
-			if field.Relation != "" {
-				colName = toSnakeCase(field.Name) + "_id"
-			} else {
-				colName = toSnakeCase(field.Name)
+			if strings.ToLower(field.Name) == "id" {
+				continue
 			}
-			var colType string
+
+			var colDef string
 			if field.Relation != "" {
-				// Lookup the referenced entity's primary key type.
-				if pk, ok := pkMap[field.Relation]; ok {
-					if pk == "DECIMAL" {
-						colType = "DECIMAL"
-					} else {
-						colType = "INTEGER"
-					}
-				} else {
-					colType = "INTEGER"
+				// Skip array relations in first pass
+				if strings.HasPrefix(field.Type, "[") {
+					continue
 				}
+				// Handle one-to-one relations
+				colDef = fmt.Sprintf("    \"%s_id\" TEXT", toSnakeCase(field.Name))
+				foreignKeys = append(foreignKeys,
+					fmt.Sprintf("    FOREIGN KEY (\"%s_id\") REFERENCES \"%s\"(\"id\") ON DELETE CASCADE",
+						toSnakeCase(field.Name),
+						toSnakeCase(field.Relation)))
 			} else {
-				switch strings.ToLower(field.Type) {
-				case "id":
-					colType = "SERIAL"
-				case "bigint":
-					colType = "DECIMAL"
-				case "string":
-					colType = "TEXT"
-				case "boolean":
-					colType = "BOOLEAN"
-				case "date":
-					colType = "TIMESTAMPTZ"
-				default:
-					colType = "TEXT"
-				}
+				// Handle scalar types
+				colName := toSnakeCase(field.Name)
+				colType := getSQLType(field.Type)
+				colDef = fmt.Sprintf("    \"%s\" %s", colName, colType)
 			}
-			colDef := fmt.Sprintf("    \"%s\" %s", colName, colType)
-			if field.IsNonNull && strings.ToLower(field.Type) != "id" {
+
+			if field.IsNonNull {
 				colDef += " NOT NULL"
 			}
-			if strings.ToLower(field.Type) == "id" && field.Relation == "" {
-				colDef += " PRIMARY KEY"
-			}
+
 			colDefs = append(colDefs, colDef)
-			if field.Relation != "" {
-				refTable := toSnakeCase(field.Relation)
-				foreignKeys = append(foreignKeys, fmt.Sprintf("    FOREIGN KEY (\"%s\") REFERENCES \"%s\"(\"id\")", colName, refTable))
-			}
 		}
-		allDefs := strings.Join(colDefs, ",\n")
+
+		// Add created_at timestamp
+		colDefs = append(colDefs, "    \"created_at\" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP")
+
+		// Combine all column definitions
+		sb.WriteString(strings.Join(colDefs, ",\n"))
 		if len(foreignKeys) > 0 {
-			allDefs += ",\n" + strings.Join(foreignKeys, ",\n")
+			sb.WriteString(",\n")
+			sb.WriteString(strings.Join(foreignKeys, ",\n"))
 		}
-		sb.WriteString(allDefs)
 		sb.WriteString("\n);\n\n")
+
+		// Create indexes
 		for _, field := range entity.Fields {
 			if field.IsIndexed {
-				var colName string
-				if field.Relation != "" {
-					colName = toSnakeCase(field.Name) + "_id"
-				} else {
-					colName = toSnakeCase(field.Name)
-				}
 				idxName := fmt.Sprintf("idx_%s_%s", tableName, toSnakeCase(field.Name))
+				colName := toSnakeCase(field.Name)
+				if field.Relation != "" && !strings.HasPrefix(field.Type, "[") {
+					colName += "_id"
+				}
+
 				if field.IsUnique {
-					sb.WriteString(fmt.Sprintf("CREATE UNIQUE INDEX \"%s\" ON \"%s\"(\"%s\");\n", idxName, tableName, colName))
+					sb.WriteString(fmt.Sprintf("CREATE UNIQUE INDEX \"%s\" ON \"%s\"(\"%s\");\n",
+						idxName, tableName, colName))
 				} else {
-					sb.WriteString(fmt.Sprintf("CREATE INDEX \"%s\" ON \"%s\"(\"%s\");\n", idxName, tableName, colName))
+					sb.WriteString(fmt.Sprintf("CREATE INDEX \"%s\" ON \"%s\"(\"%s\");\n",
+						idxName, tableName, colName))
 				}
 			}
 		}
 		sb.WriteString("\n")
 	}
+
+	// Second pass: Add foreign keys for array relations
+	for _, entity := range sortedEntities {
+		for _, field := range entity.Fields {
+			if field.Relation != "" && strings.HasPrefix(field.Type, "[") {
+				// Get the base type from array type (e.g., "[Post!]!" -> "Post")
+				baseType := strings.Trim(strings.Trim(field.Type, "[]!"), "!")
+				manyTableName := toSnakeCase(baseType)
+				oneTableName := toSnakeCase(entity.Name)
+
+				// Add foreign key column directly in CREATE TABLE
+				sb.WriteString(fmt.Sprintf(`ALTER TABLE "%s" ADD COLUMN "%s_id" TEXT;`,
+					manyTableName, oneTableName))
+				sb.WriteString("\n")
+
+				// Add foreign key constraint
+				sb.WriteString(fmt.Sprintf(`ALTER TABLE "%s" ADD CONSTRAINT "fk_%s_%s" 
+					FOREIGN KEY ("%s_id") REFERENCES "%s"("id") ON DELETE CASCADE;`,
+					manyTableName, manyTableName, oneTableName,
+					oneTableName, oneTableName))
+				sb.WriteString("\n")
+
+				// Add index on foreign key
+				sb.WriteString(fmt.Sprintf(`CREATE INDEX "idx_%s_%s_id" ON "%s"("%s_id");`,
+					manyTableName, oneTableName, manyTableName, oneTableName))
+				sb.WriteString("\n\n")
+			}
+		}
+	}
+
 	return sb.String(), nil
+}
+
+func getSQLType(graphqlType string) string {
+	switch strings.ToLower(graphqlType) {
+	case "id":
+		return "TEXT"
+	case "string":
+		return "TEXT"
+	case "boolean":
+		return "BOOLEAN"
+	case "int":
+		return "INTEGER"
+	case "bigint":
+		return "NUMERIC"
+	case "float":
+		return "DOUBLE PRECISION"
+	case "date":
+		return "TIMESTAMPTZ"
+	default:
+		return "TEXT"
+	}
 }
 
 func generateDiffMigration(prev, curr []Entity) (string, error) {

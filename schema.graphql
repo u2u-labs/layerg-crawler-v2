@@ -6,6 +6,7 @@ type User @entity {
   createdDate: Date
   isActive: Boolean
   profile: UserProfile
+  posts: [Post!]! @relation(name: "UserPosts")
 }
 
 type UserProfile @entity {
@@ -19,7 +20,7 @@ type Post @entity {
   title: String!
   content: String
   publishedDate: Date
-  author: User @index
+  author: User @index(unique: true)
 } 
 
 type Collection @entity {
