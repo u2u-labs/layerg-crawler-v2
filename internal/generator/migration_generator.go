@@ -10,9 +10,19 @@ import (
 
 func GenerateMigrationScripts(entities []Entity, outputDir string) error {
 	migrationsDir := outputDir + "/migrations"
+
+	// Only remove if directory exists
+	if _, err := os.Stat(migrationsDir); err == nil {
+		if err := os.RemoveAll(migrationsDir); err != nil {
+			return fmt.Errorf("failed to remove existing migrations directory: %w", err)
+		}
+	}
+
+	// Create migrations directory
 	if err := os.MkdirAll(migrationsDir, os.ModePerm); err != nil {
 		return err
 	}
+
 	snapshotFile := migrationsDir + "/schema_snapshot.json"
 	var prevEntities []Entity
 	if data, err := os.ReadFile(snapshotFile); err == nil {
@@ -39,6 +49,7 @@ func GenerateMigrationScripts(entities []Entity, outputDir string) error {
 	}
 	timestamp := time.Now().Format("20060102150405")
 	filePath := fmt.Sprintf("%s/%s_migration.sql", migrationsDir, timestamp)
+
 	f, err := os.Create(filePath)
 	if err != nil {
 		return err
