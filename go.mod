@@ -5,6 +5,8 @@ go 1.22.5
 require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/google/uuid v1.6.0
+	github.com/graphql-go/graphql v0.8.1
+	github.com/graphql-go/handler v0.2.4
 	github.com/hibiken/asynq v0.25.1
 	github.com/lib/pq v1.10.9
 	github.com/redis/go-redis/v9 v9.7.0
@@ -67,8 +69,6 @@ require (
 	github.com/spf13/cast v1.7.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/swaggo/files v1.0.1
-	github.com/swaggo/gin-swagger v1.6.0
 	github.com/tklauser/go-sysconf v0.3.14 // indirect
 	github.com/tklauser/numcpus v0.9.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect

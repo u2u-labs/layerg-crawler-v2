@@ -13,3 +13,6 @@ GIN_MODE: release
 API_KEY_HEADER_NAME: X-API-KEY
 API_PORT: ":8085"
 APP_ID: f3e3bf76-62dc-42a7-ad0d-ef9033bc13a5
+
+# Query service
+SERVICE_PORT: "8084"

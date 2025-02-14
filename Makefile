@@ -2,6 +2,7 @@ GOOSE_DRIVER='postgres'
 GOOSE_DBSTRING='postgres://root@localhost:26257/layerg?sslmode=disable'
 SYSTEM_MIGRATION_DIR='./db/migrations'
 GENERATED_MIGRATION_DIR='./generated/migrations'
+SERVICE_PORT='8084'
 
 build:
 	go build -ldflags -w
@@ -10,15 +11,11 @@ all:
 	chmod +x layerg-crawler
 	./layerg-crawler --config .layerg-crawler.yaml
 
-api:
+query:
 	go build -ldflags -w
 	chmod +x layerg-crawler
-	./layerg-crawler api --config .layerg-crawler.yaml
+	./layerg-crawler query --config .layerg-crawler.yaml
 
-worker:
-	go build -ldflags -w
-	chmod +x layerg-crawler
-	./layerg-crawler worker --config .layerg-crawler.yaml
 
 system-migrate-up:
 	@echo "Running system migration..."

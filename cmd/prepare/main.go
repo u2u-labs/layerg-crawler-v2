@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/u2u-labs/layerg-crawler/cmd/query_service"
 	"github.com/u2u-labs/layerg-crawler/internal/generator"
 	"gopkg.in/yaml.v3"
 )
@@ -46,6 +47,10 @@ func main() {
 
 	if err := generator.GenerateSQLCQueries(entities, *queriesDir); err != nil {
 		log.Fatalf("failed to generate SQLC queries: %v", err)
+	}
+
+	if err := query_service.GenerateQueryService(*schemaPath); err != nil {
+		log.Fatalf("failed to generate queries for Query service: %v", err)
 	}
 
 	// // Double-check the ABI mapping defined in your subgraph YAML.
