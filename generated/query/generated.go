@@ -7,62 +7,88 @@ import (
 )
 
 
-var DateType = core.DateType
-
 
 func CreateQueryFields(resolver *core.QueryResolver) graphql.Fields {
 	// Pre-declare all types to handle forward references
 	
+	var ItemType *graphql.Object
+	
+	var MetadataUpdateRecordType *graphql.Object
+	
 	var UserType *graphql.Object
-	
-	var UserProfileType *graphql.Object
-	
-	var PostType *graphql.Object
-	
-	var CollectionType *graphql.Object
-	
-	var TransferType *graphql.Object
 	
 
 	// Define all input types first since they don't have relationships
 	
+	ItemWhereInputType := graphql.NewInputObject(graphql.InputObjectConfig{
+		Name: "ItemWhereInput",
+		Fields: graphql.InputObjectConfigFieldMap{
+			"id": &graphql.InputObjectFieldConfig{Type: graphql.String},"tokenId": &graphql.InputObjectFieldConfig{Type: graphql.String},"tokenUri": &graphql.InputObjectFieldConfig{Type: graphql.String},"owner": &graphql.InputObjectFieldConfig{Type: graphql.String},
+		},
+	})
+	
+	MetadataUpdateRecordWhereInputType := graphql.NewInputObject(graphql.InputObjectConfig{
+		Name: "MetadataUpdateRecordWhereInput",
+		Fields: graphql.InputObjectConfigFieldMap{
+			"id": &graphql.InputObjectFieldConfig{Type: graphql.String},"tokenId": &graphql.InputObjectFieldConfig{Type: graphql.String},"actor": &graphql.InputObjectFieldConfig{Type: graphql.String},
+		},
+	})
+	
 	UserWhereInputType := graphql.NewInputObject(graphql.InputObjectConfig{
 		Name: "UserWhereInput",
 		Fields: graphql.InputObjectConfigFieldMap{
-			"id": &graphql.InputObjectFieldConfig{Type: graphql.String},"name": &graphql.InputObjectFieldConfig{Type: graphql.String},"email": &graphql.InputObjectFieldConfig{Type: graphql.String},"createdDate": &graphql.InputObjectFieldConfig{Type: graphql.String},"isActive": &graphql.InputObjectFieldConfig{Type: graphql.String},"profile": &graphql.InputObjectFieldConfig{Type: graphql.String},"posts": &graphql.InputObjectFieldConfig{Type: graphql.String},
-		},
-	})
-	
-	UserProfileWhereInputType := graphql.NewInputObject(graphql.InputObjectConfig{
-		Name: "UserProfileWhereInput",
-		Fields: graphql.InputObjectConfigFieldMap{
-			"id": &graphql.InputObjectFieldConfig{Type: graphql.String},"bio": &graphql.InputObjectFieldConfig{Type: graphql.String},"avatarUrl": &graphql.InputObjectFieldConfig{Type: graphql.String},
-		},
-	})
-	
-	PostWhereInputType := graphql.NewInputObject(graphql.InputObjectConfig{
-		Name: "PostWhereInput",
-		Fields: graphql.InputObjectConfigFieldMap{
-			"id": &graphql.InputObjectFieldConfig{Type: graphql.String},"title": &graphql.InputObjectFieldConfig{Type: graphql.String},"content": &graphql.InputObjectFieldConfig{Type: graphql.String},"publishedDate": &graphql.InputObjectFieldConfig{Type: graphql.String},"author": &graphql.InputObjectFieldConfig{Type: graphql.String},
-		},
-	})
-	
-	CollectionWhereInputType := graphql.NewInputObject(graphql.InputObjectConfig{
-		Name: "CollectionWhereInput",
-		Fields: graphql.InputObjectConfigFieldMap{
-			"id": &graphql.InputObjectFieldConfig{Type: graphql.String},"address": &graphql.InputObjectFieldConfig{Type: graphql.String},"type": &graphql.InputObjectFieldConfig{Type: graphql.String},
-		},
-	})
-	
-	TransferWhereInputType := graphql.NewInputObject(graphql.InputObjectConfig{
-		Name: "TransferWhereInput",
-		Fields: graphql.InputObjectConfigFieldMap{
-			"id": &graphql.InputObjectFieldConfig{Type: graphql.String},"from": &graphql.InputObjectFieldConfig{Type: graphql.String},"to": &graphql.InputObjectFieldConfig{Type: graphql.String},"amount": &graphql.InputObjectFieldConfig{Type: graphql.String},"timestamp": &graphql.InputObjectFieldConfig{Type: graphql.String},
+			"id": &graphql.InputObjectFieldConfig{Type: graphql.String},"items": &graphql.InputObjectFieldConfig{Type: graphql.String},
 		},
 	})
 	
 
 	// Now define all object types with their relationships
+	
+	ItemType = graphql.NewObject(graphql.ObjectConfig{
+		Name: "Item",
+		Fields: graphql.FieldsThunk(func() graphql.Fields {
+			return graphql.Fields{
+				
+				"id": &graphql.Field{
+					Type: graphql.ID,
+				},
+				
+				"tokenId": &graphql.Field{
+					Type: core.BigIntType,
+				},
+				
+				"tokenUri": &graphql.Field{
+					Type: graphql.String,
+				},
+				
+				"owner": &graphql.Field{
+					Type: UserType,
+				},
+				
+			}
+		}),
+	})
+	
+	MetadataUpdateRecordType = graphql.NewObject(graphql.ObjectConfig{
+		Name: "MetadataUpdateRecord",
+		Fields: graphql.FieldsThunk(func() graphql.Fields {
+			return graphql.Fields{
+				
+				"id": &graphql.Field{
+					Type: graphql.ID,
+				},
+				
+				"tokenId": &graphql.Field{
+					Type: core.BigIntType,
+				},
+				
+				"actor": &graphql.Field{
+					Type: UserType,
+				},
+				
+			}
+		}),
+	})
 	
 	UserType = graphql.NewObject(graphql.ObjectConfig{
 		Name: "User",
@@ -73,128 +99,8 @@ func CreateQueryFields(resolver *core.QueryResolver) graphql.Fields {
 					Type: graphql.ID,
 				},
 				
-				"name": &graphql.Field{
-					Type: graphql.String,
-				},
-				
-				"email": &graphql.Field{
-					Type: graphql.String,
-				},
-				
-				"createdDate": &graphql.Field{
-					Type: core.DateType,
-				},
-				
-				"isActive": &graphql.Field{
-					Type: graphql.Boolean,
-				},
-				
-				"profile": &graphql.Field{
-					Type: UserProfileType,
-				},
-				
-				"posts": &graphql.Field{
-					Type: graphql.NewList(PostType),
-				},
-				
-			}
-		}),
-	})
-	
-	UserProfileType = graphql.NewObject(graphql.ObjectConfig{
-		Name: "UserProfile",
-		Fields: graphql.FieldsThunk(func() graphql.Fields {
-			return graphql.Fields{
-				
-				"id": &graphql.Field{
-					Type: graphql.ID,
-				},
-				
-				"bio": &graphql.Field{
-					Type: graphql.String,
-				},
-				
-				"avatarUrl": &graphql.Field{
-					Type: graphql.String,
-				},
-				
-			}
-		}),
-	})
-	
-	PostType = graphql.NewObject(graphql.ObjectConfig{
-		Name: "Post",
-		Fields: graphql.FieldsThunk(func() graphql.Fields {
-			return graphql.Fields{
-				
-				"id": &graphql.Field{
-					Type: graphql.ID,
-				},
-				
-				"title": &graphql.Field{
-					Type: graphql.String,
-				},
-				
-				"content": &graphql.Field{
-					Type: graphql.String,
-				},
-				
-				"publishedDate": &graphql.Field{
-					Type: core.DateType,
-				},
-				
-				"author": &graphql.Field{
-					Type: UserType,
-				},
-				
-			}
-		}),
-	})
-	
-	CollectionType = graphql.NewObject(graphql.ObjectConfig{
-		Name: "Collection",
-		Fields: graphql.FieldsThunk(func() graphql.Fields {
-			return graphql.Fields{
-				
-				"id": &graphql.Field{
-					Type: graphql.ID,
-				},
-				
-				"address": &graphql.Field{
-					Type: graphql.String,
-				},
-				
-				"type": &graphql.Field{
-					Type: graphql.String,
-				},
-				
-			}
-		}),
-	})
-	
-	TransferType = graphql.NewObject(graphql.ObjectConfig{
-		Name: "Transfer",
-		Fields: graphql.FieldsThunk(func() graphql.Fields {
-			return graphql.Fields{
-				
-				"id": &graphql.Field{
-					Type: graphql.ID,
-				},
-				
-				"from": &graphql.Field{
-					Type: graphql.String,
-				},
-				
-				"to": &graphql.Field{
-					Type: graphql.String,
-				},
-				
-				"amount": &graphql.Field{
-					Type: core.BigIntType,
-				},
-				
-				"timestamp": &graphql.Field{
-					Type: core.DateType,
+				"items": &graphql.Field{
+					Type: graphql.NewList(ItemType),
 				},
 				
 			}
@@ -203,6 +109,50 @@ func CreateQueryFields(resolver *core.QueryResolver) graphql.Fields {
 	
 
 	return graphql.Fields{
+		
+		"Item": &graphql.Field{
+			Type: ItemType,
+			Args: graphql.FieldConfigArgument{
+				"id": &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.ID)},
+			},
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				return resolver.ResolveSingle("Item", p)
+			},
+		},
+		"Items": &graphql.Field{
+			Type: graphql.NewList(ItemType),
+			Args: graphql.FieldConfigArgument{
+				"page":  &graphql.ArgumentConfig{Type: graphql.Int},
+				"limit": &graphql.ArgumentConfig{Type: graphql.Int},
+				"order": &graphql.ArgumentConfig{Type: graphql.String},
+				"where": &graphql.ArgumentConfig{Type: ItemWhereInputType},
+			},
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				return resolver.ResolveMultiple("Item", p)
+			},
+		},
+		
+		"MetadataUpdateRecord": &graphql.Field{
+			Type: MetadataUpdateRecordType,
+			Args: graphql.FieldConfigArgument{
+				"id": &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.ID)},
+			},
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				return resolver.ResolveSingle("MetadataUpdateRecord", p)
+			},
+		},
+		"MetadataUpdateRecords": &graphql.Field{
+			Type: graphql.NewList(MetadataUpdateRecordType),
+			Args: graphql.FieldConfigArgument{
+				"page":  &graphql.ArgumentConfig{Type: graphql.Int},
+				"limit": &graphql.ArgumentConfig{Type: graphql.Int},
+				"order": &graphql.ArgumentConfig{Type: graphql.String},
+				"where": &graphql.ArgumentConfig{Type: MetadataUpdateRecordWhereInputType},
+			},
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				return resolver.ResolveMultiple("MetadataUpdateRecord", p)
+			},
+		},
 		
 		"User": &graphql.Field{
 			Type: UserType,
@@ -223,94 +173,6 @@ func CreateQueryFields(resolver *core.QueryResolver) graphql.Fields {
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 				return resolver.ResolveMultiple("User", p)
-			},
-		},
-		
-		"UserProfile": &graphql.Field{
-			Type: UserProfileType,
-			Args: graphql.FieldConfigArgument{
-				"id": &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.ID)},
-			},
-			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				return resolver.ResolveSingle("UserProfile", p)
-			},
-		},
-		"UserProfiles": &graphql.Field{
-			Type: graphql.NewList(UserProfileType),
-			Args: graphql.FieldConfigArgument{
-				"page":  &graphql.ArgumentConfig{Type: graphql.Int},
-				"limit": &graphql.ArgumentConfig{Type: graphql.Int},
-				"order": &graphql.ArgumentConfig{Type: graphql.String},
-				"where": &graphql.ArgumentConfig{Type: UserProfileWhereInputType},
-			},
-			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				return resolver.ResolveMultiple("UserProfile", p)
-			},
-		},
-		
-		"Post": &graphql.Field{
-			Type: PostType,
-			Args: graphql.FieldConfigArgument{
-				"id": &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.ID)},
-			},
-			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				return resolver.ResolveSingle("Post", p)
-			},
-		},
-		"Posts": &graphql.Field{
-			Type: graphql.NewList(PostType),
-			Args: graphql.FieldConfigArgument{
-				"page":  &graphql.ArgumentConfig{Type: graphql.Int},
-				"limit": &graphql.ArgumentConfig{Type: graphql.Int},
-				"order": &graphql.ArgumentConfig{Type: graphql.String},
-				"where": &graphql.ArgumentConfig{Type: PostWhereInputType},
-			},
-			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				return resolver.ResolveMultiple("Post", p)
-			},
-		},
-		
-		"Collection": &graphql.Field{
-			Type: CollectionType,
-			Args: graphql.FieldConfigArgument{
-				"id": &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.ID)},
-			},
-			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				return resolver.ResolveSingle("Collection", p)
-			},
-		},
-		"Collections": &graphql.Field{
-			Type: graphql.NewList(CollectionType),
-			Args: graphql.FieldConfigArgument{
-				"page":  &graphql.ArgumentConfig{Type: graphql.Int},
-				"limit": &graphql.ArgumentConfig{Type: graphql.Int},
-				"order": &graphql.ArgumentConfig{Type: graphql.String},
-				"where": &graphql.ArgumentConfig{Type: CollectionWhereInputType},
-			},
-			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				return resolver.ResolveMultiple("Collection", p)
-			},
-		},
-		
-		"Transfer": &graphql.Field{
-			Type: TransferType,
-			Args: graphql.FieldConfigArgument{
-				"id": &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.ID)},
-			},
-			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				return resolver.ResolveSingle("Transfer", p)
-			},
-		},
-		"Transfers": &graphql.Field{
-			Type: graphql.NewList(TransferType),
-			Args: graphql.FieldConfigArgument{
-				"page":  &graphql.ArgumentConfig{Type: graphql.Int},
-				"limit": &graphql.ArgumentConfig{Type: graphql.Int},
-				"order": &graphql.ArgumentConfig{Type: graphql.String},
-				"where": &graphql.ArgumentConfig{Type: TransferWhereInputType},
-			},
-			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				return resolver.ResolveMultiple("Transfer", p)
 			},
 		},
 		

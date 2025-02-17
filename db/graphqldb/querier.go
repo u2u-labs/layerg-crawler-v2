@@ -9,31 +9,23 @@ import (
 )
 
 type Querier interface {
-	CreateCollection(ctx context.Context, arg CreateCollectionParams) (Collection, error)
-	CreatePost(ctx context.Context, arg CreatePostParams) (Post, error)
-	CreateTransfer(ctx context.Context, arg CreateTransferParams) (Transfer, error)
-	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
-	CreateUserProfile(ctx context.Context, arg CreateUserProfileParams) (UserProfile, error)
-	DeleteCollection(ctx context.Context, id string) error
-	DeletePost(ctx context.Context, id string) error
-	DeleteTransfer(ctx context.Context, id string) error
-	DeleteUser(ctx context.Context, id string) error
-	DeleteUserProfile(ctx context.Context, id string) error
-	GetCollection(ctx context.Context, id string) (Collection, error)
-	GetPost(ctx context.Context, id string) (Post, error)
-	GetTransfer(ctx context.Context, id string) (Transfer, error)
+	CreateItem(ctx context.Context, arg CreateItemParams) (Item, error)
+	CreateMetadataUpdateRecord(ctx context.Context, arg CreateMetadataUpdateRecordParams) (MetadataUpdateRecord, error)
+	CreateUser(ctx context.Context, id string) (User, error)
+	DeleteItem(ctx context.Context, id string) error
+	DeleteMetadataUpdateRecord(ctx context.Context, id string) error
+	GetItem(ctx context.Context, id string) (Item, error)
+	GetMetadataUpdateRecord(ctx context.Context, id string) (MetadataUpdateRecord, error)
+	// Add a new query to get or create user
+	GetOrCreateUser(ctx context.Context, id string) (User, error)
 	GetUser(ctx context.Context, id string) (User, error)
-	GetUserProfile(ctx context.Context, id string) (UserProfile, error)
-	ListCollection(ctx context.Context) ([]Collection, error)
-	ListPost(ctx context.Context) ([]Post, error)
-	ListTransfer(ctx context.Context) ([]Transfer, error)
+	ListItem(ctx context.Context) ([]Item, error)
+	ListMetadataUpdateRecord(ctx context.Context) ([]MetadataUpdateRecord, error)
 	ListUser(ctx context.Context) ([]User, error)
-	ListUserProfile(ctx context.Context) ([]UserProfile, error)
-	UpdateCollection(ctx context.Context, arg UpdateCollectionParams) (Collection, error)
-	UpdatePost(ctx context.Context, arg UpdatePostParams) (Post, error)
-	UpdateTransfer(ctx context.Context, arg UpdateTransferParams) (Transfer, error)
-	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
-	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (UserProfile, error)
+	UpdateItem(ctx context.Context, arg UpdateItemParams) (Item, error)
+	UpdateMetadataUpdateRecord(ctx context.Context, arg UpdateMetadataUpdateRecordParams) (MetadataUpdateRecord, error)
+	// Skip update query generation as there are no updateable fields
+	UpdateUser(ctx context.Context, id string) error
 }
 
 var _ Querier = (*Queries)(nil)

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 
@@ -87,11 +88,20 @@ func GenerateQueryService(schemaPath string) error {
 	if err = tpl.Execute(&buf, genData); err != nil {
 		log.Fatal(err)
 	}
-	os.MkdirAll("generated", 0755)
-	if err = ioutil.WriteFile("generated/query/generated.go", buf.Bytes(), 0644); err != nil {
-		log.Fatal(err)
+
+	// Create directories if they don't exist
+	queryDir := "generated/query"
+	if err := os.MkdirAll(queryDir, 0755); err != nil {
+		return fmt.Errorf("failed to create query directory: %w", err)
 	}
-	fmt.Println("Generated code in generated/query/generated.go")
+
+	// Write the generated code
+	outputPath := filepath.Join(queryDir, "generated.go")
+	if err = ioutil.WriteFile(outputPath, buf.Bytes(), 0644); err != nil {
+		return fmt.Errorf("failed to write generated file: %w", err)
+	}
+
+	fmt.Println("Generated code in", outputPath)
 	return nil
 }
 

@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/unicornultrafoundation/go-u2u/ethclient"
@@ -55,6 +56,21 @@ func ProcessLatestBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *
 		return err
 	}
 	sugar.Infow("Processing latest blocks", "chain", chain.Chain+" "+chain.Name, "latest", latest)
+
+	// Load crawler config to get contract addresses
+	crawlerConfig, err := loadCrawlerConfig()
+	if err != nil {
+		sugar.Errorw("Failed to load crawler config", "err", err)
+		return err
+	}
+
+	// Get contract addresses to monitor from config
+	contractAddresses := make(map[string]bool)
+	for _, ds := range crawlerConfig.DataSources {
+		contractAddresses[strings.ToLower(ds.Options.Address)] = true
+		sugar.Infow("Monitoring contract", "address", ds.Options.Address)
+	}
+
 	// Process each block between
 	for i := chain.LatestBlock + 1; i <= int64(latest); i++ {
 		if i%50 == 0 {
@@ -75,10 +91,20 @@ func ProcessLatestBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *
 				continue
 			}
 
-			// Route each log to its handler
+			// Route each log to its handler, but only for monitored contracts
 			for _, log := range receipt.Logs {
+				// Check if this log is from a contract we're monitoring
+				// Convert addresses to lowercase for comparison
+				if !contractAddresses[strings.ToLower(log.Address.Hex())] {
+					continue
+				}
+
 				if err := registry.Route(ctx, log); err != nil {
-					sugar.Debugw("Failed to handle event", "err", err, "tx", tx.Hash())
+					sugar.Debugw("Failed to handle event",
+						"err", err,
+						"tx", tx.Hash(),
+						"contract", log.Address.Hex(),
+					)
 					continue
 				}
 			}

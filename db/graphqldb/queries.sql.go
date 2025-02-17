@@ -7,333 +7,167 @@ package graphqldb
 
 import (
 	"context"
-	"database/sql"
 )
 
-const createCollection = `-- name: CreateCollection :one
-INSERT INTO "collection" ("id", "address", "type") VALUES ($1, $2, $3) RETURNING id, address, type, created_at
+const createItem = `-- name: CreateItem :one
+INSERT INTO "item" ("id", "token_id", "token_uri", "owner_id") VALUES ($1, $2, $3, $4) RETURNING id, token_id, token_uri, owner_id, created_at, user_id
 `
 
-type CreateCollectionParams struct {
-	ID      string         `json:"id"`
-	Address string         `json:"address"`
-	Type    sql.NullString `json:"type"`
+type CreateItemParams struct {
+	ID       string `json:"id"`
+	TokenID  string `json:"token_id"`
+	TokenUri string `json:"token_uri"`
+	OwnerID  string `json:"owner_id"`
 }
 
-func (q *Queries) CreateCollection(ctx context.Context, arg CreateCollectionParams) (Collection, error) {
-	row := q.db.QueryRowContext(ctx, createCollection, arg.ID, arg.Address, arg.Type)
-	var i Collection
-	err := row.Scan(
-		&i.ID,
-		&i.Address,
-		&i.Type,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const createPost = `-- name: CreatePost :one
-INSERT INTO "post" ("id", "title", "content", "published_date") VALUES ($1, $2, $3, $4) RETURNING id, title, content, published_date, author_id, created_at, user_id
-`
-
-type CreatePostParams struct {
-	ID            string         `json:"id"`
-	Title         string         `json:"title"`
-	Content       sql.NullString `json:"content"`
-	PublishedDate sql.NullTime   `json:"published_date"`
-}
-
-func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, error) {
-	row := q.db.QueryRowContext(ctx, createPost,
+func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (Item, error) {
+	row := q.db.QueryRowContext(ctx, createItem,
 		arg.ID,
-		arg.Title,
-		arg.Content,
-		arg.PublishedDate,
+		arg.TokenID,
+		arg.TokenUri,
+		arg.OwnerID,
 	)
-	var i Post
+	var i Item
 	err := row.Scan(
 		&i.ID,
-		&i.Title,
-		&i.Content,
-		&i.PublishedDate,
-		&i.AuthorID,
+		&i.TokenID,
+		&i.TokenUri,
+		&i.OwnerID,
 		&i.CreatedAt,
 		&i.UserID,
 	)
 	return i, err
 }
 
-const createTransfer = `-- name: CreateTransfer :one
-INSERT INTO "transfer" ("id", "from", "to", "amount", "timestamp") VALUES ($1, $2, $3, $4, $5) RETURNING id, "from", "to", amount, timestamp, created_at
+const createMetadataUpdateRecord = `-- name: CreateMetadataUpdateRecord :one
+INSERT INTO "metadata_update_record" ("id", "token_id", "actor_id") VALUES ($1, $2, $3) RETURNING id, token_id, actor_id, created_at
 `
 
-type CreateTransferParams struct {
-	ID        string         `json:"id"`
-	From      string         `json:"from"`
-	To        string         `json:"to"`
-	Amount    sql.NullString `json:"amount"`
-	Timestamp sql.NullTime   `json:"timestamp"`
+type CreateMetadataUpdateRecordParams struct {
+	ID      string `json:"id"`
+	TokenID string `json:"token_id"`
+	ActorID string `json:"actor_id"`
 }
 
-func (q *Queries) CreateTransfer(ctx context.Context, arg CreateTransferParams) (Transfer, error) {
-	row := q.db.QueryRowContext(ctx, createTransfer,
-		arg.ID,
-		arg.From,
-		arg.To,
-		arg.Amount,
-		arg.Timestamp,
-	)
-	var i Transfer
+func (q *Queries) CreateMetadataUpdateRecord(ctx context.Context, arg CreateMetadataUpdateRecordParams) (MetadataUpdateRecord, error) {
+	row := q.db.QueryRowContext(ctx, createMetadataUpdateRecord, arg.ID, arg.TokenID, arg.ActorID)
+	var i MetadataUpdateRecord
 	err := row.Scan(
 		&i.ID,
-		&i.From,
-		&i.To,
-		&i.Amount,
-		&i.Timestamp,
+		&i.TokenID,
+		&i.ActorID,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO "user" ("id", "name", "email", "created_date", "is_active") VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, created_date, is_active, profile_id, created_at
+INSERT INTO "user" ("id") VALUES ($1) RETURNING id, created_at
 `
 
-type CreateUserParams struct {
-	ID          string         `json:"id"`
-	Name        string         `json:"name"`
-	Email       sql.NullString `json:"email"`
-	CreatedDate sql.NullTime   `json:"created_date"`
-	IsActive    sql.NullBool   `json:"is_active"`
-}
-
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, createUser,
-		arg.ID,
-		arg.Name,
-		arg.Email,
-		arg.CreatedDate,
-		arg.IsActive,
-	)
+func (q *Queries) CreateUser(ctx context.Context, id string) (User, error) {
+	row := q.db.QueryRowContext(ctx, createUser, id)
 	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Email,
-		&i.CreatedDate,
-		&i.IsActive,
-		&i.ProfileID,
-		&i.CreatedAt,
-	)
+	err := row.Scan(&i.ID, &i.CreatedAt)
 	return i, err
 }
 
-const createUserProfile = `-- name: CreateUserProfile :one
-INSERT INTO "user_profile" ("id", "bio", "avatar_url") VALUES ($1, $2, $3) RETURNING id, bio, avatar_url, created_at
+const deleteItem = `-- name: DeleteItem :exec
+DELETE FROM "item" WHERE id = $1
 `
 
-type CreateUserProfileParams struct {
-	ID        string         `json:"id"`
-	Bio       sql.NullString `json:"bio"`
-	AvatarUrl sql.NullString `json:"avatar_url"`
+func (q *Queries) DeleteItem(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, deleteItem, id)
+	return err
 }
 
-func (q *Queries) CreateUserProfile(ctx context.Context, arg CreateUserProfileParams) (UserProfile, error) {
-	row := q.db.QueryRowContext(ctx, createUserProfile, arg.ID, arg.Bio, arg.AvatarUrl)
-	var i UserProfile
+const deleteMetadataUpdateRecord = `-- name: DeleteMetadataUpdateRecord :exec
+DELETE FROM "metadata_update_record" WHERE id = $1
+`
+
+func (q *Queries) DeleteMetadataUpdateRecord(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, deleteMetadataUpdateRecord, id)
+	return err
+}
+
+const getItem = `-- name: GetItem :one
+SELECT id, token_id, token_uri, owner_id, created_at, user_id FROM "item" WHERE id = $1
+`
+
+func (q *Queries) GetItem(ctx context.Context, id string) (Item, error) {
+	row := q.db.QueryRowContext(ctx, getItem, id)
+	var i Item
 	err := row.Scan(
 		&i.ID,
-		&i.Bio,
-		&i.AvatarUrl,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const deleteCollection = `-- name: DeleteCollection :exec
-DELETE FROM "collection" WHERE id = $1
-`
-
-func (q *Queries) DeleteCollection(ctx context.Context, id string) error {
-	_, err := q.db.ExecContext(ctx, deleteCollection, id)
-	return err
-}
-
-const deletePost = `-- name: DeletePost :exec
-DELETE FROM "post" WHERE id = $1
-`
-
-func (q *Queries) DeletePost(ctx context.Context, id string) error {
-	_, err := q.db.ExecContext(ctx, deletePost, id)
-	return err
-}
-
-const deleteTransfer = `-- name: DeleteTransfer :exec
-DELETE FROM "transfer" WHERE id = $1
-`
-
-func (q *Queries) DeleteTransfer(ctx context.Context, id string) error {
-	_, err := q.db.ExecContext(ctx, deleteTransfer, id)
-	return err
-}
-
-const deleteUser = `-- name: DeleteUser :exec
-DELETE FROM "user" WHERE id = $1
-`
-
-func (q *Queries) DeleteUser(ctx context.Context, id string) error {
-	_, err := q.db.ExecContext(ctx, deleteUser, id)
-	return err
-}
-
-const deleteUserProfile = `-- name: DeleteUserProfile :exec
-DELETE FROM "user_profile" WHERE id = $1
-`
-
-func (q *Queries) DeleteUserProfile(ctx context.Context, id string) error {
-	_, err := q.db.ExecContext(ctx, deleteUserProfile, id)
-	return err
-}
-
-const getCollection = `-- name: GetCollection :one
-SELECT id, address, type, created_at FROM "collection" WHERE id = $1
-`
-
-func (q *Queries) GetCollection(ctx context.Context, id string) (Collection, error) {
-	row := q.db.QueryRowContext(ctx, getCollection, id)
-	var i Collection
-	err := row.Scan(
-		&i.ID,
-		&i.Address,
-		&i.Type,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const getPost = `-- name: GetPost :one
-SELECT id, title, content, published_date, author_id, created_at, user_id FROM "post" WHERE id = $1
-`
-
-func (q *Queries) GetPost(ctx context.Context, id string) (Post, error) {
-	row := q.db.QueryRowContext(ctx, getPost, id)
-	var i Post
-	err := row.Scan(
-		&i.ID,
-		&i.Title,
-		&i.Content,
-		&i.PublishedDate,
-		&i.AuthorID,
+		&i.TokenID,
+		&i.TokenUri,
+		&i.OwnerID,
 		&i.CreatedAt,
 		&i.UserID,
 	)
 	return i, err
 }
 
-const getTransfer = `-- name: GetTransfer :one
-SELECT id, "from", "to", amount, timestamp, created_at FROM "transfer" WHERE id = $1
+const getMetadataUpdateRecord = `-- name: GetMetadataUpdateRecord :one
+SELECT id, token_id, actor_id, created_at FROM "metadata_update_record" WHERE id = $1
 `
 
-func (q *Queries) GetTransfer(ctx context.Context, id string) (Transfer, error) {
-	row := q.db.QueryRowContext(ctx, getTransfer, id)
-	var i Transfer
+func (q *Queries) GetMetadataUpdateRecord(ctx context.Context, id string) (MetadataUpdateRecord, error) {
+	row := q.db.QueryRowContext(ctx, getMetadataUpdateRecord, id)
+	var i MetadataUpdateRecord
 	err := row.Scan(
 		&i.ID,
-		&i.From,
-		&i.To,
-		&i.Amount,
-		&i.Timestamp,
+		&i.TokenID,
+		&i.ActorID,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
+const getOrCreateUser = `-- name: GetOrCreateUser :one
+INSERT INTO "user" ("id") 
+VALUES ($1) 
+ON CONFLICT (id) DO UPDATE SET id = EXCLUDED.id
+RETURNING id, created_at
+`
+
+// Add a new query to get or create user
+func (q *Queries) GetOrCreateUser(ctx context.Context, id string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getOrCreateUser, id)
+	var i User
+	err := row.Scan(&i.ID, &i.CreatedAt)
+	return i, err
+}
+
 const getUser = `-- name: GetUser :one
-SELECT id, name, email, created_date, is_active, profile_id, created_at FROM "user" WHERE id = $1
+SELECT id, created_at FROM "user" WHERE id = $1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id string) (User, error) {
 	row := q.db.QueryRowContext(ctx, getUser, id)
 	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Email,
-		&i.CreatedDate,
-		&i.IsActive,
-		&i.ProfileID,
-		&i.CreatedAt,
-	)
+	err := row.Scan(&i.ID, &i.CreatedAt)
 	return i, err
 }
 
-const getUserProfile = `-- name: GetUserProfile :one
-SELECT id, bio, avatar_url, created_at FROM "user_profile" WHERE id = $1
+const listItem = `-- name: ListItem :many
+SELECT id, token_id, token_uri, owner_id, created_at, user_id FROM "item"
 `
 
-func (q *Queries) GetUserProfile(ctx context.Context, id string) (UserProfile, error) {
-	row := q.db.QueryRowContext(ctx, getUserProfile, id)
-	var i UserProfile
-	err := row.Scan(
-		&i.ID,
-		&i.Bio,
-		&i.AvatarUrl,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const listCollection = `-- name: ListCollection :many
-SELECT id, address, type, created_at FROM "collection"
-`
-
-func (q *Queries) ListCollection(ctx context.Context) ([]Collection, error) {
-	rows, err := q.db.QueryContext(ctx, listCollection)
+func (q *Queries) ListItem(ctx context.Context) ([]Item, error) {
+	rows, err := q.db.QueryContext(ctx, listItem)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Collection{}
+	items := []Item{}
 	for rows.Next() {
-		var i Collection
+		var i Item
 		if err := rows.Scan(
 			&i.ID,
-			&i.Address,
-			&i.Type,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listPost = `-- name: ListPost :many
-SELECT id, title, content, published_date, author_id, created_at, user_id FROM "post"
-`
-
-func (q *Queries) ListPost(ctx context.Context) ([]Post, error) {
-	rows, err := q.db.QueryContext(ctx, listPost)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []Post{}
-	for rows.Next() {
-		var i Post
-		if err := rows.Scan(
-			&i.ID,
-			&i.Title,
-			&i.Content,
-			&i.PublishedDate,
-			&i.AuthorID,
+			&i.TokenID,
+			&i.TokenUri,
+			&i.OwnerID,
 			&i.CreatedAt,
 			&i.UserID,
 		); err != nil {
@@ -350,25 +184,23 @@ func (q *Queries) ListPost(ctx context.Context) ([]Post, error) {
 	return items, nil
 }
 
-const listTransfer = `-- name: ListTransfer :many
-SELECT id, "from", "to", amount, timestamp, created_at FROM "transfer"
+const listMetadataUpdateRecord = `-- name: ListMetadataUpdateRecord :many
+SELECT id, token_id, actor_id, created_at FROM "metadata_update_record"
 `
 
-func (q *Queries) ListTransfer(ctx context.Context) ([]Transfer, error) {
-	rows, err := q.db.QueryContext(ctx, listTransfer)
+func (q *Queries) ListMetadataUpdateRecord(ctx context.Context) ([]MetadataUpdateRecord, error) {
+	rows, err := q.db.QueryContext(ctx, listMetadataUpdateRecord)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Transfer{}
+	items := []MetadataUpdateRecord{}
 	for rows.Next() {
-		var i Transfer
+		var i MetadataUpdateRecord
 		if err := rows.Scan(
 			&i.ID,
-			&i.From,
-			&i.To,
-			&i.Amount,
-			&i.Timestamp,
+			&i.TokenID,
+			&i.ActorID,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -385,7 +217,7 @@ func (q *Queries) ListTransfer(ctx context.Context) ([]Transfer, error) {
 }
 
 const listUser = `-- name: ListUser :many
-SELECT id, name, email, created_date, is_active, profile_id, created_at FROM "user"
+SELECT id, created_at FROM "user"
 `
 
 func (q *Queries) ListUser(ctx context.Context) ([]User, error) {
@@ -397,15 +229,7 @@ func (q *Queries) ListUser(ctx context.Context) ([]User, error) {
 	items := []User{}
 	for rows.Next() {
 		var i User
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Email,
-			&i.CreatedDate,
-			&i.IsActive,
-			&i.ProfileID,
-			&i.CreatedAt,
-		); err != nil {
+		if err := rows.Scan(&i.ID, &i.CreatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -419,174 +243,65 @@ func (q *Queries) ListUser(ctx context.Context) ([]User, error) {
 	return items, nil
 }
 
-const listUserProfile = `-- name: ListUserProfile :many
-SELECT id, bio, avatar_url, created_at FROM "user_profile"
+const updateItem = `-- name: UpdateItem :one
+UPDATE "item" SET "token_id" = $2, "token_uri" = $3, "owner_id" = $4 WHERE id = $1 RETURNING id, token_id, token_uri, owner_id, created_at, user_id
 `
 
-func (q *Queries) ListUserProfile(ctx context.Context) ([]UserProfile, error) {
-	rows, err := q.db.QueryContext(ctx, listUserProfile)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []UserProfile{}
-	for rows.Next() {
-		var i UserProfile
-		if err := rows.Scan(
-			&i.ID,
-			&i.Bio,
-			&i.AvatarUrl,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type UpdateItemParams struct {
+	ID       string `json:"id"`
+	TokenID  string `json:"token_id"`
+	TokenUri string `json:"token_uri"`
+	OwnerID  string `json:"owner_id"`
 }
 
-const updateCollection = `-- name: UpdateCollection :one
-UPDATE "collection" SET "address" = $2, "type" = $3 WHERE id = $1 RETURNING id, address, type, created_at
-`
-
-type UpdateCollectionParams struct {
-	ID      string         `json:"id"`
-	Address string         `json:"address"`
-	Type    sql.NullString `json:"type"`
-}
-
-func (q *Queries) UpdateCollection(ctx context.Context, arg UpdateCollectionParams) (Collection, error) {
-	row := q.db.QueryRowContext(ctx, updateCollection, arg.ID, arg.Address, arg.Type)
-	var i Collection
-	err := row.Scan(
-		&i.ID,
-		&i.Address,
-		&i.Type,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const updatePost = `-- name: UpdatePost :one
-UPDATE "post" SET "title" = $2, "content" = $3, "published_date" = $4 WHERE id = $1 RETURNING id, title, content, published_date, author_id, created_at, user_id
-`
-
-type UpdatePostParams struct {
-	ID            string         `json:"id"`
-	Title         string         `json:"title"`
-	Content       sql.NullString `json:"content"`
-	PublishedDate sql.NullTime   `json:"published_date"`
-}
-
-func (q *Queries) UpdatePost(ctx context.Context, arg UpdatePostParams) (Post, error) {
-	row := q.db.QueryRowContext(ctx, updatePost,
+func (q *Queries) UpdateItem(ctx context.Context, arg UpdateItemParams) (Item, error) {
+	row := q.db.QueryRowContext(ctx, updateItem,
 		arg.ID,
-		arg.Title,
-		arg.Content,
-		arg.PublishedDate,
+		arg.TokenID,
+		arg.TokenUri,
+		arg.OwnerID,
 	)
-	var i Post
+	var i Item
 	err := row.Scan(
 		&i.ID,
-		&i.Title,
-		&i.Content,
-		&i.PublishedDate,
-		&i.AuthorID,
+		&i.TokenID,
+		&i.TokenUri,
+		&i.OwnerID,
 		&i.CreatedAt,
 		&i.UserID,
 	)
 	return i, err
 }
 
-const updateTransfer = `-- name: UpdateTransfer :one
-UPDATE "transfer" SET "from" = $2, "to" = $3, "amount" = $4, "timestamp" = $5 WHERE id = $1 RETURNING id, "from", "to", amount, timestamp, created_at
+const updateMetadataUpdateRecord = `-- name: UpdateMetadataUpdateRecord :one
+UPDATE "metadata_update_record" SET "token_id" = $2, "actor_id" = $3 WHERE id = $1 RETURNING id, token_id, actor_id, created_at
 `
 
-type UpdateTransferParams struct {
-	ID        string         `json:"id"`
-	From      string         `json:"from"`
-	To        string         `json:"to"`
-	Amount    sql.NullString `json:"amount"`
-	Timestamp sql.NullTime   `json:"timestamp"`
+type UpdateMetadataUpdateRecordParams struct {
+	ID      string `json:"id"`
+	TokenID string `json:"token_id"`
+	ActorID string `json:"actor_id"`
 }
 
-func (q *Queries) UpdateTransfer(ctx context.Context, arg UpdateTransferParams) (Transfer, error) {
-	row := q.db.QueryRowContext(ctx, updateTransfer,
-		arg.ID,
-		arg.From,
-		arg.To,
-		arg.Amount,
-		arg.Timestamp,
-	)
-	var i Transfer
+func (q *Queries) UpdateMetadataUpdateRecord(ctx context.Context, arg UpdateMetadataUpdateRecordParams) (MetadataUpdateRecord, error) {
+	row := q.db.QueryRowContext(ctx, updateMetadataUpdateRecord, arg.ID, arg.TokenID, arg.ActorID)
+	var i MetadataUpdateRecord
 	err := row.Scan(
 		&i.ID,
-		&i.From,
-		&i.To,
-		&i.Amount,
-		&i.Timestamp,
+		&i.TokenID,
+		&i.ActorID,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
-const updateUser = `-- name: UpdateUser :one
-UPDATE "user" SET "name" = $2, "email" = $3, "created_date" = $4, "is_active" = $5 WHERE id = $1 RETURNING id, name, email, created_date, is_active, profile_id, created_at
+const updateUser = `-- name: UpdateUser :exec
+
+DELETE FROM "user" WHERE id = $1
 `
 
-type UpdateUserParams struct {
-	ID          string         `json:"id"`
-	Name        string         `json:"name"`
-	Email       sql.NullString `json:"email"`
-	CreatedDate sql.NullTime   `json:"created_date"`
-	IsActive    sql.NullBool   `json:"is_active"`
-}
-
-func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, updateUser,
-		arg.ID,
-		arg.Name,
-		arg.Email,
-		arg.CreatedDate,
-		arg.IsActive,
-	)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Email,
-		&i.CreatedDate,
-		&i.IsActive,
-		&i.ProfileID,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const updateUserProfile = `-- name: UpdateUserProfile :one
-UPDATE "user_profile" SET "bio" = $2, "avatar_url" = $3 WHERE id = $1 RETURNING id, bio, avatar_url, created_at
-`
-
-type UpdateUserProfileParams struct {
-	ID        string         `json:"id"`
-	Bio       sql.NullString `json:"bio"`
-	AvatarUrl sql.NullString `json:"avatar_url"`
-}
-
-func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (UserProfile, error) {
-	row := q.db.QueryRowContext(ctx, updateUserProfile, arg.ID, arg.Bio, arg.AvatarUrl)
-	var i UserProfile
-	err := row.Scan(
-		&i.ID,
-		&i.Bio,
-		&i.AvatarUrl,
-		&i.CreatedAt,
-	)
-	return i, err
+// Skip update query generation as there are no updateable fields
+func (q *Queries) UpdateUser(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, updateUser, id)
+	return err
 }

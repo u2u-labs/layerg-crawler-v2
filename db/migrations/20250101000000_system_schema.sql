@@ -45,7 +45,7 @@ CREATE TABLE onchain_histories (
 );
 
 INSERT INTO chains (id, chain, name, rpc_url, chain_id, explorer, latest_block, block_time)
-VALUES (1, 'U2U', 'Nebulas Testnet', 'https://rpc-nebulas-testnet.uniultra.xyz', 2484, 'https://testnet.u2uscan.xyz/', 47984307, 500);
+-- VALUES (1, 'U2U', 'Nebulas Testnet', 'https://rpc-nebulas-testnet.uniultra.xyz', 2484, 'https://testnet.u2uscan.xyz/', 47984307, 500);
 -- Create enumeration type for backfill crawler status.
 -- CREATE TYPE crawler_status AS ENUM ('CRAWLING', 'CRAWLED');
 

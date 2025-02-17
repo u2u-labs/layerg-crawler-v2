@@ -2,9 +2,7 @@ package handlers
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
-	"time"
 
 	"go.uber.org/zap"
 
@@ -15,12 +13,12 @@ import (
 	"github.com/u2u-labs/layerg-crawler/generated/mappings"
 )
 
-// TransferHandler implements mappings.TransferHandler
 type TransferHandler struct {
 	*mappings.BaseTransferMapping
 }
-type ApprovalHandler struct {
-	*mappings.BaseApprovalMapping
+
+type MetadataUpdateHandler struct {
+	*mappings.BaseMetadataUpdateMapping
 }
 
 func NewTransferHandler(queries *db.Queries, gqlQueries *graphqldb.Queries, chainID int32, logger *zap.SugaredLogger) *TransferHandler {
@@ -28,63 +26,156 @@ func NewTransferHandler(queries *db.Queries, gqlQueries *graphqldb.Queries, chai
 		BaseTransferMapping: mappings.NewTransferMapping(queries, gqlQueries, chainID, logger),
 	}
 }
-func NewApprovalHandler(queries *db.Queries, gqlQueries *graphqldb.Queries, chainID int32, logger *zap.SugaredLogger) *ApprovalHandler {
-	return &ApprovalHandler{
-		BaseApprovalMapping: mappings.NewApprovalMapping(queries, gqlQueries, chainID, logger),
+
+func NewMetadataUpdateHandler(queries *db.Queries, gqlQueries *graphqldb.Queries, chainID int32, logger *zap.SugaredLogger) *MetadataUpdateHandler {
+	return &MetadataUpdateHandler{
+		BaseMetadataUpdateMapping: mappings.NewMetadataUpdateMapping(queries, gqlQueries, chainID, logger),
 	}
 }
 
-func (h *ApprovalHandler) HandleApproval(ctx context.Context, event *eventhandlers.Approval) error {
-	return nil
-}
-
-// HandleTransfer implements mappings.TransferHandler
 func (h *TransferHandler) HandleTransfer(ctx context.Context, event *eventhandlers.Transfer) error {
-	// Store the transfer in system database
-	// _, err := h.Queries.CreateOnchainHistory(ctx, db.CreateOnchainHistoryParams{
-	// 	From:      event.From.Hex(),
-	// 	To:        event.To.Hex(),
-	// 	ChainID:   h.ChainID,
-	// 	AssetID:   event.Raw.Address.Hex(),
-	// 	TxHash:    event.Raw.TxHash.Hex(),
-	// 	Receipt:   []byte("{}"),
-	// 	EventType: sql.NullString{String: "Transfer", Valid: true},
-	// 	Timestamp: time.Now(),
-	// })
 
-	// if err != nil {
-	// 	h.Logger.Errorw("Failed to store transfer",
-	// 		"chain_id", h.ChainID,
-	// 		"err", err,
-	// 		"tx", event.Raw.TxHash.Hex(),
-	// 	)
-	// 	return err
-	// }
-
-	// Create a Collection record in the GraphQL database
-	_, err := h.GQL.CreateTransfer(ctx, graphqldb.CreateTransferParams{
-		ID:        uuid.New().String(),
-		From:      event.From.Hex(),
-		To:        event.To.Hex(),
-		Amount:    sql.NullString{String: event.Value.String(), Valid: true},
-		Timestamp: sql.NullTime{Time: time.Now(), Valid: true},
-	})
-
+	fromUser, err := h.GQL.GetOrCreateUser(ctx, event.From.Hex())
 	if err != nil {
-		h.Logger.Errorw("Failed to create transfer record",
+		h.Logger.Errorw("Failed to ensure 'from' user exists",
 			"err", err,
-			"address", event.Raw.Address.Hex(),
-			"from", event.From.Hex(),
-			"to", event.To.Hex(),
-			"amount", event.Value.String(),
+			"address", event.From.Hex(),
 		)
-		return fmt.Errorf("failed to create transfer record: %w", err)
+		return fmt.Errorf("failed to ensure 'from' user exists: %w", err)
+	}
+
+	toUser, err := h.GQL.GetOrCreateUser(ctx, event.To.Hex())
+	if err != nil {
+		h.Logger.Errorw("Failed to ensure 'to' user exists",
+			"err", err,
+			"address", event.To.Hex(),
+		)
+		return fmt.Errorf("failed to ensure 'to' user exists: %w", err)
+	}
+
+	// Try to get existing item
+	tokenID := event.TokenId.String()
+	items, err := h.GQL.ListItem(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to list items: %w", err)
+	}
+
+	var existingItem graphqldb.Item
+	var itemExists bool
+	for _, item := range items {
+		if item.TokenID == tokenID {
+			existingItem = item
+			itemExists = true
+			break
+		}
+	}
+
+	if itemExists {
+		// Update existing item's owner
+		_, err = h.GQL.UpdateItem(ctx, graphqldb.UpdateItemParams{
+			ID:       existingItem.ID,
+			TokenID:  existingItem.TokenID,
+			TokenUri: existingItem.TokenUri,
+			OwnerID:  toUser.ID,
+		})
+		if err != nil {
+			h.Logger.Errorw("Failed to update item ownership",
+				"err", err,
+				"tokenId", tokenID,
+				"newOwner", toUser.ID,
+			)
+			return fmt.Errorf("failed to update item ownership: %w", err)
+		}
+	} else {
+		// Create new item
+		_, err = h.GQL.CreateItem(ctx, graphqldb.CreateItemParams{
+			ID:       uuid.New().String(),
+			TokenID:  tokenID,
+			TokenUri: "",
+			OwnerID:  toUser.ID,
+		})
+		if err != nil {
+			h.Logger.Errorw("Failed to create new item",
+				"err", err,
+				"tokenId", tokenID,
+				"owner", toUser.ID,
+			)
+			return fmt.Errorf("failed to create new item: %w", err)
+		}
 	}
 
 	h.Logger.Infow("Transfer event processed",
-		"from", event.From.Hex(),
-		"to", event.To.Hex(),
-		"amount", event.Value.String(),
+		"tokenId", tokenID,
+		"from", fromUser.ID,
+		"to", toUser.ID,
+		"contract", event.Raw.Address.Hex(),
+		"tx", event.Raw.TxHash.Hex(),
+	)
+
+	return nil
+}
+
+func (h *MetadataUpdateHandler) HandleMetadataUpdate(ctx context.Context, event *eventhandlers.MetadataUpdate) error {
+
+	actor := event.Raw.TxHash.Hex()
+
+	actorUser, err := h.GQL.GetOrCreateUser(ctx, actor)
+	if err != nil {
+		h.Logger.Errorw("Failed to ensure actor exists",
+			"err", err,
+			"address", actor,
+		)
+		return fmt.Errorf("failed to ensure actor exists: %w", err)
+	}
+
+	tokenID := event.TokenId.String()
+	_, err = h.GQL.CreateMetadataUpdateRecord(ctx, graphqldb.CreateMetadataUpdateRecordParams{
+		ID:      uuid.New().String(),
+		TokenID: tokenID,
+		ActorID: actorUser.ID,
+	})
+
+	if err != nil {
+		h.Logger.Errorw("Failed to create metadata update record",
+			"err", err,
+			"tokenId", tokenID,
+			"actor", actor,
+			"tx", event.Raw.TxHash.Hex(),
+		)
+		return fmt.Errorf("failed to create metadata update record: %w", err)
+	}
+
+	// Update the item's token URI if it exists
+	items, err := h.GQL.ListItem(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to list items: %w", err)
+	}
+
+	for _, item := range items {
+		if item.TokenID == tokenID {
+
+			newTokenUri := "" // TODO: Implement fetching token URI from contract
+
+			_, err = h.GQL.UpdateItem(ctx, graphqldb.UpdateItemParams{
+				ID:       item.ID,
+				TokenID:  item.TokenID,
+				TokenUri: newTokenUri,
+			})
+			if err != nil {
+				h.Logger.Errorw("Failed to update item token URI",
+					"err", err,
+					"tokenId", tokenID,
+					"newUri", newTokenUri,
+				)
+				return fmt.Errorf("failed to update item token URI: %w", err)
+			}
+			break
+		}
+	}
+
+	h.Logger.Infow("Metadata update event processed",
+		"tokenId", tokenID,
+		"actor", actor,
 		"contract", event.Raw.Address.Hex(),
 		"tx", event.Raw.TxHash.Hex(),
 	)

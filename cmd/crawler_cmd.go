@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hibiken/asynq"
@@ -17,6 +18,7 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
+	"github.com/google/uuid"
 	"github.com/u2u-labs/layerg-crawler/config"
 	"github.com/u2u-labs/layerg-crawler/db"
 	"github.com/u2u-labs/layerg-crawler/db/graphqldb"
@@ -50,12 +52,74 @@ func startCrawler(cmd *cobra.Command, args []string) {
 
 	sqlDb := dbCon.New(conn)
 
-	// Initialize system database from subgraph config
-	// if err := InitializeSystemFromConfig(ctx, sqlDb); err != nil {
-	// 	sugar.Errorw("Failed to initialize system from config", "err", err)
-	// 	return
-	// }
+	// Load crawler config
+	crawlerConfig, err := loadCrawlerConfig()
+	if err != nil {
+		sugar.Errorw("Failed to load crawler config", "err", err)
+		return
+	}
 
+	// Initialize chain from subgraph config
+	chainID, _ := strconv.ParseInt(crawlerConfig.Network.ChainId, 10, 32)
+	chainIDInt32 := int32(chainID)
+
+	// Find the lowest startBlock from all datasources
+	var lowestStartBlock int64
+	if len(crawlerConfig.DataSources) > 0 {
+		lowestStartBlock = crawlerConfig.DataSources[0].StartBlock
+		for _, ds := range crawlerConfig.DataSources {
+			if ds.StartBlock < lowestStartBlock {
+				lowestStartBlock = ds.StartBlock
+			}
+		}
+	}
+
+	// Create or update chain information
+	_, err = sqlDb.CreateChain(ctx, dbCon.CreateChainParams{
+		ID:          chainIDInt32,
+		Chain:       "ethereum",
+		Name:        crawlerConfig.Network.Name,
+		RpcUrl:      crawlerConfig.Network.Endpoint[0],
+		ChainID:     chainID,
+		Explorer:    "",
+		LatestBlock: lowestStartBlock,
+		BlockTime:   500,
+	})
+	if err != nil {
+		sugar.Errorw("Failed to create chain", "err", err)
+		return
+	}
+
+	// Initialize assets (contracts) from subgraph config
+	for _, ds := range crawlerConfig.DataSources {
+		startBlock := sql.NullInt64{
+			Int64: ds.StartBlock,
+			Valid: true,
+		}
+
+		_, err = sqlDb.CreateAsset(ctx, dbCon.CreateAssetParams{
+			ID:              uuid.New().String(),
+			ChainID:         chainIDInt32,
+			ContractAddress: strings.ToLower(ds.Options.Address),
+			InitialBlock:    startBlock,
+		})
+		if err != nil {
+			sugar.Errorw("Failed to create asset",
+				"err", err,
+				"address", ds.Options.Address,
+				"startBlock", ds.StartBlock,
+			)
+			return
+		}
+		sugar.Infow("Initialized contract",
+			"address", ds.Options.Address,
+			"startBlock", ds.StartBlock,
+		)
+	}
+
+	router := router.NewEventRouter(sqlDb, graphqldb.New(conn), sugar, chainIDInt32)
+
+	// Initialize Redis and continue with existing code...
 	rdb, err := db.NewRedisClient(&db.RedisConfig{
 		Url:      viper.GetString("REDIS_DB_URL"),
 		Db:       viper.GetInt("REDIS_DB"),
@@ -66,45 +130,11 @@ func startCrawler(cmd *cobra.Command, args []string) {
 	}
 
 	queueClient := asynq.NewClient(asynq.RedisClientOpt{Addr: viper.GetString("REDIS_DB_URL")})
-
 	defer queueClient.Close()
-
-	// Initialize event handling system
-	crawlerConfig, err := loadCrawlerConfig()
-	if err != nil {
-		sugar.Errorw("Failed to load crawler config", "err", err)
-		return
-	}
-	chainID, _ := strconv.ParseInt(crawlerConfig.Network.ChainId, 10, 32)
-	router := router.NewEventRouter(sqlDb, graphqldb.New(conn), sugar, int32(chainID))
-	// // Register handlers for each contract/event
-	// for _, ds := range crawlerConfig.DataSources {
-	// 	for _, h := range ds.Mapping.Handlers {
-	// 		if h.Kind == "EthereumHandlerKind.Event" && len(h.Filter.Topics) > 0 {
-	// 			chainID, _ := strconv.ParseInt(crawlerConfig.Network.ChainId, 10, 32)
-	// 			handler := getHandlerForEvent(h.Handler, sugar, sqlDb, graphqldb.New(conn), int32(chainID))
-
-	// 			eventSig := h.Filter.Topics[0]
-	// 			eventHash := eventhandlers.KeccakHash(eventSig)
-
-	// 			registry.RegisterHandler(eventHash, handler)
-
-	// 			sugar.Infow("Registered event handler",
-	// 				"event_hash", eventHash,
-	// 				"contract", ds.Options.Address)
-	// 		}
-	// 	}
-	// }
 
 	err = crawlSupportedChains(ctx, sugar, sqlDb, rdb, router)
 	if err != nil {
 		sugar.Errorw("Error init supported chains", "err", err)
-		return
-	}
-
-	// Get RPC URL from subgraph config
-	if len(crawlerConfig.DataSources) == 0 || len(crawlerConfig.Network.Endpoint) == 0 {
-		sugar.Errorw("No data sources or endpoints configured")
 		return
 	}
 
@@ -118,12 +148,6 @@ func startCrawler(cmd *cobra.Command, args []string) {
 	}
 	defer client.Close()
 
-	// Start watching blocks with the event registry
-	// if err := watchBlocks(ctx, sugar, client, registry); err != nil {
-	// 	sugar.Errorw("Failed watching blocks", "err", err)
-	// }
-
-	// Start processing new chains and their events
 	timer := time.NewTimer(config.RetriveAddedChainsAndAssetsInterval)
 	defer timer.Stop()
 	for {

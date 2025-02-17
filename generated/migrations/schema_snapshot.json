@@ -1,5 +1,71 @@
 [
   {
+    "Name": "Item",
+    "Fields": [
+      {
+        "Name": "id",
+        "Type": "ID",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": ""
+      },
+      {
+        "Name": "tokenId",
+        "Type": "BigInt",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": ""
+      },
+      {
+        "Name": "tokenUri",
+        "Type": "String",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": ""
+      },
+      {
+        "Name": "owner",
+        "Type": "User",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": "User"
+      }
+    ]
+  },
+  {
+    "Name": "MetadataUpdateRecord",
+    "Fields": [
+      {
+        "Name": "id",
+        "Type": "ID",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": ""
+      },
+      {
+        "Name": "tokenId",
+        "Type": "BigInt",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": ""
+      },
+      {
+        "Name": "actor",
+        "Type": "User",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "Relation": "User"
+      }
+    ]
+  },
+  {
     "Name": "User",
     "Fields": [
       {
@@ -11,200 +77,12 @@
         "Relation": ""
       },
       {
-        "Name": "name",
-        "Type": "String",
-        "IsNonNull": true,
-        "IsIndexed": true,
-        "IsUnique": false,
-        "Relation": ""
-      },
-      {
-        "Name": "email",
-        "Type": "String",
-        "IsNonNull": false,
-        "IsIndexed": true,
-        "IsUnique": false,
-        "Relation": ""
-      },
-      {
-        "Name": "createdDate",
-        "Type": "Date",
-        "IsNonNull": false,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "Relation": ""
-      },
-      {
-        "Name": "isActive",
-        "Type": "Boolean",
-        "IsNonNull": false,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "Relation": ""
-      },
-      {
-        "Name": "profile",
-        "Type": "UserProfile",
-        "IsNonNull": false,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "Relation": "UserProfile"
-      },
-      {
-        "Name": "posts",
-        "Type": "[Post!]",
+        "Name": "items",
+        "Type": "[Item!]",
         "IsNonNull": true,
         "IsIndexed": false,
         "IsUnique": false,
-        "Relation": "[Post!]"
-      }
-    ]
-  },
-  {
-    "Name": "UserProfile",
-    "Fields": [
-      {
-        "Name": "id",
-        "Type": "ID",
-        "IsNonNull": true,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "Relation": ""
-      },
-      {
-        "Name": "bio",
-        "Type": "String",
-        "IsNonNull": false,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "Relation": ""
-      },
-      {
-        "Name": "avatarUrl",
-        "Type": "String",
-        "IsNonNull": false,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "Relation": ""
-      }
-    ]
-  },
-  {
-    "Name": "Post",
-    "Fields": [
-      {
-        "Name": "id",
-        "Type": "ID",
-        "IsNonNull": true,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "Relation": ""
-      },
-      {
-        "Name": "title",
-        "Type": "String",
-        "IsNonNull": true,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "Relation": ""
-      },
-      {
-        "Name": "content",
-        "Type": "String",
-        "IsNonNull": false,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "Relation": ""
-      },
-      {
-        "Name": "publishedDate",
-        "Type": "Date",
-        "IsNonNull": false,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "Relation": ""
-      },
-      {
-        "Name": "author",
-        "Type": "User",
-        "IsNonNull": false,
-        "IsIndexed": true,
-        "IsUnique": false,
-        "Relation": "User"
-      }
-    ]
-  },
-  {
-    "Name": "Collection",
-    "Fields": [
-      {
-        "Name": "id",
-        "Type": "ID",
-        "IsNonNull": true,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "Relation": ""
-      },
-      {
-        "Name": "address",
-        "Type": "String",
-        "IsNonNull": true,
-        "IsIndexed": true,
-        "IsUnique": false,
-        "Relation": ""
-      },
-      {
-        "Name": "type",
-        "Type": "String",
-        "IsNonNull": false,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "Relation": ""
-      }
-    ]
-  },
-  {
-    "Name": "Transfer",
-    "Fields": [
-      {
-        "Name": "id",
-        "Type": "ID",
-        "IsNonNull": true,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "Relation": ""
-      },
-      {
-        "Name": "from",
-        "Type": "String",
-        "IsNonNull": true,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "Relation": ""
-      },
-      {
-        "Name": "to",
-        "Type": "String",
-        "IsNonNull": true,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "Relation": ""
-      },
-      {
-        "Name": "amount",
-        "Type": "BigInt",
-        "IsNonNull": false,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "Relation": ""
-      },
-      {
-        "Name": "timestamp",
-        "Type": "Date",
-        "IsNonNull": false,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "Relation": ""
+        "Relation": "[Item!]"
       }
     ]
   }

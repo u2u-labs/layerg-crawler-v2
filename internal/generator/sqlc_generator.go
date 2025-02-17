@@ -63,8 +63,15 @@ func GenerateSQLCQueries(entities []Entity, outputDir string) error {
 			listQueryName, tableName)
 		// Update query.
 		updateQueryName := fmt.Sprintf("Update%s", entity.Name)
-		updateQuery := fmt.Sprintf("-- name: %s :one\nUPDATE \"%s\" SET %s WHERE id = $1 RETURNING *;\n\n",
-			updateQueryName, tableName, strings.Join(updateAssignments, ", "))
+		var updateQuery string
+		if len(updateAssignments) == 0 {
+			// If there are no fields to update, skip generating the update query
+			updateQuery = fmt.Sprintf("-- name: %s :exec\n-- Skip update query generation as there are no updateable fields\n\n",
+				updateQueryName)
+		} else {
+			updateQuery = fmt.Sprintf("-- name: %s :one\nUPDATE \"%s\" SET %s WHERE id = $1 RETURNING *;\n\n",
+				updateQueryName, tableName, strings.Join(updateAssignments, ", "))
+		}
 		// Delete query.
 		deleteQueryName := fmt.Sprintf("Delete%s", entity.Name)
 		deleteQuery := fmt.Sprintf("-- name: %s :exec\nDELETE FROM \"%s\" WHERE id = $1;\n\n",

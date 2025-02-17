@@ -12,6 +12,7 @@ type CrawlerConfig struct {
 		File string `yaml:"file"`
 	} `yaml:"schema"`
 	Network struct {
+		Name     string   `yaml:"name"`
 		ChainId  string   `yaml:"chainId"`
 		Endpoint []string `yaml:"endpoint"`
 	} `yaml:"network"`
@@ -20,7 +21,6 @@ type CrawlerConfig struct {
 		Options    ContractConfig `yaml:"options"`
 		StartBlock int64          `yaml:"startBlock"`
 		Mapping    struct {
-			File     string `yaml:"file"`
 			Handlers []struct {
 				Kind    string `yaml:"kind"`
 				Handler string `yaml:"handler"`
@@ -35,9 +35,13 @@ type CrawlerConfig struct {
 }
 
 type ContractConfig struct {
-	Address string `yaml:"address"`
-	Abi     string `yaml:"abi"`
-	File    string `yaml:"file"`
+	Address string      `yaml:"address"`
+	Abis    []AbiConfig `yaml:"abis"`
+}
+
+type AbiConfig struct {
+	Name string `yaml:"name"`
+	File string `yaml:"file"`
 }
 
 // Event represents a parsed event from the config
