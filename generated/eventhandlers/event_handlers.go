@@ -33,6 +33,27 @@ func (h *DefaultHandler) HandleEvent(ctx context.Context, log *types.Log, logger
 }
 
 
+// MetadataUpdate represents the event data for MetadataUpdate(uint256)
+type MetadataUpdate struct {
+	
+	TokenId *big.Int // uint256
+	
+	Raw *types.Log
+}
+
+func UnpackMetadataUpdate(log *types.Log) (*MetadataUpdate, error) {
+	event := new(MetadataUpdate)
+	event.Raw = log
+
+	
+	
+	event.TokenId = new(big.Int).SetBytes(log.Data)
+	
+	
+
+	return event, nil
+}
+
 // Transfer represents the event data for Transfer(address,address,uint256)
 type Transfer struct {
 	
@@ -81,38 +102,17 @@ func UnpackTransfer(log *types.Log) (*Transfer, error) {
 	return event, nil
 }
 
-// MetadataUpdate represents the event data for MetadataUpdate(uint256)
-type MetadataUpdate struct {
-	
-	TokenId *big.Int // uint256
-	
-	Raw *types.Log
-}
-
-func UnpackMetadataUpdate(log *types.Log) (*MetadataUpdate, error) {
-	event := new(MetadataUpdate)
-	event.Raw = log
-
-	
-	
-	event.TokenId = new(big.Int).SetBytes(log.Data)
-	
-	
-
-	return event, nil
-}
-
 
 // EventSignatures maps event signatures to their hex representations
 var EventSignatures = map[string]string{
-	"Transfer(address,address,uint256)": common.HexToHash(KeccakHash("Transfer(address,address,uint256)")).Hex(),
 	"MetadataUpdate(uint256)": common.HexToHash(KeccakHash("MetadataUpdate(uint256)")).Hex(),
+	"Transfer(address,address,uint256)": common.HexToHash(KeccakHash("Transfer(address,address,uint256)")).Hex(),
 }
 
 // HandlerRegistry maps event signatures to their handlers
 var HandlerRegistry = map[string]EventHandler{
-	EventSignatures["Transfer(address,address,uint256)"]: &DefaultHandler{},
 	EventSignatures["MetadataUpdate(uint256)"]: &DefaultHandler{},
+	EventSignatures["Transfer(address,address,uint256)"]: &DefaultHandler{},
 }
 
 // KeccakHash returns the Keccak256 hash of a string
@@ -121,5 +121,5 @@ func KeccakHash(s string) string {
 }
 
 // Event signatures
-var TransferEventSignature = crypto.Keccak256Hash([]byte("Transfer(address,address,uint256)")).Hex()
 var MetadataUpdateEventSignature = crypto.Keccak256Hash([]byte("MetadataUpdate(uint256)")).Hex()
+var TransferEventSignature = crypto.Keccak256Hash([]byte("Transfer(address,address,uint256)")).Hex()
