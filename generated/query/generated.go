@@ -8,6 +8,37 @@ import (
 
 
 
+var StringFilterType = graphql.NewInputObject(graphql.InputObjectConfig{
+	Name: "StringFilter",
+	Fields: graphql.InputObjectConfigFieldMap{
+		"gte": &graphql.InputObjectFieldConfig{Type: graphql.String},
+		"gt":  &graphql.InputObjectFieldConfig{Type: graphql.String},
+		"eq":  &graphql.InputObjectFieldConfig{Type: graphql.String},
+		"lt":  &graphql.InputObjectFieldConfig{Type: graphql.String},
+		"lte": &graphql.InputObjectFieldConfig{Type: graphql.String},
+	},
+})
+var BigIntFilterType = graphql.NewInputObject(graphql.InputObjectConfig{
+	Name: "BigIntFilter",
+	Fields: graphql.InputObjectConfigFieldMap{
+		"gte": &graphql.InputObjectFieldConfig{Type: core.BigIntType},
+		"gt":  &graphql.InputObjectFieldConfig{Type: core.BigIntType},
+		"eq":  &graphql.InputObjectFieldConfig{Type: core.BigIntType},
+		"lt":  &graphql.InputObjectFieldConfig{Type: core.BigIntType},
+		"lte": &graphql.InputObjectFieldConfig{Type: core.BigIntType},
+	},
+})
+var IDFilterType = graphql.NewInputObject(graphql.InputObjectConfig{
+	Name: "IDFilter",
+	Fields: graphql.InputObjectConfigFieldMap{
+		"gte": &graphql.InputObjectFieldConfig{Type: graphql.ID},
+		"gt":  &graphql.InputObjectFieldConfig{Type: graphql.ID},
+		"eq":  &graphql.InputObjectFieldConfig{Type: graphql.ID},
+		"lt":  &graphql.InputObjectFieldConfig{Type: graphql.ID},
+		"lte": &graphql.InputObjectFieldConfig{Type: graphql.ID},
+	},
+})
+
 func CreateQueryFields(resolver *core.QueryResolver) graphql.Fields {
 	// Pre-declare all types to handle forward references
 	
@@ -23,21 +54,21 @@ func CreateQueryFields(resolver *core.QueryResolver) graphql.Fields {
 	ItemWhereInputType := graphql.NewInputObject(graphql.InputObjectConfig{
 		Name: "ItemWhereInput",
 		Fields: graphql.InputObjectConfigFieldMap{
-			"id": &graphql.InputObjectFieldConfig{Type: graphql.String},"tokenId": &graphql.InputObjectFieldConfig{Type: graphql.String},"tokenUri": &graphql.InputObjectFieldConfig{Type: graphql.String},"owner": &graphql.InputObjectFieldConfig{Type: graphql.String},
+			"id": &graphql.InputObjectFieldConfig{Type: IDFilterType},"tokenId": &graphql.InputObjectFieldConfig{Type: BigIntFilterType},"tokenUri": &graphql.InputObjectFieldConfig{Type: StringFilterType},"owner": &graphql.InputObjectFieldConfig{Type: StringFilterType},
 		},
 	})
 	
 	MetadataUpdateRecordWhereInputType := graphql.NewInputObject(graphql.InputObjectConfig{
 		Name: "MetadataUpdateRecordWhereInput",
 		Fields: graphql.InputObjectConfigFieldMap{
-			"id": &graphql.InputObjectFieldConfig{Type: graphql.String},"tokenId": &graphql.InputObjectFieldConfig{Type: graphql.String},"actor": &graphql.InputObjectFieldConfig{Type: graphql.String},
+			"id": &graphql.InputObjectFieldConfig{Type: IDFilterType},"tokenId": &graphql.InputObjectFieldConfig{Type: BigIntFilterType},"actor": &graphql.InputObjectFieldConfig{Type: StringFilterType},
 		},
 	})
 	
 	UserWhereInputType := graphql.NewInputObject(graphql.InputObjectConfig{
 		Name: "UserWhereInput",
 		Fields: graphql.InputObjectConfigFieldMap{
-			"id": &graphql.InputObjectFieldConfig{Type: graphql.String},"items": &graphql.InputObjectFieldConfig{Type: graphql.String},
+			"id": &graphql.InputObjectFieldConfig{Type: IDFilterType},"items": &graphql.InputObjectFieldConfig{Type: StringFilterType},
 		},
 	})
 	
