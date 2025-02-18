@@ -46,13 +46,13 @@ func (r *EventRouter) Route(ctx context.Context, log *types.Log) error {
             return fmt.Errorf("failed to unpack Transfer event: %w", err)
         }
         return handler.HandleTransfer(ctx, event)
-    case eventhandlers.ApprovalEventSignature:
-        handler := handlers.NewApprovalHandler(r.queries, r.gql, r.chainID, r.logger)
-        event, err := eventhandlers.UnpackApproval(log)
+    case eventhandlers.MetadataUpdateEventSignature:
+        handler := handlers.NewMetadataUpdateHandler(r.queries, r.gql, r.chainID, r.logger)
+        event, err := eventhandlers.UnpackMetadataUpdate(log)
         if err != nil {
-            return fmt.Errorf("failed to unpack Approval event: %w", err)
+            return fmt.Errorf("failed to unpack MetadataUpdate event: %w", err)
         }
-        return handler.HandleApproval(ctx, event)
+        return handler.HandleMetadataUpdate(ctx, event)
     default:
         r.logger.Debugw("No handler for event signature", "signature", signature)
         return nil

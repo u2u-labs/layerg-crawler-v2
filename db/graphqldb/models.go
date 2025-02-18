@@ -9,45 +9,23 @@ import (
 	"time"
 )
 
-type Collection struct {
+type Item struct {
 	ID        string         `json:"id"`
-	Address   string         `json:"address"`
-	Type      sql.NullString `json:"type"`
+	TokenID   string         `json:"token_id"`
+	TokenUri  string         `json:"token_uri"`
+	OwnerID   string         `json:"owner_id"`
 	CreatedAt time.Time      `json:"created_at"`
+	UserID    sql.NullString `json:"user_id"`
 }
 
-type Post struct {
-	ID            string         `json:"id"`
-	Title         string         `json:"title"`
-	Content       sql.NullString `json:"content"`
-	PublishedDate sql.NullTime   `json:"published_date"`
-	AuthorID      sql.NullString `json:"author_id"`
-	CreatedAt     time.Time      `json:"created_at"`
-	UserID        sql.NullString `json:"user_id"`
-}
-
-type Transfer struct {
-	ID        string         `json:"id"`
-	From      string         `json:"from"`
-	To        string         `json:"to"`
-	Amount    sql.NullString `json:"amount"`
-	Timestamp sql.NullTime   `json:"timestamp"`
-	CreatedAt time.Time      `json:"created_at"`
+type MetadataUpdateRecord struct {
+	ID        string    `json:"id"`
+	TokenID   string    `json:"token_id"`
+	ActorID   string    `json:"actor_id"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type User struct {
-	ID          string         `json:"id"`
-	Name        string         `json:"name"`
-	Email       sql.NullString `json:"email"`
-	CreatedDate sql.NullTime   `json:"created_date"`
-	IsActive    sql.NullBool   `json:"is_active"`
-	ProfileID   sql.NullString `json:"profile_id"`
-	CreatedAt   time.Time      `json:"created_at"`
-}
-
-type UserProfile struct {
-	ID        string         `json:"id"`
-	Bio       sql.NullString `json:"bio"`
-	AvatarUrl sql.NullString `json:"avatar_url"`
-	CreatedAt time.Time      `json:"created_at"`
+	ID        string    `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
 }

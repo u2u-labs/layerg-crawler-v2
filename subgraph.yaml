@@ -3,31 +3,30 @@ description: "This project serves as a starting point for an Ethereum indexer."
 schema:
   file: "./schema.graphql"
 network:
+  name: "nebulas"
   chainId: "2484"
   endpoint:
     - "https://rpc-nebulas-testnet.uniultra.xyz"
 dataSources:
   - kind: EthereumDatasourceKind.Runtime
-    startBlock: 47609080
+    startBlock: 16213720
     options:
-      abi: "erc20"
-      address: "0xd06A82F76d344A3158916034FBb1B9B33E929296"
-      file: "./abis/erc20.json"
+      address: "0x1b122eff77d9a54d6c773c971f6acb6aaa9f90a8"
+      abis:
+        - name: "URC721"
+          file: "./abis/URC721.json"
+        - name: "URC4906"
+          file: "./abis/URC4906.json"
     mapping:
-      file: "./cmd/handlers/transfer_handler.go"
       handlers:
-        - kind: EthereumHandlerKind.Call
-          handler: "HandleTransaction"
-          filter:
-            function: "approve(address spender, uint256 rawAmount)"
         - kind: EthereumHandlerKind.Event
-          handler: "HandleLog"
+          handler: "HandleTransfer"
           filter:
             topics:
               - "Transfer(address indexed from, address indexed to, uint256 amount)"
         - kind: EthereumHandlerKind.Event
-          handler: "HandleApprove"
+          handler: "MetadataUpdate"
           filter:
             topics:
-              - "Approval(address owner, address spender, uint256 value)"
+              - "MetadataUpdate(uint256 tokenId)"
 repository: "https://github.com/subquery/ethereum-subql-starter" 

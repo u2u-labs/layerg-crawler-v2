@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"unicode"
 )
 
 type EventHandlerConfig struct {
@@ -79,7 +80,7 @@ func (h *DefaultHandler) HandleEvent(ctx context.Context, log *types.Log, logger
 // {{.Name}} represents the event data for {{.Signature}}
 type {{.Name}} struct {
 	{{range .Params}}
-	{{title .Name}} {{.GoType}} // Capitalize field names
+	{{title .Name}} {{.GoType}} // {{.Type}}
 	{{end}}
 	Raw *types.Log
 }
@@ -109,24 +110,16 @@ func Unpack{{.Name}}(log *types.Log) (*{{.Name}}, error) {
 
 // EventSignatures maps event signatures to their hex representations
 var EventSignatures = map[string]string{
-{{range .Handlers}}
-{{if eq .Kind "EthereumHandlerKind.Event"}}
-	{{range .Topics}}
-	"{{.}}": common.HexToHash(KeccakHash("{{.}}")).Hex(),
-	{{end}}
-{{end}}
-{{end}}
+{{- range .Events}}
+	"{{.Signature}}": common.HexToHash(KeccakHash("{{.Signature}}")).Hex(),
+{{- end}}
 }
 
 // HandlerRegistry maps event signatures to their handlers
 var HandlerRegistry = map[string]EventHandler{
-{{range .Handlers}}
-{{if eq .Kind "EthereumHandlerKind.Event"}}
-	{{range .Topics}}
-	EventSignatures["{{.}}"]: &{{$.Handler}}{},
-	{{end}}
-{{end}}
-{{end}}
+{{- range .Events}}
+	EventSignatures["{{.Signature}}"]: &DefaultHandler{},
+{{- end}}
 }
 
 // KeccakHash returns the Keccak256 hash of a string
@@ -135,118 +128,149 @@ func KeccakHash(s string) string {
 }
 
 // Event signatures
-{{range .Events}}
+{{- range .Events}}
 var {{.Name}}EventSignature = crypto.Keccak256Hash([]byte("{{.Signature}}")).Hex()
-{{end}}
+{{- end}}
 `
+
+// Helper function to capitalize first letter
+func title(s string) string {
+	if s == "" {
+		return s
+	}
+	// Remove underscore prefix if exists
+	if s[0] == '_' {
+		s = s[1:]
+	}
+	// Capitalize first letter
+	r := []rune(s)
+	r[0] = unicode.ToUpper(r[0])
+	return string(r)
+}
 
 func getEventSignatureFromABI(config *CrawlerConfig, eventName string) (string, error) {
 	for _, ds := range config.DataSources {
-		abiPath := ds.Options.File
-		if !filepath.IsAbs(abiPath) {
-			abiPath = filepath.Join("../", abiPath)
-		}
+		// Iterate through all ABIs in the datasource
+		for _, abiConfig := range ds.Options.Abis {
+			abiPath := abiConfig.File
+			if !filepath.IsAbs(abiPath) {
+				abiPath = filepath.Join(".", abiPath)
+			}
 
-		abiFile, err := os.ReadFile(abiPath)
-		if err != nil {
-			return "", fmt.Errorf("failed to read ABI file %s: %w", abiPath, err)
-		}
+			abiFile, err := os.ReadFile(abiPath)
+			if err != nil {
+				continue // Try next ABI if this one fails
+			}
 
-		var abi ABI
-		if err := json.Unmarshal(abiFile, &abi); err != nil {
-			return "", fmt.Errorf("failed to parse ABI file %s: %w", abiPath, err)
-		}
+			var abi ABI
+			if err := json.Unmarshal(abiFile, &abi); err != nil {
+				continue // Try next ABI if parsing fails
+			}
 
-		// Find the event in ABI
-		for _, item := range abi {
-			if item.Type == "event" && item.Name == eventName {
-				// Build canonical event signature
-				var inputs []string
-				for _, input := range item.Inputs {
-					inputs = append(inputs, input.Type)
+			// Find the event in ABI
+			for _, item := range abi {
+				if item.Type == "event" && item.Name == eventName {
+					var inputs []string
+					for _, input := range item.Inputs {
+						inputs = append(inputs, input.Type)
+					}
+					return fmt.Sprintf("%s(%s)", eventName, strings.Join(inputs, ",")), nil
 				}
-				return fmt.Sprintf("%s(%s)", eventName, strings.Join(inputs, ",")), nil
 			}
 		}
 	}
-	return "", fmt.Errorf("event %s not found in ABI", eventName)
+	return "", fmt.Errorf("event %s not found in any ABI", eventName)
 }
 
 func GenerateEventHandlers(config *CrawlerConfig, outputDir string) error {
 	var handlers []EventHandlerConfig
+	// Use a map to deduplicate events
+	eventMap := make(map[string]struct {
+		Name      string
+		Signature string
+		Params    []EventParam
+	})
+
+	for _, ds := range config.DataSources {
+		for _, abiConfig := range ds.Options.Abis {
+			abiPath := abiConfig.File
+			if !filepath.IsAbs(abiPath) {
+				abiPath = filepath.Join(".", abiPath)
+			}
+
+			abiFile, err := os.ReadFile(abiPath)
+			if err != nil {
+				return fmt.Errorf("failed to read ABI file %s: %w", abiPath, err)
+			}
+
+			var abi ABI
+			if err := json.Unmarshal(abiFile, &abi); err != nil {
+				return fmt.Errorf("failed to parse ABI file %s: %w", abiPath, err)
+			}
+
+			// Process handlers and match with ABI events
+			for _, h := range ds.Mapping.Handlers {
+				if h.Kind == "EthereumHandlerKind.Event" {
+					for _, topic := range h.Filter.Topics {
+						name, _ := parseEventSignature(topic)
+						if name == "" {
+							continue
+						}
+
+						// Find event in ABI
+						for _, item := range abi {
+							if item.Type == "event" && item.Name == name {
+								var params []EventParam
+								for _, input := range item.Inputs {
+									params = append(params, EventParam{
+										Name:    input.Name,
+										Type:    input.Type,
+										Indexed: input.Indexed,
+										GoType:  getGoType(input.Type),
+									})
+								}
+
+								// Build canonical signature
+								var types []string
+								for _, input := range item.Inputs {
+									types = append(types, input.Type)
+								}
+								signature := fmt.Sprintf("%s(%s)", name, strings.Join(types, ","))
+
+								// Store in map to deduplicate
+								eventMap[name] = struct {
+									Name      string
+									Signature string
+									Params    []EventParam
+								}{
+									Name:      name,
+									Signature: signature,
+									Params:    params,
+								}
+								break
+							}
+						}
+					}
+				}
+				// Only add handler if it's not already added
+				handlers = append(handlers, EventHandlerConfig{
+					Kind:     h.Kind,
+					Handler:  h.Handler,
+					Function: h.Filter.Function,
+					Topics:   h.Filter.Topics,
+				})
+			}
+		}
+	}
+
+	// Convert map to slice
 	var events []struct {
 		Name      string
 		Signature string
 		Params    []EventParam
 	}
-
-	for _, ds := range config.DataSources {
-		// Read and parse ABI file
-		abiPath := ds.Options.File
-		if !filepath.IsAbs(abiPath) {
-			abiPath = filepath.Join(".", abiPath)
-		}
-
-		abiFile, err := os.ReadFile(abiPath)
-		if err != nil {
-			return fmt.Errorf("failed to read ABI file %s: %w", abiPath, err)
-		}
-
-		var abi ABI
-		if err := json.Unmarshal(abiFile, &abi); err != nil {
-			return fmt.Errorf("failed to parse ABI file %s: %w", abiPath, err)
-		}
-
-		// Process handlers and match with ABI events
-		for _, h := range ds.Mapping.Handlers {
-			if h.Kind == "EthereumHandlerKind.Event" {
-				for _, topic := range h.Filter.Topics {
-					name, _ := parseEventSignature(topic)
-					if name == "" {
-						continue
-					}
-
-					// Find event in ABI
-					for _, item := range abi {
-						if item.Type == "event" && item.Name == name {
-							var params []EventParam
-							for _, input := range item.Inputs {
-								params = append(params, EventParam{
-									Name:    input.Name,
-									Type:    input.Type,
-									Indexed: input.Indexed,
-									GoType:  getGoType(input.Type),
-								})
-							}
-
-							// Build canonical signature
-							var types []string
-							for _, input := range item.Inputs {
-								types = append(types, input.Type)
-							}
-							signature := fmt.Sprintf("%s(%s)", name, strings.Join(types, ","))
-
-							events = append(events, struct {
-								Name      string
-								Signature string
-								Params    []EventParam
-							}{
-								Name:      name,
-								Signature: signature,
-								Params:    params,
-							})
-							break
-						}
-					}
-				}
-			}
-			handlers = append(handlers, EventHandlerConfig{
-				Kind:     h.Kind,
-				Handler:  h.Handler,
-				Function: h.Filter.Function,
-				Topics:   h.Filter.Topics,
-			})
-		}
+	for _, event := range eventMap {
+		events = append(events, event)
 	}
 
 	data := struct {
@@ -273,7 +297,7 @@ func GenerateEventHandlers(config *CrawlerConfig, outputDir string) error {
 		"add": func(a, b int) int {
 			return a + b
 		},
-		"title": strings.Title,
+		"title": title,
 		"getEventName": func(topics []string) string {
 			if len(topics) == 0 {
 				return ""

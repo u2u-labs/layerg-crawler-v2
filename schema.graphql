@@ -1,38 +1,17 @@
-# schema.graphql
+type Item @entity {
+  id: ID!
+  tokenId: BigInt!
+  tokenUri: String!
+  owner: User!
+}
+
+type MetadataUpdateRecord @entity {
+  id: ID!
+  tokenId: BigInt!
+  actor: User!
+}
+
 type User @entity {
   id: ID!
-  name: String! @index(unique: true)
-  email: String @index
-  createdDate: Date
-  isActive: Boolean
-  profile: UserProfile
-  posts: [Post!]!
-}
-
-type UserProfile @entity {
-  id: ID!
-  bio: String
-  avatarUrl: String
-}
-
-type Post @entity {
-  id: ID!
-  title: String!
-  content: String
-  publishedDate: Date
-  author: User @index(unique: true)
-} 
-
-type Collection @entity {
-  id: ID!
-  address: String! @index(unique: true)
-  type: String
-}
-
-type Transfer @entity {
-  id: ID!
-  from: String!
-  to: String!
-  amount: BigInt
-  timestamp: Date
+  items: [Item!]! @derivedFrom(field: "owner")
 }

@@ -1,5 +1,35 @@
+-- name: CreateItem :one
+INSERT INTO "item" ("id", "token_id", "token_uri", "owner_id") VALUES ($1, $2, $3, $4) RETURNING *;
+
+-- name: GetItem :one
+SELECT * FROM "item" WHERE id = $1;
+
+-- name: ListItem :many
+SELECT * FROM "item";
+
+-- name: UpdateItem :one
+UPDATE "item" SET "token_id" = $2, "token_uri" = $3, "owner_id" = $4 WHERE id = $1 RETURNING *;
+
+-- name: DeleteItem :exec
+DELETE FROM "item" WHERE id = $1;
+
+-- name: CreateMetadataUpdateRecord :one
+INSERT INTO "metadata_update_record" ("id", "token_id", "actor_id") VALUES ($1, $2, $3) RETURNING *;
+
+-- name: GetMetadataUpdateRecord :one
+SELECT * FROM "metadata_update_record" WHERE id = $1;
+
+-- name: ListMetadataUpdateRecord :many
+SELECT * FROM "metadata_update_record";
+
+-- name: UpdateMetadataUpdateRecord :one
+UPDATE "metadata_update_record" SET "token_id" = $2, "actor_id" = $3 WHERE id = $1 RETURNING *;
+
+-- name: DeleteMetadataUpdateRecord :exec
+DELETE FROM "metadata_update_record" WHERE id = $1;
+
 -- name: CreateUser :one
-INSERT INTO "user" ("id", "name", "email", "created_date", "is_active") VALUES ($1, $2, $3, $4, $5) RETURNING *;
+INSERT INTO "user" ("id") VALUES ($1) RETURNING *;
 
 -- name: GetUser :one
 SELECT * FROM "user" WHERE id = $1;
@@ -7,69 +37,16 @@ SELECT * FROM "user" WHERE id = $1;
 -- name: ListUser :many
 SELECT * FROM "user";
 
--- name: UpdateUser :one
-UPDATE "user" SET "name" = $2, "email" = $3, "created_date" = $4, "is_active" = $5 WHERE id = $1 RETURNING *;
+-- name: UpdateUser :exec
+-- Skip update query generation as there are no updateable fields
 
 -- name: DeleteUser :exec
 DELETE FROM "user" WHERE id = $1;
 
--- name: CreateUserProfile :one
-INSERT INTO "user_profile" ("id", "bio", "avatar_url") VALUES ($1, $2, $3) RETURNING *;
-
--- name: GetUserProfile :one
-SELECT * FROM "user_profile" WHERE id = $1;
-
--- name: ListUserProfile :many
-SELECT * FROM "user_profile";
-
--- name: UpdateUserProfile :one
-UPDATE "user_profile" SET "bio" = $2, "avatar_url" = $3 WHERE id = $1 RETURNING *;
-
--- name: DeleteUserProfile :exec
-DELETE FROM "user_profile" WHERE id = $1;
-
--- name: CreatePost :one
-INSERT INTO "post" ("id", "title", "content", "published_date") VALUES ($1, $2, $3, $4) RETURNING *;
-
--- name: GetPost :one
-SELECT * FROM "post" WHERE id = $1;
-
--- name: ListPost :many
-SELECT * FROM "post";
-
--- name: UpdatePost :one
-UPDATE "post" SET "title" = $2, "content" = $3, "published_date" = $4 WHERE id = $1 RETURNING *;
-
--- name: DeletePost :exec
-DELETE FROM "post" WHERE id = $1;
-
--- name: CreateCollection :one
-INSERT INTO "collection" ("id", "address", "type") VALUES ($1, $2, $3) RETURNING *;
-
--- name: GetCollection :one
-SELECT * FROM "collection" WHERE id = $1;
-
--- name: ListCollection :many
-SELECT * FROM "collection";
-
--- name: UpdateCollection :one
-UPDATE "collection" SET "address" = $2, "type" = $3 WHERE id = $1 RETURNING *;
-
--- name: DeleteCollection :exec
-DELETE FROM "collection" WHERE id = $1;
-
--- name: CreateTransfer :one
-INSERT INTO "transfer" ("id", "from", "to", "amount", "timestamp") VALUES ($1, $2, $3, $4, $5) RETURNING *;
-
--- name: GetTransfer :one
-SELECT * FROM "transfer" WHERE id = $1;
-
--- name: ListTransfer :many
-SELECT * FROM "transfer";
-
--- name: UpdateTransfer :one
-UPDATE "transfer" SET "from" = $2, "to" = $3, "amount" = $4, "timestamp" = $5 WHERE id = $1 RETURNING *;
-
--- name: DeleteTransfer :exec
-DELETE FROM "transfer" WHERE id = $1;
+-- Add a new query to get or create user
+-- name: GetOrCreateUser :one
+INSERT INTO "user" ("id") 
+VALUES ($1) 
+ON CONFLICT (id) DO UPDATE SET id = EXCLUDED.id
+RETURNING *;
 
