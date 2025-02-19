@@ -3,8 +3,6 @@ package cmd
 import (
 	"context"
 	"database/sql"
-	"fmt"
-	"math/big"
 	"strconv"
 	"strings"
 	"time"
@@ -86,8 +84,8 @@ func startCrawler(cmd *cobra.Command, args []string) {
 		BlockTime:   500,
 	})
 	if err != nil {
-		sugar.Errorw("Failed to create chain", "err", err)
-		return
+		sugar.Warnw("Failed to create chain", "err", err)
+		// return
 	}
 
 	// Initialize assets (contracts) from subgraph config
@@ -104,12 +102,12 @@ func startCrawler(cmd *cobra.Command, args []string) {
 			InitialBlock:    startBlock,
 		})
 		if err != nil {
-			sugar.Errorw("Failed to create asset",
+			sugar.Warnw("Failed to create asset",
 				"err", err,
 				"address", ds.Options.Address,
 				"startBlock", ds.StartBlock,
 			)
-			return
+			// return
 		}
 		sugar.Infow("Initialized contract",
 			"address", ds.Options.Address,
@@ -260,109 +258,3 @@ func crawlSupportedChains(ctx context.Context, sugar *zap.SugaredLogger, q *dbCo
 	}
 	return nil
 }
-
-// func ProcessCrawlingBackfillCollection(ctx context.Context, sugar *zap.SugaredLogger, q *dbCon.Queries, rdb *redis.Client, queueClient *asynq.Client) error {
-// 	// Get all Backfill Collection with status CRAWLING
-// 	crawlingBackfill, err := q.GetCrawlingBackfillCrawler(ctx)
-
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	for _, c := range crawlingBackfill {
-// 		chain, err := q.GetChainById(ctx, c.ChainID)
-
-// 		client, err := initChainClient(&chain)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		go AddBackfillCrawlerTask(ctx, sugar, client, q, &chain, &c, queueClient)
-
-// 	}
-// 	return nil
-// }
-
-func watchBlocks(ctx context.Context, sugar *zap.SugaredLogger, client *ethclient.Client, registry *HandlerRegistry) error {
-	// Initialize with current block
-	latestBlock, err := client.BlockNumber(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get latest block: %w", err)
-	}
-
-	currentBlock := latestBlock
-
-	ticker := time.NewTicker(15 * time.Second) // Poll every 15 seconds
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			latestBlock, err := client.BlockNumber(ctx)
-			if err != nil {
-				sugar.Errorw("Failed to get latest block", "err", err)
-				continue
-			}
-
-			// Process new blocks
-			for blockNum := currentBlock + 1; blockNum <= latestBlock; blockNum++ {
-				block, err := client.BlockByNumber(ctx, big.NewInt(int64(blockNum)))
-				if err != nil {
-					sugar.Errorw("Failed to get block", "err", err, "blockNum", blockNum)
-					continue
-				}
-
-				// Process each transaction in the block
-				for _, tx := range block.Transactions() {
-					receipt, err := client.TransactionReceipt(ctx, tx.Hash())
-					if err != nil {
-						sugar.Errorw("Failed to get receipt", "err", err)
-						continue
-					}
-
-					// Route each log to its handler
-					for _, log := range receipt.Logs {
-						if err := registry.RouteEvent(ctx, log); err != nil {
-							sugar.Errorw("Failed to process event",
-								"err", err,
-								"contract", log.Address.Hex(),
-								"tx", log.TxHash.Hex(),
-							)
-							// Continue processing other logs even if one fails
-							continue
-						}
-					}
-				}
-
-				currentBlock = blockNum
-			}
-
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
-}
-
-// func getHandlerForEvent(handlerName string, sugar *zap.SugaredLogger, queries *dbCon.Queries, gqlQueries *graphqldb.Queries, chainID int32) EventHandler {
-// 	switch handlerName {
-// 	case "HandleLog":
-// 		return &handlerAdapter{
-// 			handler: handlers.NewTransferHandler(queries, gqlQueries, chainID, sugar),
-// 			logger:  sugar,
-// 		}
-// 	default:
-// 		return &handlerAdapter{
-// 			handler: &eventhandlers.DefaultHandler{},
-// 			logger:  sugar,
-// 		}
-// 	}
-// }
-
-// // handlerAdapter adapts the generated handler to our local EventHandler interface
-// type handlerAdapter struct {
-// 	handler eventhandlers.EventHandler
-// 	logger  *zap.SugaredLogger
-// }
-
-// func (a *handlerAdapter) HandleEvent(ctx context.Context, log *types.Log) error {
-// 	return a.handler.HandleEvent(ctx, log, a.logger)
-// }
