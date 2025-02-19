@@ -7,15 +7,6 @@ CREATE TABLE "user" (
 );
 
 
-CREATE TABLE "metadata_update_record" (
-    "id" TEXT PRIMARY KEY,
-    "token_id" NUMERIC NOT NULL,
-    "actor_id" TEXT NOT NULL,
-    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY ("actor_id") REFERENCES "user"("id") ON DELETE CASCADE
-);
-
-
 CREATE TABLE "item" (
     "id" TEXT PRIMARY KEY,
     "token_id" NUMERIC NOT NULL,
@@ -23,6 +14,15 @@ CREATE TABLE "item" (
     "owner_id" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY ("owner_id") REFERENCES "user"("id") ON DELETE CASCADE
+);
+
+
+CREATE TABLE "metadata_update_record" (
+    "id" TEXT PRIMARY KEY,
+    "token_id" NUMERIC NOT NULL,
+    "actor_id" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY ("actor_id") REFERENCES "user"("id") ON DELETE CASCADE
 );
 
 

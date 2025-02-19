@@ -16,8 +16,6 @@ type Querier interface {
 	DeleteMetadataUpdateRecord(ctx context.Context, id string) error
 	GetItem(ctx context.Context, id string) (Item, error)
 	GetMetadataUpdateRecord(ctx context.Context, id string) (MetadataUpdateRecord, error)
-	// Add a new query to get or create user
-	GetOrCreateUser(ctx context.Context, id string) (User, error)
 	GetUser(ctx context.Context, id string) (User, error)
 	ListItem(ctx context.Context) ([]Item, error)
 	ListMetadataUpdateRecord(ctx context.Context) ([]MetadataUpdateRecord, error)

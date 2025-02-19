@@ -124,21 +124,6 @@ func (q *Queries) GetMetadataUpdateRecord(ctx context.Context, id string) (Metad
 	return i, err
 }
 
-const getOrCreateUser = `-- name: GetOrCreateUser :one
-INSERT INTO "user" ("id") 
-VALUES ($1) 
-ON CONFLICT (id) DO UPDATE SET id = EXCLUDED.id
-RETURNING id, created_at
-`
-
-// Add a new query to get or create user
-func (q *Queries) GetOrCreateUser(ctx context.Context, id string) (User, error) {
-	row := q.db.QueryRowContext(ctx, getOrCreateUser, id)
-	var i User
-	err := row.Scan(&i.ID, &i.CreatedAt)
-	return i, err
-}
-
 const getUser = `-- name: GetUser :one
 SELECT id, created_at FROM "user" WHERE id = $1
 `

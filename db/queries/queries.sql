@@ -43,10 +43,3 @@ SELECT * FROM "user";
 -- name: DeleteUser :exec
 DELETE FROM "user" WHERE id = $1;
 
--- Add a new query to get or create user
--- name: GetOrCreateUser :one
-INSERT INTO "user" ("id") 
-VALUES ($1) 
-ON CONFLICT (id) DO UPDATE SET id = EXCLUDED.id
-RETURNING *;
-

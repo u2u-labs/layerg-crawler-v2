@@ -7,12 +7,14 @@ import (
 )
 
 type Field struct {
-	Name      string
-	Type      string
-	IsNonNull bool
-	IsIndexed bool
-	IsUnique  bool
-	Relation  string // non-scalar types are assumed to be relations
+	Name        string
+	Type        string
+	IsNonNull   bool
+	IsIndexed   bool
+	IsUnique    bool
+	IsList      bool
+	DerivedFrom bool
+	Relation    string // non-scalar types are assumed to be relations
 }
 
 type Entity struct {
@@ -70,6 +72,9 @@ func ParseGraphQLSchema(path string) ([]Entity, error) {
 					if strings.Contains(rest, "unique: true") {
 						field.IsUnique = true
 					}
+				}
+				if strings.Contains(rest, "@derivedFrom") {
+					field.DerivedFrom = true
 				}
 				if !isScalar(fieldType) {
 					field.Relation = fieldType

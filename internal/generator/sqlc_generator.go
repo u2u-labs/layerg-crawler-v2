@@ -36,11 +36,20 @@ func GenerateSQLCQueries(entities []Entity, outputDir string) error {
 			if strings.ToLower(field.Name) == "id" {
 				continue
 			}
+
+			colName := toSnakeCase(field.Name)
 			if field.Relation != "" {
+				if !field.DerivedFrom { // Only add foreign key if not @derivedFrom
+					// Add foreign key for non-derived relations
+					colName = colName + "_id"
+					insertCols = append(insertCols, fmt.Sprintf("\"%s\"", colName))
+					insertPhs = append(insertPhs, fmt.Sprintf("$%d", phCount))
+					updateAssignments = append(updateAssignments, fmt.Sprintf("\"%s\" = $%d", colName, phCount))
+					phCount++
+				}
 				continue
 			}
 
-			colName := toSnakeCase(field.Name)
 			insertCols = append(insertCols, fmt.Sprintf("\"%s\"", colName))
 			insertPhs = append(insertPhs, fmt.Sprintf("$%d", phCount))
 			updateAssignments = append(updateAssignments, fmt.Sprintf("\"%s\" = $%d", colName, phCount))
