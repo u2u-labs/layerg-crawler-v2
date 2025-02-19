@@ -1,4 +1,5 @@
 name: "ethereum-starter"
+version: "1.0.0"
 description: "This project serves as a starting point for an Ethereum indexer."
 schema:
   file: "./schema.graphql"

@@ -7,6 +7,7 @@ import (
 // CrawlerConfig represents the subgraph.yaml configuration
 type CrawlerConfig struct {
 	Name        string `yaml:"name"`
+	Version     string `yaml:"version"`
 	Description string `yaml:"description"`
 	Schema      struct {
 		File string `yaml:"file"`

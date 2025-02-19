@@ -10,31 +10,39 @@ import (
 	graphqldb "github.com/u2u-labs/layerg-crawler/db/graphqldb"
 	db "github.com/u2u-labs/layerg-crawler/db/sqlc"
 	"github.com/u2u-labs/layerg-crawler/generated/eventhandlers"
-	"github.com/u2u-labs/layerg-crawler/generated/mappings"
 )
 
 type TransferHandler struct {
-	*mappings.BaseTransferMapping
+	*BaseHandler
 }
 
 type MetadataUpdateHandler struct {
-	*mappings.BaseMetadataUpdateMapping
+	*BaseHandler
 }
 
 func NewTransferHandler(queries *db.Queries, gqlQueries *graphqldb.Queries, chainID int32, logger *zap.SugaredLogger) *TransferHandler {
 	return &TransferHandler{
-		BaseTransferMapping: mappings.NewTransferMapping(queries, gqlQueries, chainID, logger),
+		BaseHandler: &BaseHandler{
+			Queries: queries,
+			GQL:     gqlQueries,
+			ChainID: chainID,
+			Logger:  logger,
+		},
 	}
 }
 
 func NewMetadataUpdateHandler(queries *db.Queries, gqlQueries *graphqldb.Queries, chainID int32, logger *zap.SugaredLogger) *MetadataUpdateHandler {
 	return &MetadataUpdateHandler{
-		BaseMetadataUpdateMapping: mappings.NewMetadataUpdateMapping(queries, gqlQueries, chainID, logger),
+		BaseHandler: &BaseHandler{
+			Queries: queries,
+			GQL:     gqlQueries,
+			ChainID: chainID,
+			Logger:  logger,
+		},
 	}
 }
 
 func (h *TransferHandler) HandleTransfer(ctx context.Context, event *eventhandlers.Transfer) error {
-
 	fromUser, err := h.GQL.GetOrCreateUser(ctx, event.From.Hex())
 	if err != nil {
 		h.Logger.Errorw("Failed to ensure 'from' user exists",
@@ -43,6 +51,7 @@ func (h *TransferHandler) HandleTransfer(ctx context.Context, event *eventhandle
 		)
 		return fmt.Errorf("failed to ensure 'from' user exists: %w", err)
 	}
+	h.AddOperation("User", fromUser, event.Raw.BlockHash.Hex(), event.Raw.BlockNumber)
 
 	toUser, err := h.GQL.GetOrCreateUser(ctx, event.To.Hex())
 	if err != nil {
@@ -52,6 +61,7 @@ func (h *TransferHandler) HandleTransfer(ctx context.Context, event *eventhandle
 		)
 		return fmt.Errorf("failed to ensure 'to' user exists: %w", err)
 	}
+	h.AddOperation("User", toUser, event.Raw.BlockHash.Hex(), event.Raw.BlockNumber)
 
 	// Try to get existing item
 	tokenID := event.TokenId.String()
@@ -72,7 +82,7 @@ func (h *TransferHandler) HandleTransfer(ctx context.Context, event *eventhandle
 
 	if itemExists {
 		// Update existing item's owner
-		_, err = h.GQL.UpdateItem(ctx, graphqldb.UpdateItemParams{
+		updatedItem, err := h.GQL.UpdateItem(ctx, graphqldb.UpdateItemParams{
 			ID:       existingItem.ID,
 			TokenID:  existingItem.TokenID,
 			TokenUri: existingItem.TokenUri,
@@ -86,9 +96,10 @@ func (h *TransferHandler) HandleTransfer(ctx context.Context, event *eventhandle
 			)
 			return fmt.Errorf("failed to update item ownership: %w", err)
 		}
+		h.AddOperation("Item", updatedItem, event.Raw.BlockHash.Hex(), event.Raw.BlockNumber)
 	} else {
 		// Create new item
-		_, err = h.GQL.CreateItem(ctx, graphqldb.CreateItemParams{
+		newItem, err := h.GQL.CreateItem(ctx, graphqldb.CreateItemParams{
 			ID:       uuid.New().String(),
 			TokenID:  tokenID,
 			TokenUri: "",
@@ -102,6 +113,7 @@ func (h *TransferHandler) HandleTransfer(ctx context.Context, event *eventhandle
 			)
 			return fmt.Errorf("failed to create new item: %w", err)
 		}
+		h.AddOperation("Item", newItem, event.Raw.BlockHash.Hex(), event.Raw.BlockNumber)
 	}
 
 	h.Logger.Infow("Transfer event processed",
@@ -111,6 +123,11 @@ func (h *TransferHandler) HandleTransfer(ctx context.Context, event *eventhandle
 		"contract", event.Raw.Address.Hex(),
 		"tx", event.Raw.TxHash.Hex(),
 	)
+
+	// Submit all changes to DA
+	if err := h.SubmitToDA(); err != nil {
+		h.Logger.Errorw("Failed to submit to DA", "error", err)
+	}
 
 	return nil
 }
@@ -127,6 +144,8 @@ func (h *MetadataUpdateHandler) HandleMetadataUpdate(ctx context.Context, event 
 		)
 		return fmt.Errorf("failed to ensure actor exists: %w", err)
 	}
+
+	h.AddOperation("User", actorUser, event.Raw.BlockHash.Hex(), event.Raw.BlockNumber)
 
 	tokenID := event.TokenId.String()
 	_, err = h.GQL.CreateMetadataUpdateRecord(ctx, graphqldb.CreateMetadataUpdateRecordParams{
@@ -156,7 +175,7 @@ func (h *MetadataUpdateHandler) HandleMetadataUpdate(ctx context.Context, event 
 
 			newTokenUri := "" // TODO: Implement fetching token URI from contract
 
-			_, err = h.GQL.UpdateItem(ctx, graphqldb.UpdateItemParams{
+			itemResp, err := h.GQL.UpdateItem(ctx, graphqldb.UpdateItemParams{
 				ID:       item.ID,
 				TokenID:  item.TokenID,
 				TokenUri: newTokenUri,
@@ -169,8 +188,13 @@ func (h *MetadataUpdateHandler) HandleMetadataUpdate(ctx context.Context, event 
 				)
 				return fmt.Errorf("failed to update item token URI: %w", err)
 			}
+			h.AddOperation("Item", itemResp, event.Raw.BlockHash.Hex(), event.Raw.BlockNumber)
 			break
 		}
+	}
+
+	if err := h.SubmitToDA(); err != nil {
+		h.Logger.Errorw("Failed to submit to DA", "error", err)
 	}
 
 	h.Logger.Infow("Metadata update event processed",
