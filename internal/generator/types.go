@@ -153,6 +153,8 @@ func getGoType(solidityType string) string {
 		return "[]byte"
 	case "bytes32":
 		return "[32]byte"
+	case "uint256[]":
+		return "[]*big.Int"
 	default:
 		if strings.HasPrefix(solidityType, "bytes") {
 			return "[]byte"

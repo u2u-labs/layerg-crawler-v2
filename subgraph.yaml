@@ -30,4 +30,23 @@ dataSources:
           filter:
             topics:
               - "MetadataUpdate(uint256 tokenId)"
+  - kind: EthereumDatasourceKind.Runtime
+    startBlock: 16213720
+    options:
+      address: "0xeddd02437aa5db6def90ff32c329decd2bcb86db"
+      abis:
+        - name: "URC1155"
+          file: "./abis/URC1155.json"
+    mapping:
+      handlers:
+        - kind: EthereumHandlerKind.Event
+          handler: "HandleTransferSingle"
+          filter:
+            topics:
+              - "TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value)"
+        - kind: EthereumHandlerKind.Event
+          handler: "HandleTransferBatch"
+          filter:
+            topics:
+              - "TransferBatch(address indexed operator, address indexed from, address indexed to, uint256[] ids, uint256[] values)"
 repository: "https://github.com/subquery/ethereum-subql-starter" 

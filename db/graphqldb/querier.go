@@ -9,17 +9,22 @@ import (
 )
 
 type Querier interface {
+	CreateBalance(ctx context.Context, arg CreateBalanceParams) (Balance, error)
 	CreateItem(ctx context.Context, arg CreateItemParams) (Item, error)
 	CreateMetadataUpdateRecord(ctx context.Context, arg CreateMetadataUpdateRecordParams) (MetadataUpdateRecord, error)
 	CreateUser(ctx context.Context, id string) (User, error)
+	DeleteBalance(ctx context.Context, id string) error
 	DeleteItem(ctx context.Context, id string) error
 	DeleteMetadataUpdateRecord(ctx context.Context, id string) error
+	GetBalance(ctx context.Context, id string) (Balance, error)
 	GetItem(ctx context.Context, id string) (Item, error)
 	GetMetadataUpdateRecord(ctx context.Context, id string) (MetadataUpdateRecord, error)
 	GetUser(ctx context.Context, id string) (User, error)
+	ListBalance(ctx context.Context) ([]Balance, error)
 	ListItem(ctx context.Context) ([]Item, error)
 	ListMetadataUpdateRecord(ctx context.Context) ([]MetadataUpdateRecord, error)
 	ListUser(ctx context.Context) ([]User, error)
+	UpdateBalance(ctx context.Context, arg UpdateBalanceParams) (Balance, error)
 	UpdateItem(ctx context.Context, arg UpdateItemParams) (Item, error)
 	UpdateMetadataUpdateRecord(ctx context.Context, arg UpdateMetadataUpdateRecordParams) (MetadataUpdateRecord, error)
 	// Skip update query generation as there are no updateable fields

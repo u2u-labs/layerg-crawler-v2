@@ -2,16 +2,27 @@ type Item @entity {
   id: ID!
   tokenId: BigInt!
   tokenUri: String!
+  standard: String!
+  balances: [Balance!]! @derivedFrom(field: "item")
+}
+
+type Balance @entity {
+  id: ID!   
+  item: Item!
   owner: User!
+  value: BigInt!
+  updatedAt: BigInt!
+  contract: String!
 }
 
 type MetadataUpdateRecord @entity {
   id: ID!
   tokenId: BigInt!
   actor: User!
+  timestamp: BigInt!
 }
 
 type User @entity {
   id: ID!
-  items: [Item!]! @derivedFrom(field: "owner")
+  balances: [Balance!]! @derivedFrom(field: "owner")
 }
