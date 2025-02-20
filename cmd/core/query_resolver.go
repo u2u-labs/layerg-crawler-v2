@@ -202,12 +202,12 @@ func (r *QueryResolver) ResolveMultiple(typeName string, p graphql.ResolveParams
 		selectFields = append(selectFields, fmt.Sprintf(`"%s"."id"`, tableName))
 		fieldToIndex["id"] = len(selectFields) - 1
 	}
-	// Base query
+	// Base query.
 	query := fmt.Sprintf(`SELECT DISTINCT %s FROM "%s" %s`,
 		strings.Join(selectFields, ", "),
 		tableName,
 		strings.Join(joins, " "))
-	// Build WHERE clause from "where" input.
+	// Build WHERE clause.
 	args := []interface{}{}
 	if whereRaw, ok := p.Args["where"]; ok && whereRaw != nil {
 		if whereMap, ok := whereRaw.(map[string]interface{}); ok {
@@ -251,11 +251,10 @@ func (r *QueryResolver) ResolveMultiple(typeName string, p graphql.ResolveParams
 			}
 		}
 	}
-	// Append ORDER BY if provided.
+	// Append ORDER BY, LIMIT, and OFFSET.
 	if order, ok := p.Args["order"].(string); ok && order != "" {
 		query += " ORDER BY " + order
 	}
-	// Append LIMIT (and OFFSET if page is provided).
 	if lim, ok := p.Args["limit"].(int); ok {
 		offset := 0
 		if page, ok := p.Args["page"].(int); ok && page > 1 {
@@ -307,7 +306,7 @@ func (r *QueryResolver) ResolveMultiple(typeName string, p graphql.ResolveParams
 				}
 			}
 		}
-
+		// Handle derived (inverse) fields.
 		for fieldName, fieldAST := range derivedFields {
 			fieldDef := r.getFieldDefinition(typeName, fieldName)
 			if fieldDef == nil {
@@ -327,15 +326,27 @@ func (r *QueryResolver) ResolveMultiple(typeName string, p graphql.ResolveParams
 			relatedType := getNamedType(fieldDef.Type)
 			relatedTable := deriveTableName(relatedType)
 			var nestedSelects []string
+			var nestedAliases []string
 			if fieldAST.SelectionSet != nil {
 				for _, sel := range fieldAST.SelectionSet.Selections {
 					if sf, ok := sel.(*ast.Field); ok {
-						nestedSelects = append(nestedSelects, fmt.Sprintf(`"%s"."%s"`, relatedTable, toSnakeCase(sf.Name.Value)))
+						fieldNameNested := sf.Name.Value
+						nestedFieldDef := r.getFieldDefinition(relatedType, toCamelCase(fieldNameNested))
+						var colName string
+						if nestedFieldDef != nil && !isScalar(nestedFieldDef.Type) {
+							colName = toSnakeCase(fieldNameNested) + "_id"
+						} else {
+							colName = toSnakeCase(fieldNameNested)
+						}
+						alias := toCamelCase(fieldNameNested)
+						nestedSelects = append(nestedSelects, fmt.Sprintf(`"%s"."%s" as "%s"`, relatedTable, colName, alias))
+						nestedAliases = append(nestedAliases, alias)
 					}
 				}
 			}
 			if len(nestedSelects) == 0 {
-				nestedSelects = append(nestedSelects, fmt.Sprintf(`"%s"."id"`, relatedTable))
+				nestedSelects = append(nestedSelects, fmt.Sprintf(`"%s"."id" as "id"`, relatedTable))
+				nestedAliases = append(nestedAliases, "id")
 			}
 			joinColumn := fmt.Sprintf(`"%s_id"`, derivedFieldName)
 			nestedQuery := fmt.Sprintf(`SELECT DISTINCT %s FROM "%s" WHERE %s = $1`,
@@ -351,9 +362,8 @@ func (r *QueryResolver) ResolveMultiple(typeName string, p graphql.ResolveParams
 				return nil, err
 			}
 			var nestedResults []map[string]interface{}
-			cols, _ := nestedRows.Columns()
 			for nestedRows.Next() {
-				vals := make([]interface{}, len(cols))
+				vals := make([]interface{}, len(nestedAliases))
 				for i := range vals {
 					vals[i] = new(sql.NullString)
 				}
@@ -362,16 +372,43 @@ func (r *QueryResolver) ResolveMultiple(typeName string, p graphql.ResolveParams
 					return nil, err
 				}
 				rec := make(map[string]interface{})
-				for i, col := range cols {
+				for i, alias := range nestedAliases {
 					ns := vals[i].(*sql.NullString)
+					var v interface{}
 					if ns.Valid {
-						rec[toCamelCase(col)] = ns.String
+						v = ns.String
+					}
+					nestedFieldDef := r.getFieldDefinition(relatedType, alias)
+					if nestedFieldDef != nil && !isScalar(nestedFieldDef.Type) {
+						rec[alias] = map[string]interface{}{"id": v}
+					} else {
+						rec[alias] = v
 					}
 				}
 				nestedResults = append(nestedResults, rec)
 			}
 			nestedRows.Close()
 			record[toCamelCase(fieldName)] = nestedResults
+		}
+		// Post-process join fields: group flat join columns into nested objects.
+		for _, fieldDef := range r.Schema.Types[typeName].Fields {
+			if !isScalar(fieldDef.Type) && !hasDirective(fieldDef, "derivedFrom") {
+				prefix := toCamelCase(toSnakeCase(fieldDef.Name.Value))
+				nested := make(map[string]interface{})
+				for k, v := range record {
+					if k != prefix && strings.HasPrefix(k, prefix) {
+						subKey := k[len(prefix):]
+						if len(subKey) > 0 {
+							subKey = strings.ToLower(subKey[:1]) + subKey[1:]
+							nested[subKey] = v
+							delete(record, k)
+						}
+					}
+				}
+				if len(nested) > 0 {
+					record[prefix] = nested
+				}
+			}
 		}
 		results = append(results, record)
 	}
@@ -383,7 +420,10 @@ func (r *QueryResolver) ResolveSingle(typeName string, p graphql.ResolveParams) 
 	tableName := deriveTableName(typeName)
 	selectFields, joins, fieldToIndex := r.buildSelectAndJoins(typeName, p.Info.FieldASTs)
 	query := fmt.Sprintf(`SELECT DISTINCT %s FROM "%s" %s WHERE "%s"."id" = $1`,
-		strings.Join(selectFields, ","), tableName, strings.Join(joins, " "), tableName)
+		strings.Join(selectFields, ","),
+		tableName,
+		strings.Join(joins, " "),
+		tableName)
 	log.Println("SQL Query:", query)
 	row := db.DB.QueryRow(query, p.Args["id"])
 	values := make([]interface{}, len(selectFields))
@@ -422,7 +462,7 @@ func (r *QueryResolver) ResolveSingle(typeName string, p graphql.ResolveParams) 
 			}
 		}
 	}
-	// Dynamically handle fields with @derivedFrom (inverse relationships)
+	// Handle derived (inverse) fields.
 	if _, exists := r.Schema.Types[typeName]; exists {
 		for _, f := range p.Info.FieldASTs {
 			fname := toSnakeCase(f.Name.Value)
@@ -441,7 +481,6 @@ func (r *QueryResolver) ResolveSingle(typeName string, p graphql.ResolveParams) 
 				if err != nil {
 					return nil, err
 				}
-				defer nestedRows.Close()
 				var nestedResults []map[string]interface{}
 				cols, _ := nestedRows.Columns()
 				for nestedRows.Next() {
@@ -450,6 +489,7 @@ func (r *QueryResolver) ResolveSingle(typeName string, p graphql.ResolveParams) 
 						vals[i] = new(sql.NullString)
 					}
 					if err := nestedRows.Scan(vals...); err != nil {
+						nestedRows.Close()
 						return nil, err
 					}
 					rec := make(map[string]interface{})
@@ -461,7 +501,28 @@ func (r *QueryResolver) ResolveSingle(typeName string, p graphql.ResolveParams) 
 					}
 					nestedResults = append(nestedResults, rec)
 				}
+				nestedRows.Close()
 				result[toCamelCase(fname)] = nestedResults
+			}
+		}
+	}
+	// Post-process join fields: group flat join columns into nested objects.
+	for _, fieldDef := range r.Schema.Types[typeName].Fields {
+		if !isScalar(fieldDef.Type) && !hasDirective(fieldDef, "derivedFrom") {
+			prefix := toCamelCase(toSnakeCase(fieldDef.Name.Value))
+			nested := make(map[string]interface{})
+			for k, v := range result {
+				if k != prefix && strings.HasPrefix(k, prefix) {
+					subKey := k[len(prefix):]
+					if len(subKey) > 0 {
+						subKey = strings.ToLower(subKey[:1]) + subKey[1:]
+						nested[subKey] = v
+						delete(result, k)
+					}
+				}
+			}
+			if len(nested) > 0 {
+				result[prefix] = nested
 			}
 		}
 	}
