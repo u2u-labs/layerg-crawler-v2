@@ -44,6 +44,8 @@ func CreateQueryFields(resolver *core.QueryResolver) graphql.Fields {
 	
 	var ItemType *graphql.Object
 	
+	var BalanceType *graphql.Object
+	
 	var MetadataUpdateRecordType *graphql.Object
 	
 	var UserType *graphql.Object
@@ -54,21 +56,28 @@ func CreateQueryFields(resolver *core.QueryResolver) graphql.Fields {
 	ItemWhereInputType := graphql.NewInputObject(graphql.InputObjectConfig{
 		Name: "ItemWhereInput",
 		Fields: graphql.InputObjectConfigFieldMap{
-			"id": &graphql.InputObjectFieldConfig{Type: IDFilterType},"tokenId": &graphql.InputObjectFieldConfig{Type: BigIntFilterType},"tokenUri": &graphql.InputObjectFieldConfig{Type: StringFilterType},"owner": &graphql.InputObjectFieldConfig{Type: StringFilterType},
+			"id": &graphql.InputObjectFieldConfig{Type: IDFilterType},"tokenId": &graphql.InputObjectFieldConfig{Type: BigIntFilterType},"tokenUri": &graphql.InputObjectFieldConfig{Type: StringFilterType},"standard": &graphql.InputObjectFieldConfig{Type: StringFilterType},"balances": &graphql.InputObjectFieldConfig{Type: StringFilterType},
+		},
+	})
+	
+	BalanceWhereInputType := graphql.NewInputObject(graphql.InputObjectConfig{
+		Name: "BalanceWhereInput",
+		Fields: graphql.InputObjectConfigFieldMap{
+			"id": &graphql.InputObjectFieldConfig{Type: IDFilterType},"item": &graphql.InputObjectFieldConfig{Type: StringFilterType},"owner": &graphql.InputObjectFieldConfig{Type: StringFilterType},"value": &graphql.InputObjectFieldConfig{Type: BigIntFilterType},"updatedAt": &graphql.InputObjectFieldConfig{Type: BigIntFilterType},"contract": &graphql.InputObjectFieldConfig{Type: StringFilterType},
 		},
 	})
 	
 	MetadataUpdateRecordWhereInputType := graphql.NewInputObject(graphql.InputObjectConfig{
 		Name: "MetadataUpdateRecordWhereInput",
 		Fields: graphql.InputObjectConfigFieldMap{
-			"id": &graphql.InputObjectFieldConfig{Type: IDFilterType},"tokenId": &graphql.InputObjectFieldConfig{Type: BigIntFilterType},"actor": &graphql.InputObjectFieldConfig{Type: StringFilterType},
+			"id": &graphql.InputObjectFieldConfig{Type: IDFilterType},"tokenId": &graphql.InputObjectFieldConfig{Type: BigIntFilterType},"actor": &graphql.InputObjectFieldConfig{Type: StringFilterType},"timestamp": &graphql.InputObjectFieldConfig{Type: BigIntFilterType},
 		},
 	})
 	
 	UserWhereInputType := graphql.NewInputObject(graphql.InputObjectConfig{
 		Name: "UserWhereInput",
 		Fields: graphql.InputObjectConfigFieldMap{
-			"id": &graphql.InputObjectFieldConfig{Type: IDFilterType},"items": &graphql.InputObjectFieldConfig{Type: StringFilterType},
+			"id": &graphql.InputObjectFieldConfig{Type: IDFilterType},"balances": &graphql.InputObjectFieldConfig{Type: StringFilterType},
 		},
 	})
 	
@@ -92,8 +101,45 @@ func CreateQueryFields(resolver *core.QueryResolver) graphql.Fields {
 					Type: graphql.String,
 				},
 				
+				"standard": &graphql.Field{
+					Type: graphql.String,
+				},
+				
+				"balances": &graphql.Field{
+					Type: graphql.NewList(BalanceType),
+				},
+				
+			}
+		}),
+	})
+	
+	BalanceType = graphql.NewObject(graphql.ObjectConfig{
+		Name: "Balance",
+		Fields: graphql.FieldsThunk(func() graphql.Fields {
+			return graphql.Fields{
+				
+				"id": &graphql.Field{
+					Type: graphql.ID,
+				},
+				
+				"item": &graphql.Field{
+					Type: ItemType,
+				},
+				
 				"owner": &graphql.Field{
 					Type: UserType,
+				},
+				
+				"value": &graphql.Field{
+					Type: core.BigIntType,
+				},
+				
+				"updatedAt": &graphql.Field{
+					Type: core.BigIntType,
+				},
+				
+				"contract": &graphql.Field{
+					Type: graphql.String,
 				},
 				
 			}
@@ -117,6 +163,10 @@ func CreateQueryFields(resolver *core.QueryResolver) graphql.Fields {
 					Type: UserType,
 				},
 				
+				"timestamp": &graphql.Field{
+					Type: core.BigIntType,
+				},
+				
 			}
 		}),
 	})
@@ -130,8 +180,8 @@ func CreateQueryFields(resolver *core.QueryResolver) graphql.Fields {
 					Type: graphql.ID,
 				},
 				
-				"items": &graphql.Field{
-					Type: graphql.NewList(ItemType),
+				"balances": &graphql.Field{
+					Type: graphql.NewList(BalanceType),
 				},
 				
 			}
@@ -160,6 +210,28 @@ func CreateQueryFields(resolver *core.QueryResolver) graphql.Fields {
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 				return resolver.ResolveMultiple("Item", p)
+			},
+		},
+		
+		"Balance": &graphql.Field{
+			Type: BalanceType,
+			Args: graphql.FieldConfigArgument{
+				"id": &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.ID)},
+			},
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				return resolver.ResolveSingle("Balance", p)
+			},
+		},
+		"Balances": &graphql.Field{
+			Type: graphql.NewList(BalanceType),
+			Args: graphql.FieldConfigArgument{
+				"page":  &graphql.ArgumentConfig{Type: graphql.Int},
+				"limit": &graphql.ArgumentConfig{Type: graphql.Int},
+				"order": &graphql.ArgumentConfig{Type: graphql.String},
+				"where": &graphql.ArgumentConfig{Type: BalanceWhereInputType},
+			},
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				return resolver.ResolveMultiple("Balance", p)
 			},
 		},
 		

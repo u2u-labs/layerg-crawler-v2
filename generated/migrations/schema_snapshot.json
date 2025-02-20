@@ -8,6 +8,8 @@
         "IsNonNull": true,
         "IsIndexed": false,
         "IsUnique": false,
+        "IsList": false,
+        "DerivedFrom": false,
         "Relation": ""
       },
       {
@@ -16,6 +18,8 @@
         "IsNonNull": true,
         "IsIndexed": false,
         "IsUnique": false,
+        "IsList": false,
+        "DerivedFrom": false,
         "Relation": ""
       },
       {
@@ -24,7 +28,54 @@
         "IsNonNull": true,
         "IsIndexed": false,
         "IsUnique": false,
+        "IsList": false,
+        "DerivedFrom": false,
         "Relation": ""
+      },
+      {
+        "Name": "standard",
+        "Type": "String",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "IsList": false,
+        "DerivedFrom": false,
+        "Relation": ""
+      },
+      {
+        "Name": "balances",
+        "Type": "[Balance!]",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "IsList": false,
+        "DerivedFrom": true,
+        "Relation": "[Balance!]"
+      }
+    ]
+  },
+  {
+    "Name": "Balance",
+    "Fields": [
+      {
+        "Name": "id",
+        "Type": "ID",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "IsList": false,
+        "DerivedFrom": false,
+        "Relation": ""
+      },
+      {
+        "Name": "item",
+        "Type": "Item",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "IsList": false,
+        "DerivedFrom": false,
+        "Relation": "Item"
       },
       {
         "Name": "owner",
@@ -32,7 +83,39 @@
         "IsNonNull": true,
         "IsIndexed": false,
         "IsUnique": false,
+        "IsList": false,
+        "DerivedFrom": false,
         "Relation": "User"
+      },
+      {
+        "Name": "value",
+        "Type": "BigInt",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "IsList": false,
+        "DerivedFrom": false,
+        "Relation": ""
+      },
+      {
+        "Name": "updatedAt",
+        "Type": "BigInt",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "IsList": false,
+        "DerivedFrom": false,
+        "Relation": ""
+      },
+      {
+        "Name": "contract",
+        "Type": "String",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "IsList": false,
+        "DerivedFrom": false,
+        "Relation": ""
       }
     ]
   },
@@ -45,6 +128,8 @@
         "IsNonNull": true,
         "IsIndexed": false,
         "IsUnique": false,
+        "IsList": false,
+        "DerivedFrom": false,
         "Relation": ""
       },
       {
@@ -53,6 +138,8 @@
         "IsNonNull": true,
         "IsIndexed": false,
         "IsUnique": false,
+        "IsList": false,
+        "DerivedFrom": false,
         "Relation": ""
       },
       {
@@ -61,7 +148,19 @@
         "IsNonNull": true,
         "IsIndexed": false,
         "IsUnique": false,
+        "IsList": false,
+        "DerivedFrom": false,
         "Relation": "User"
+      },
+      {
+        "Name": "timestamp",
+        "Type": "BigInt",
+        "IsNonNull": true,
+        "IsIndexed": false,
+        "IsUnique": false,
+        "IsList": false,
+        "DerivedFrom": false,
+        "Relation": ""
       }
     ]
   },
@@ -74,15 +173,19 @@
         "IsNonNull": true,
         "IsIndexed": false,
         "IsUnique": false,
+        "IsList": false,
+        "DerivedFrom": false,
         "Relation": ""
       },
       {
-        "Name": "items",
-        "Type": "[Item!]",
+        "Name": "balances",
+        "Type": "[Balance!]",
         "IsNonNull": true,
         "IsIndexed": false,
         "IsUnique": false,
-        "Relation": "[Item!]"
+        "IsList": false,
+        "DerivedFrom": true,
+        "Relation": "[Balance!]"
       }
     ]
   }

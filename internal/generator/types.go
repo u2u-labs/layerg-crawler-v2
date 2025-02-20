@@ -7,6 +7,7 @@ import (
 // CrawlerConfig represents the subgraph.yaml configuration
 type CrawlerConfig struct {
 	Name        string `yaml:"name"`
+	Version     string `yaml:"version"`
 	Description string `yaml:"description"`
 	Schema      struct {
 		File string `yaml:"file"`
@@ -152,6 +153,8 @@ func getGoType(solidityType string) string {
 		return "[]byte"
 	case "bytes32":
 		return "[32]byte"
+	case "uint256[]":
+		return "[]*big.Int"
 	default:
 		if strings.HasPrefix(solidityType, "bytes") {
 			return "[]byte"

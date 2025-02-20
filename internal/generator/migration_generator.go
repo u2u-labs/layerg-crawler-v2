@@ -165,27 +165,27 @@ func generateFullMigration(entities []Entity) (string, error) {
 	for _, entity := range sortedEntities {
 		for _, field := range entity.Fields {
 			if field.Relation != "" && strings.HasPrefix(field.Type, "[") {
-				// Get the base type from array type (e.g., "[Post!]!" -> "Post")
 				baseType := strings.Trim(strings.Trim(field.Type, "[]!"), "!")
 				manyTableName := toSnakeCase(baseType)
 				oneTableName := toSnakeCase(entity.Name)
 
-				// Add foreign key column directly in CREATE TABLE
-				sb.WriteString(fmt.Sprintf(`ALTER TABLE "%s" ADD COLUMN "%s_id" TEXT;`,
-					manyTableName, oneTableName))
-				sb.WriteString("\n")
+				// Skip adding column if it's a @derivedFrom field
+				if !field.DerivedFrom {
+					// Add foreign key column and constraint
+					sb.WriteString(fmt.Sprintf(`ALTER TABLE "%s" ADD COLUMN IF NOT EXISTS "%s_id" TEXT;`,
+						manyTableName, oneTableName))
+					sb.WriteString("\n")
 
-				// Add foreign key constraint
-				sb.WriteString(fmt.Sprintf(`ALTER TABLE "%s" ADD CONSTRAINT "fk_%s_%s" 
-					FOREIGN KEY ("%s_id") REFERENCES "%s"("id") ON DELETE CASCADE;`,
-					manyTableName, manyTableName, oneTableName,
-					oneTableName, oneTableName))
-				sb.WriteString("\n")
+					sb.WriteString(fmt.Sprintf(`ALTER TABLE "%s" ADD CONSTRAINT IF NOT EXISTS "fk_%s_%s" 
+						FOREIGN KEY ("%s_id") REFERENCES "%s"("id") ON DELETE CASCADE;`,
+						manyTableName, manyTableName, oneTableName,
+						oneTableName, oneTableName))
+					sb.WriteString("\n")
 
-				// Add index on foreign key
-				sb.WriteString(fmt.Sprintf(`CREATE INDEX "idx_%s_%s_id" ON "%s"("%s_id");`,
-					manyTableName, oneTableName, manyTableName, oneTableName))
-				sb.WriteString("\n\n")
+					sb.WriteString(fmt.Sprintf(`CREATE INDEX IF NOT EXISTS "idx_%s_%s_id" ON "%s"("%s_id");`,
+						manyTableName, oneTableName, manyTableName, oneTableName))
+					sb.WriteString("\n\n")
+				}
 			}
 		}
 	}
