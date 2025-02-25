@@ -10,9 +10,9 @@ network:
     - "https://rpc-nebulas-testnet.uniultra.xyz"
 dataSources:
   - kind: EthereumDatasourceKind.Runtime
-    startBlock: 16213720
+    startBlock: 47866700
     options:
-      address: "0x1b122eff77d9a54d6c773c971f6acb6aaa9f90a8"
+      address: "0x1C27cA7b5F028A6b9E569094F09390B0f3E63Ba9"
       abis:
         - name: "URC721"
           file: "./abis/URC721.json"
@@ -31,22 +31,45 @@ dataSources:
             topics:
               - "MetadataUpdate(uint256 tokenId)"
   - kind: EthereumDatasourceKind.Runtime
-    startBlock: 16213720
+    startBlock: 47866700
     options:
-      address: "0xeddd02437aa5db6def90ff32c329decd2bcb86db"
+      address: "0x41bEdAecb7678d1BB832a45897D2580D3b424e30"
       abis:
-        - name: "URC1155"
-          file: "./abis/URC1155.json"
+        - name: "URC721"
+          file: "./abis/URC721.json"
+        - name: "URC4906"
+          file: "./abis/URC4906.json"
     mapping:
       handlers:
         - kind: EthereumHandlerKind.Event
-          handler: "HandleTransferSingle"
+          handler: "HandleTransfer"
           filter:
             topics:
-              - "TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value)"
+              - "Transfer(address indexed from, address indexed to, uint256 amount)"
         - kind: EthereumHandlerKind.Event
-          handler: "HandleTransferBatch"
+          handler: "MetadataUpdate"
           filter:
             topics:
-              - "TransferBatch(address indexed operator, address indexed from, address indexed to, uint256[] ids, uint256[] values)"
+              - "MetadataUpdate(uint256 tokenId)"
+  - kind: EthereumDatasourceKind.Runtime
+    startBlock: 47866700
+    options:
+      address: "0xF191D999e45a5334e7Eb4102b26ed3148B280285"
+      abis:
+        - name: "URC721"
+          file: "./abis/URC721.json"
+        - name: "URC4906"
+          file: "./abis/URC4906.json"
+    mapping:
+      handlers:
+        - kind: EthereumHandlerKind.Event
+          handler: "HandleTransfer"
+          filter:
+            topics:
+              - "Transfer(address indexed from, address indexed to, uint256 amount)"
+        - kind: EthereumHandlerKind.Event
+          handler: "MetadataUpdate"
+          filter:
+            topics:
+              - "MetadataUpdate(uint256 tokenId)"
 repository: "https://github.com/subquery/ethereum-subql-starter" 

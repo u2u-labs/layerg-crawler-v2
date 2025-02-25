@@ -8,29 +8,19 @@ import (
 	"time"
 )
 
-type Balance struct {
-	ID        string    `json:"id"`
-	ItemID    string    `json:"item_id"`
-	OwnerID   string    `json:"owner_id"`
-	Value     string    `json:"value"`
-	UpdatedAt string    `json:"updated_at"`
-	Contract  string    `json:"contract"`
-	CreatedAt time.Time `json:"created_at"`
-}
-
 type Item struct {
 	ID        string    `json:"id"`
 	TokenID   string    `json:"token_id"`
 	TokenUri  string    `json:"token_uri"`
-	Standard  string    `json:"standard"`
+	OwnerID   string    `json:"owner_id"`
+	Contract  string    `json:"contract"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
 type MetadataUpdateRecord struct {
 	ID        string    `json:"id"`
-	TokenID   string    `json:"token_id"`
+	ItemID    string    `json:"item_id"`
 	ActorID   string    `json:"actor_id"`
-	Timestamp string    `json:"timestamp"`
 	CreatedAt time.Time `json:"created_at"`
 }
 

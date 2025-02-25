@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/unicornultrafoundation/go-u2u/ethclient"
+
 	"go.uber.org/zap"
 
 	db "github.com/u2u-labs/layerg-crawler/db/sqlc"

@@ -9,50 +9,16 @@ import (
 	"context"
 )
 
-const createBalance = `-- name: CreateBalance :one
-INSERT INTO "balance" ("id", "item_id", "owner_id", "value", "updated_at", "contract") VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, item_id, owner_id, value, updated_at, contract, created_at
-`
-
-type CreateBalanceParams struct {
-	ID        string `json:"id"`
-	ItemID    string `json:"item_id"`
-	OwnerID   string `json:"owner_id"`
-	Value     string `json:"value"`
-	UpdatedAt string `json:"updated_at"`
-	Contract  string `json:"contract"`
-}
-
-func (q *Queries) CreateBalance(ctx context.Context, arg CreateBalanceParams) (Balance, error) {
-	row := q.db.QueryRowContext(ctx, createBalance,
-		arg.ID,
-		arg.ItemID,
-		arg.OwnerID,
-		arg.Value,
-		arg.UpdatedAt,
-		arg.Contract,
-	)
-	var i Balance
-	err := row.Scan(
-		&i.ID,
-		&i.ItemID,
-		&i.OwnerID,
-		&i.Value,
-		&i.UpdatedAt,
-		&i.Contract,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
 const createItem = `-- name: CreateItem :one
-INSERT INTO "item" ("id", "token_id", "token_uri", "standard") VALUES ($1, $2, $3, $4) RETURNING id, token_id, token_uri, standard, created_at
+INSERT INTO "item" ("id", "token_id", "token_uri", "owner_id", "contract") VALUES ($1, $2, $3, $4, $5) RETURNING id, token_id, token_uri, owner_id, contract, created_at
 `
 
 type CreateItemParams struct {
 	ID       string `json:"id"`
 	TokenID  string `json:"token_id"`
 	TokenUri string `json:"token_uri"`
-	Standard string `json:"standard"`
+	OwnerID  string `json:"owner_id"`
+	Contract string `json:"contract"`
 }
 
 func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (Item, error) {
@@ -60,43 +26,38 @@ func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (Item, e
 		arg.ID,
 		arg.TokenID,
 		arg.TokenUri,
-		arg.Standard,
+		arg.OwnerID,
+		arg.Contract,
 	)
 	var i Item
 	err := row.Scan(
 		&i.ID,
 		&i.TokenID,
 		&i.TokenUri,
-		&i.Standard,
+		&i.OwnerID,
+		&i.Contract,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const createMetadataUpdateRecord = `-- name: CreateMetadataUpdateRecord :one
-INSERT INTO "metadata_update_record" ("id", "token_id", "actor_id", "timestamp") VALUES ($1, $2, $3, $4) RETURNING id, token_id, actor_id, timestamp, created_at
+INSERT INTO "metadata_update_record" ("id", "item_id", "actor_id") VALUES ($1, $2, $3) RETURNING id, item_id, actor_id, created_at
 `
 
 type CreateMetadataUpdateRecordParams struct {
-	ID        string `json:"id"`
-	TokenID   string `json:"token_id"`
-	ActorID   string `json:"actor_id"`
-	Timestamp string `json:"timestamp"`
+	ID      string `json:"id"`
+	ItemID  string `json:"item_id"`
+	ActorID string `json:"actor_id"`
 }
 
 func (q *Queries) CreateMetadataUpdateRecord(ctx context.Context, arg CreateMetadataUpdateRecordParams) (MetadataUpdateRecord, error) {
-	row := q.db.QueryRowContext(ctx, createMetadataUpdateRecord,
-		arg.ID,
-		arg.TokenID,
-		arg.ActorID,
-		arg.Timestamp,
-	)
+	row := q.db.QueryRowContext(ctx, createMetadataUpdateRecord, arg.ID, arg.ItemID, arg.ActorID)
 	var i MetadataUpdateRecord
 	err := row.Scan(
 		&i.ID,
-		&i.TokenID,
+		&i.ItemID,
 		&i.ActorID,
-		&i.Timestamp,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -111,15 +72,6 @@ func (q *Queries) CreateUser(ctx context.Context, id string) (User, error) {
 	var i User
 	err := row.Scan(&i.ID, &i.CreatedAt)
 	return i, err
-}
-
-const deleteBalance = `-- name: DeleteBalance :exec
-DELETE FROM "balance" WHERE id = $1
-`
-
-func (q *Queries) DeleteBalance(ctx context.Context, id string) error {
-	_, err := q.db.ExecContext(ctx, deleteBalance, id)
-	return err
 }
 
 const deleteItem = `-- name: DeleteItem :exec
@@ -140,27 +92,8 @@ func (q *Queries) DeleteMetadataUpdateRecord(ctx context.Context, id string) err
 	return err
 }
 
-const getBalance = `-- name: GetBalance :one
-SELECT id, item_id, owner_id, value, updated_at, contract, created_at FROM "balance" WHERE id = $1
-`
-
-func (q *Queries) GetBalance(ctx context.Context, id string) (Balance, error) {
-	row := q.db.QueryRowContext(ctx, getBalance, id)
-	var i Balance
-	err := row.Scan(
-		&i.ID,
-		&i.ItemID,
-		&i.OwnerID,
-		&i.Value,
-		&i.UpdatedAt,
-		&i.Contract,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
 const getItem = `-- name: GetItem :one
-SELECT id, token_id, token_uri, standard, created_at FROM "item" WHERE id = $1
+SELECT id, token_id, token_uri, owner_id, contract, created_at FROM "item" WHERE id = $1
 `
 
 func (q *Queries) GetItem(ctx context.Context, id string) (Item, error) {
@@ -170,14 +103,15 @@ func (q *Queries) GetItem(ctx context.Context, id string) (Item, error) {
 		&i.ID,
 		&i.TokenID,
 		&i.TokenUri,
-		&i.Standard,
+		&i.OwnerID,
+		&i.Contract,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getMetadataUpdateRecord = `-- name: GetMetadataUpdateRecord :one
-SELECT id, token_id, actor_id, timestamp, created_at FROM "metadata_update_record" WHERE id = $1
+SELECT id, item_id, actor_id, created_at FROM "metadata_update_record" WHERE id = $1
 `
 
 func (q *Queries) GetMetadataUpdateRecord(ctx context.Context, id string) (MetadataUpdateRecord, error) {
@@ -185,9 +119,8 @@ func (q *Queries) GetMetadataUpdateRecord(ctx context.Context, id string) (Metad
 	var i MetadataUpdateRecord
 	err := row.Scan(
 		&i.ID,
-		&i.TokenID,
+		&i.ItemID,
 		&i.ActorID,
-		&i.Timestamp,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -204,25 +137,24 @@ func (q *Queries) GetUser(ctx context.Context, id string) (User, error) {
 	return i, err
 }
 
-const listBalance = `-- name: ListBalance :many
-SELECT id, item_id, owner_id, value, updated_at, contract, created_at FROM "balance"
+const listItem = `-- name: ListItem :many
+SELECT id, token_id, token_uri, owner_id, contract, created_at FROM "item"
 `
 
-func (q *Queries) ListBalance(ctx context.Context) ([]Balance, error) {
-	rows, err := q.db.QueryContext(ctx, listBalance)
+func (q *Queries) ListItem(ctx context.Context) ([]Item, error) {
+	rows, err := q.db.QueryContext(ctx, listItem)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Balance{}
+	items := []Item{}
 	for rows.Next() {
-		var i Balance
+		var i Item
 		if err := rows.Scan(
 			&i.ID,
-			&i.ItemID,
+			&i.TokenID,
+			&i.TokenUri,
 			&i.OwnerID,
-			&i.Value,
-			&i.UpdatedAt,
 			&i.Contract,
 			&i.CreatedAt,
 		); err != nil {
@@ -239,41 +171,8 @@ func (q *Queries) ListBalance(ctx context.Context) ([]Balance, error) {
 	return items, nil
 }
 
-const listItem = `-- name: ListItem :many
-SELECT id, token_id, token_uri, standard, created_at FROM "item"
-`
-
-func (q *Queries) ListItem(ctx context.Context) ([]Item, error) {
-	rows, err := q.db.QueryContext(ctx, listItem)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []Item{}
-	for rows.Next() {
-		var i Item
-		if err := rows.Scan(
-			&i.ID,
-			&i.TokenID,
-			&i.TokenUri,
-			&i.Standard,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listMetadataUpdateRecord = `-- name: ListMetadataUpdateRecord :many
-SELECT id, token_id, actor_id, timestamp, created_at FROM "metadata_update_record"
+SELECT id, item_id, actor_id, created_at FROM "metadata_update_record"
 `
 
 func (q *Queries) ListMetadataUpdateRecord(ctx context.Context) ([]MetadataUpdateRecord, error) {
@@ -287,9 +186,8 @@ func (q *Queries) ListMetadataUpdateRecord(ctx context.Context) ([]MetadataUpdat
 		var i MetadataUpdateRecord
 		if err := rows.Scan(
 			&i.ID,
-			&i.TokenID,
+			&i.ItemID,
 			&i.ActorID,
-			&i.Timestamp,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -332,50 +230,16 @@ func (q *Queries) ListUser(ctx context.Context) ([]User, error) {
 	return items, nil
 }
 
-const updateBalance = `-- name: UpdateBalance :one
-UPDATE "balance" SET "item_id" = $2, "owner_id" = $3, "value" = $4, "updated_at" = $5, "contract" = $6 WHERE id = $1 RETURNING id, item_id, owner_id, value, updated_at, contract, created_at
-`
-
-type UpdateBalanceParams struct {
-	ID        string `json:"id"`
-	ItemID    string `json:"item_id"`
-	OwnerID   string `json:"owner_id"`
-	Value     string `json:"value"`
-	UpdatedAt string `json:"updated_at"`
-	Contract  string `json:"contract"`
-}
-
-func (q *Queries) UpdateBalance(ctx context.Context, arg UpdateBalanceParams) (Balance, error) {
-	row := q.db.QueryRowContext(ctx, updateBalance,
-		arg.ID,
-		arg.ItemID,
-		arg.OwnerID,
-		arg.Value,
-		arg.UpdatedAt,
-		arg.Contract,
-	)
-	var i Balance
-	err := row.Scan(
-		&i.ID,
-		&i.ItemID,
-		&i.OwnerID,
-		&i.Value,
-		&i.UpdatedAt,
-		&i.Contract,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
 const updateItem = `-- name: UpdateItem :one
-UPDATE "item" SET "token_id" = $2, "token_uri" = $3, "standard" = $4 WHERE id = $1 RETURNING id, token_id, token_uri, standard, created_at
+UPDATE "item" SET "token_id" = $2, "token_uri" = $3, "owner_id" = $4, "contract" = $5 WHERE id = $1 RETURNING id, token_id, token_uri, owner_id, contract, created_at
 `
 
 type UpdateItemParams struct {
 	ID       string `json:"id"`
 	TokenID  string `json:"token_id"`
 	TokenUri string `json:"token_uri"`
-	Standard string `json:"standard"`
+	OwnerID  string `json:"owner_id"`
+	Contract string `json:"contract"`
 }
 
 func (q *Queries) UpdateItem(ctx context.Context, arg UpdateItemParams) (Item, error) {
@@ -383,43 +247,38 @@ func (q *Queries) UpdateItem(ctx context.Context, arg UpdateItemParams) (Item, e
 		arg.ID,
 		arg.TokenID,
 		arg.TokenUri,
-		arg.Standard,
+		arg.OwnerID,
+		arg.Contract,
 	)
 	var i Item
 	err := row.Scan(
 		&i.ID,
 		&i.TokenID,
 		&i.TokenUri,
-		&i.Standard,
+		&i.OwnerID,
+		&i.Contract,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const updateMetadataUpdateRecord = `-- name: UpdateMetadataUpdateRecord :one
-UPDATE "metadata_update_record" SET "token_id" = $2, "actor_id" = $3, "timestamp" = $4 WHERE id = $1 RETURNING id, token_id, actor_id, timestamp, created_at
+UPDATE "metadata_update_record" SET "item_id" = $2, "actor_id" = $3 WHERE id = $1 RETURNING id, item_id, actor_id, created_at
 `
 
 type UpdateMetadataUpdateRecordParams struct {
-	ID        string `json:"id"`
-	TokenID   string `json:"token_id"`
-	ActorID   string `json:"actor_id"`
-	Timestamp string `json:"timestamp"`
+	ID      string `json:"id"`
+	ItemID  string `json:"item_id"`
+	ActorID string `json:"actor_id"`
 }
 
 func (q *Queries) UpdateMetadataUpdateRecord(ctx context.Context, arg UpdateMetadataUpdateRecordParams) (MetadataUpdateRecord, error) {
-	row := q.db.QueryRowContext(ctx, updateMetadataUpdateRecord,
-		arg.ID,
-		arg.TokenID,
-		arg.ActorID,
-		arg.Timestamp,
-	)
+	row := q.db.QueryRowContext(ctx, updateMetadataUpdateRecord, arg.ID, arg.ItemID, arg.ActorID)
 	var i MetadataUpdateRecord
 	err := row.Scan(
 		&i.ID,
-		&i.TokenID,
+		&i.ItemID,
 		&i.ActorID,
-		&i.Timestamp,
 		&i.CreatedAt,
 	)
 	return i, err
