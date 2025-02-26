@@ -34,7 +34,7 @@ services:
   app:
     image: u2labs/layerg-crawler:latest
     container_name: crawler-app
-    command: "./layerg-crawler --config layerg-crawler.yaml"
+    command: "--config layerg-crawler.yaml"
     working_dir: /app
     volumes:
       - ./:/app
@@ -55,7 +55,7 @@ services:
     build:
       context: .
     container_name: crawler-query
-    command: "./layerg-crawler --config layerg-crawler.yaml"
+    command: "--config layerg-crawler.yaml"
     working_dir: /app
     volumes:
       - ./:/app
