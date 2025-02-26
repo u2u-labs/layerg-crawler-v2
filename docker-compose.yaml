@@ -7,11 +7,10 @@ services:
       - "26257:26257"
       - "8080:8080"
     command: >
-      sh -c "
-        /cockroach/cockroach start-single-node --insecure &
-        sleep 2 &&
-        /cockroach/cockroach sql --insecure -e 'CREATE DATABASE IF NOT EXISTS layerg;'
-      "
+      start-single-node
+      --insecure
+      --background
+      --execute="CREATE DATABASE IF NOT EXISTS layerg;"
     volumes:
       - ../data/crdb:/cockroach/cockroach-data
 
