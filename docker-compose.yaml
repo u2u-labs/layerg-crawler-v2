@@ -8,6 +8,8 @@ services:
       - "26257:26257"
       - "8080:8080"
     command: "start-single-node --insecure  && cockroach sql --execute='CREATE DATABASE IF NOT EXISTS layerg;'"
+    environment:
+      - COCKROACH_DATABASE=layerg
     volumes:
       - ../data/crdb:/cockroach/cockroach-data
 
