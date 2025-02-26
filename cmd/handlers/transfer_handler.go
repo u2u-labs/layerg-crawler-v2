@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/google/uuid"
+	"github.com/spf13/viper"
 	"github.com/u2u-labs/layerg-crawler/cmd/helpers"
 	graphqldb "github.com/u2u-labs/layerg-crawler/db/graphqldb"
 	db "github.com/u2u-labs/layerg-crawler/db/sqlc"
@@ -94,8 +95,24 @@ func (h *TransferHandler) HandleTransfer(ctx context.Context, event *eventhandle
 			)
 			return fmt.Errorf("failed to create new item: %w", err)
 		}
+		webhookUrl := viper.GetString("WEBHOOK_URL")
+		if err := helpers.PostToWebhook(ctx, webhookUrl+"/webhook/customa", map[string]interface{}{
+			"tokenId":  tokenID,
+			"tokenUri": tokenUri,
+			"owner":    toUser.ID,
+			"txHash":   event.Raw.TxHash.Hex(),
+		}); err != nil {
+			h.Logger.Errorw("Failed to post to webhook",
+				"err", err,
+				"tokenId", tokenID,
+				"txHash", event.Raw.TxHash.Hex(),
+				"tokenUri", tokenUri,
+				"owner", toUser.ID,
+			)
+			// Not returning the error here to avoid failing the entire transfer process
+		}
 	} else {
-		_, err = h.GQL.UpdateItem(ctx, graphqldb.UpdateItemParams{
+		updatedItem, err := h.GQL.UpdateItem(ctx, graphqldb.UpdateItemParams{
 			ID:       item.ID,
 			TokenID:  item.TokenID,
 			TokenUri: item.TokenUri,
@@ -108,6 +125,21 @@ func (h *TransferHandler) HandleTransfer(ctx context.Context, event *eventhandle
 				"newOwner", toUser.ID,
 			)
 			return fmt.Errorf("failed to update item ownership: %w", err)
+		}
+		if err := helpers.PostToWebhook(ctx, "http://localhost:7350/webhook/customa", map[string]interface{}{
+			"tokenId":  tokenID,
+			"tokenUri": updatedItem.TokenUri,
+			"owner":    toUser.ID,
+			"txHash":   event.Raw.TxHash.Hex(),
+		}); err != nil {
+			h.Logger.Errorw("Failed to post to webhook",
+				"err", err,
+				"tokenId", tokenID,
+				"txHash", event.Raw.TxHash.Hex(),
+				"tokenUri", updatedItem.TokenUri,
+				"owner", toUser.ID,
+			)
+			// Not returning the error here to avoid failing the entire transfer process
 		}
 	}
 

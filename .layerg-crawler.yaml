@@ -3,7 +3,10 @@ COCKROACH_DB_DRIVER: postgres
 COCKROACH_DB_URL: postgres://root@localhost:26257/layerg?sslmode=disable
 COCKROACH_DB_NAME: layerg
 
-REDIS_DB_URL: localhost:6379
+# Webhook
+WEBHOOK_URL: http://localhost:7350/
+
+REDIS_DB_URL: localhost:7379
 REDIS_DB_PASSWORD:
 REDIS_DB: 0
 
