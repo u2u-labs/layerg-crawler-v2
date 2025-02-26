@@ -6,11 +6,7 @@ services:
     ports:
       - "26257:26257"
       - "8080:8080"
-    command: >
-      start-single-node
-      --insecure
-      --background
-      --execute="CREATE DATABASE IF NOT EXISTS layerg;"
+    command: start-single-node --insecure
     volumes:
       - ../data/crdb:/cockroach/cockroach-data
 
