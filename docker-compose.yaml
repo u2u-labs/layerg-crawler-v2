@@ -45,11 +45,11 @@ services:
     build:
       context: .
     container_name: crawler-app
-    command: ./layerg-crawler --config config.yaml
+    command: ./layerg-crawler --config layerg-crawler.yaml
     working_dir: /app
     volumes:
       - ./:/app
-      - ./config.yaml:/go/bin/config.yaml
+      - ./config.yaml:/go/bin/layerg-crawler.yaml
     depends_on:
       - crdb
       - redis
@@ -60,11 +60,11 @@ services:
     build:
       context: .
     container_name: crawler-query
-    command: ./layerg-crawler --config config.yaml
+    command: ./layerg-crawler --config layerg-crawler.yaml
     working_dir: /app
     volumes:
       - ./:/app
-      - ./config.yaml:/go/bin/config.yaml
+      - ./config.yaml:/go/bin/layerg-crawler.yaml
     depends_on:
       - crdb
       - redis
