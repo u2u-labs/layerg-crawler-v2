@@ -6,7 +6,12 @@ services:
     ports:
       - "26257:26257"
       - "8080:8080"
-    command: start-single-node --insecure
+    command: >
+      sh -c "
+        /cockroach/cockroach start-single-node --insecure &
+        sleep 2 &&
+        /cockroach/cockroach sql --insecure -e 'CREATE DATABASE IF NOT EXISTS layerg;'
+      "
     volumes:
       - ../data/crdb:/cockroach/cockroach-data
 
@@ -36,30 +41,34 @@ services:
         make generated-migrate-up
       "
 
-  server:
-    image: u2labs/layerg-crawler:latest
+  app:
     build:
       context: .
+    container_name: crawler-app
+    command: ./layerg-crawler --config config.yaml
+    working_dir: /app
+    volumes:
+      - ./:/app
+      - ./config.yaml:/go/bin/config.yaml
     depends_on:
-      - setup
       - crdb
       - redis
-    volumes:
-      - .:/app
-    working_dir: /app
-    command: make all
-    ports:
-      - "${SERVICE_PORT:-8084}:8084"
+      - setup
+    restart: always
 
   query:
-    image: u2labs/layerg-crawler:latest
     build:
       context: .
+    container_name: crawler-query
+    command: ./layerg-crawler --config config.yaml
+    working_dir: /app
+    volumes:
+      - ./:/app
+      - ./config.yaml:/go/bin/config.yaml
     depends_on:
-      - setup
       - crdb
       - redis
-    volumes:
-      - .:/app
-    working_dir: /app
-    command: make query
+      - setup
+    ports:
+      - "8084:8084"
+    restart: always
