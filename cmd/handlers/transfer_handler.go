@@ -45,6 +45,7 @@ func NewMetadataUpdateHandler(queries *db.Queries, gqlQueries *graphqldb.Queries
 }
 
 func (h *TransferHandler) HandleTransfer(ctx context.Context, event *eventhandlers.Transfer) error {
+	webhookUrl := viper.GetString("WEBHOOK_URL")
 
 	fromUser, err := h.GQL.GetOrCreateUser(ctx, event.From.Hex())
 	if err != nil {
@@ -100,7 +101,6 @@ func (h *TransferHandler) HandleTransfer(ctx context.Context, event *eventhandle
 			)
 			return fmt.Errorf("failed to create new item: %w", err)
 		}
-		webhookUrl := viper.GetString("WEBHOOK_URL")
 		if err := helpers.PostToWebhook(ctx, webhookUrl+"/webhook/customa", map[string]interface{}{
 			"tokenId":  tokenID,
 			"tokenUri": tokenUri,
@@ -132,7 +132,7 @@ func (h *TransferHandler) HandleTransfer(ctx context.Context, event *eventhandle
 			)
 			return fmt.Errorf("failed to update item ownership: %w", err)
 		}
-		if err := helpers.PostToWebhook(ctx, "http://localhost:7350/webhook/customa", map[string]interface{}{
+		if err := helpers.PostToWebhook(ctx, webhookUrl+"/webhook/customa", map[string]interface{}{
 			"tokenId":  tokenID,
 			"tokenUri": updatedItem.TokenUri,
 			"owner":    toUser.ID,
