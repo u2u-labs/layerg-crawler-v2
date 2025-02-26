@@ -13,6 +13,7 @@ services:
 
   redis:
     image: bitnami/redis:latest
+    container_name: crawler-redis
     environment:
       - ALLOW_EMPTY_PASSWORD=yes
       - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
@@ -29,7 +30,8 @@ services:
     volumes:
       - .:/app
     working_dir: /app
-    command: "make prepare && make system-migrate-up && make generated-migrate-up"
+    entrypoint: "make"
+    command: "prepare && make system-migrate-up && make generated-migrate-up"
 
   app:
     image: u2labs/layerg-crawler:latest
