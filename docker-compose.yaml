@@ -60,7 +60,7 @@ services:
     build:
       context: .
     container_name: crawler-query
-    command: ./layerg-crawler --config layerg-crawler.yaml
+    command: ./layerg-crawler query --config layerg-crawler.yaml
     working_dir: /app
     volumes:
       - ./:/app
