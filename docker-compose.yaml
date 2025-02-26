@@ -39,6 +39,7 @@ services:
     command: --config layerg-crawler.yaml
     volumes:
       - ./layerg-crawler.yaml:/go/bin/layerg-crawler.yaml
+      - ./subgraph.yaml:/go/bin/subgraph.yaml
     depends_on:
       - crdb
       - redis
@@ -58,6 +59,7 @@ services:
     command: query --config layerg-crawler.yaml
     volumes:
       - ./layerg-crawler.yaml:/go/bin/layerg-crawler.yaml
+      - ./schema.graphql:/go/bin/schema.graphql
     depends_on:
       - crdb
       - redis
