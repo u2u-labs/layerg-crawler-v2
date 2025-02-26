@@ -157,6 +157,10 @@ func (h *TransferHandler) HandleTransfer(ctx context.Context, event *eventhandle
 		"tx", event.Raw.TxHash.Hex(),
 	)
 
+	if err := h.SubmitToDA(); err != nil {
+		h.Logger.Errorw("Failed to submit to DA", "error", err)
+	}
+
 	return nil
 }
 
