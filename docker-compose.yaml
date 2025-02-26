@@ -22,16 +22,16 @@ services:
     volumes:
       - ../redis_data:/bitnami/redis/data
 
-  setup:
-    image: u2labs/layerg-crawler:latest
-    container_name: crawler-setup
-    depends_on:
-      - crdb
-    volumes:
-      - .:/app
-    working_dir: /app
-    entrypoint: "make"
-    command: "prepare && make system-migrate-up && make generated-migrate-up"
+  #setup:
+  #  image: u2labs/layerg-crawler:latest
+  #  container_name: crawler-setup
+  #  depends_on:
+  #    - crdb
+  #  volumes:
+  #    - .:/app
+  #  working_dir: /app
+  #  entrypoint: "make"
+  #  command: "prepare && make system-migrate-up && make generated-migrate-up"
 
   app:
     image: u2labs/layerg-crawler:latest
@@ -44,7 +44,7 @@ services:
     depends_on:
       - crdb
       - redis
-      - setup
+    #  - setup
     restart: always
     logging:
       driver: "json-file"
@@ -65,7 +65,7 @@ services:
     depends_on:
       - crdb
       - redis
-      - setup
+   #   - setup
     ports:
       - "8084:8084"
     restart: always
