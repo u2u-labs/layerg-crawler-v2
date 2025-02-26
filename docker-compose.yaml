@@ -55,6 +55,11 @@ services:
       - redis
       - setup
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: 300m
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
 
   query:
     build:
@@ -72,3 +77,8 @@ services:
     ports:
       - "8084:8084"
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: 300m
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
