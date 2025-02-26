@@ -37,9 +37,7 @@ services:
     image: u2labs/layerg-crawler:latest
     container_name: crawler-app
     command: --config layerg-crawler.yaml
-    working_dir: /app
     volumes:
-      - ./:/app
       - ./layerg-crawler.yaml:/go/bin/layerg-crawler.yaml
     depends_on:
       - crdb
@@ -58,9 +56,7 @@ services:
       context: .
     container_name: crawler-query
     command: query --config layerg-crawler.yaml
-    working_dir: /app
     volumes:
-      - ./:/app
       - ./layerg-crawler.yaml:/go/bin/layerg-crawler.yaml
     depends_on:
       - crdb
