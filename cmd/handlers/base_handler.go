@@ -107,7 +107,7 @@ func (h *BaseHandler) SubmitToDA() error {
 	}
 
 	// TODO: Get URL from config
-	url := daUrl + "poi/operations/" + subgraphId
+	url := daUrl + "poi/" + subgraphId
 	fmt.Println("data", string(jsonData))
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
