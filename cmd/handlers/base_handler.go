@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/spf13/viper"
 	graphqldb "github.com/u2u-labs/layerg-crawler/db/graphqldb"
 	db "github.com/u2u-labs/layerg-crawler/db/sqlc"
 	"go.uber.org/zap"
@@ -90,10 +91,12 @@ func (h *BaseHandler) SubmitToDA() error {
 		return nil
 	}
 
+	daUrl := viper.GetString("DA_URL")
+	projectId := viper.GetString("DA_PROJECT_ID")
 	proof := DataProof{
 		ID:             int64(h.BlockNumber), // You might want to generate this
 		ChainBlockHash: h.BlockHash,
-		ProjectID:      "113", // Get from config
+		ProjectID:      projectId,
 		Operations:     h.operations,
 	}
 
@@ -103,7 +106,7 @@ func (h *BaseHandler) SubmitToDA() error {
 	}
 
 	// TODO: Get URL from config
-	url := "https://da-dev.layerg.xyz/poi/operations/d4e35a40-8237-47f9-b121-b27aea135de9"
+	url := daUrl + "poi/operations/a4b4ceb8-c05e-4a32-96f9-ee19395295a8"
 	fmt.Println("data", string(jsonData))
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {

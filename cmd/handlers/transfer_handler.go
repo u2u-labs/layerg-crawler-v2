@@ -55,6 +55,8 @@ func (h *TransferHandler) HandleTransfer(ctx context.Context, event *eventhandle
 		return fmt.Errorf("failed to ensure 'from' user exists: %w", err)
 	}
 
+	h.AddOperation("User", fromUser, event.Raw.BlockHash.Hex(), event.Raw.BlockNumber)
+
 	toUser, err := h.GQL.GetOrCreateUser(ctx, event.To.Hex())
 	if err != nil {
 		h.Logger.Errorw("Failed to ensure 'to' user exists",
@@ -63,6 +65,8 @@ func (h *TransferHandler) HandleTransfer(ctx context.Context, event *eventhandle
 		)
 		return fmt.Errorf("failed to ensure 'to' user exists: %w", err)
 	}
+
+	h.AddOperation("User", toUser, event.Raw.BlockHash.Hex(), event.Raw.BlockNumber)
 
 	// Try to get existing item
 	tokenID := event.TokenId.String()
@@ -87,6 +91,7 @@ func (h *TransferHandler) HandleTransfer(ctx context.Context, event *eventhandle
 			OwnerID:  toUser.ID,
 			Contract: event.Raw.Address.Hex(),
 		})
+		h.AddOperation("Item", item, event.Raw.BlockHash.Hex(), event.Raw.BlockNumber)
 		if err != nil {
 			h.Logger.Errorw("Failed to create new item",
 				"err", err,
@@ -118,6 +123,7 @@ func (h *TransferHandler) HandleTransfer(ctx context.Context, event *eventhandle
 			TokenUri: item.TokenUri,
 			OwnerID:  toUser.ID,
 		})
+		h.AddOperation("Item", updatedItem, event.Raw.BlockHash.Hex(), event.Raw.BlockNumber)
 		if err != nil {
 			h.Logger.Errorw("Failed to update item ownership",
 				"err", err,

@@ -3,6 +3,10 @@ COCKROACH_DB_DRIVER: postgres
 COCKROACH_DB_URL: postgres://root@localhost:26257/layerg?sslmode=disable
 COCKROACH_DB_NAME: layerg
 
+# DA config
+DA_URL: https://da-dev.layerg.xyz/
+DA_PROJECT_ID: nebulas_2484_1.0.0
+
 # Webhook
 WEBHOOK_URL: http://localhost:7350/
 
