@@ -3,10 +3,11 @@ version: "3.5"
 services:
   crdb:
     image: cockroachdb/cockroach:v24.2.1
+    container_name: crawler-db
     ports:
       - "26257:26257"
       - "8080:8080"
-    command: start-single-node --insecure
+    command: "start-single-node --insecure  && cockroach sql --execute='CREATE DATABASE IF NOT EXISTS layerg;'"
     volumes:
       - ../data/crdb:/cockroach/cockroach-data
 
@@ -22,25 +23,18 @@ services:
 
   setup:
     image: u2labs/layerg-crawler:latest
-    build:
-      context: .
+    container_name: crawler-setup
     depends_on:
       - crdb
     volumes:
       - .:/app
     working_dir: /app
-    command: >
-      sh -c "
-        make prepare &&
-        make system-migrate-up &&
-        make generated-migrate-up
-      "
+    command: "make prepare && make system-migrate-up && make generated-migrate-up"
 
   app:
-    build:
-      context: .
+    image: u2labs/layerg-crawler:latest
     container_name: crawler-app
-    command: ./layerg-crawler --config layerg-crawler.yaml
+    command: "layerg-crawler --config layerg-crawler.yaml"
     working_dir: /app
     volumes:
       - ./:/app
@@ -57,6 +51,7 @@ services:
         tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
 
   query:
+    image: u2labs/layerg-crawler:latest
     build:
       context: .
     container_name: crawler-query
