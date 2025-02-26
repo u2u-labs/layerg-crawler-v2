@@ -93,6 +93,7 @@ func (h *BaseHandler) SubmitToDA() error {
 
 	daUrl := viper.GetString("DA_URL")
 	projectId := viper.GetString("DA_PROJECT_ID")
+	subgraphId := viper.GetString("SUBGRAPH_ID")
 	proof := DataProof{
 		ID:             int64(h.BlockNumber), // You might want to generate this
 		ChainBlockHash: h.BlockHash,
@@ -106,7 +107,7 @@ func (h *BaseHandler) SubmitToDA() error {
 	}
 
 	// TODO: Get URL from config
-	url := daUrl + "poi/operations/a4b4ceb8-c05e-4a32-96f9-ee19395295a8"
+	url := daUrl + "poi/operations/" + subgraphId
 	fmt.Println("data", string(jsonData))
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {

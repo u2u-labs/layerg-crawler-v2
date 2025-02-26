@@ -6,6 +6,7 @@ COCKROACH_DB_NAME: layerg
 # DA config
 DA_URL: https://da-dev.layerg.xyz/
 DA_PROJECT_ID: nebulas_2484_1.0.0
+SUBGRAPH_ID: 2361a6aa-77c8-4cb0-bfdc-4063425202ce
 
 # Webhook
 WEBHOOK_URL: http://localhost:7350
