@@ -49,7 +49,7 @@ services:
     working_dir: /app
     volumes:
       - ./:/app
-      - ./config.yaml:/go/bin/layerg-crawler.yaml
+      - ./layerg-crawler.yaml:/go/bin/layerg-crawler.yaml
     depends_on:
       - crdb
       - redis
@@ -69,7 +69,7 @@ services:
     working_dir: /app
     volumes:
       - ./:/app
-      - ./config.yaml:/go/bin/layerg-crawler.yaml
+      - ./layerg-crawler.yaml:/go/bin/layerg-crawler.yaml
     depends_on:
       - crdb
       - redis
