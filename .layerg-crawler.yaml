@@ -8,18 +8,18 @@ DA_URL: https://da-dev.layerg.xyz/
 DA_PROJECT_ID: nebulas_2484_1.0.0
 
 # Webhook
-WEBHOOK_URL: http://localhost:7350/
+WEBHOOK_URL: http://localhost:7350
 
 REDIS_DB_URL: localhost:7379
 REDIS_DB_PASSWORD:
 REDIS_DB: 0
 
 # App configs
-LOG_LEVEL: DEV
-GIN_MODE: release
-API_KEY_HEADER_NAME: X-API-KEY
-API_PORT: ":8085"
-APP_ID: f3e3bf76-62dc-42a7-ad0d-ef9033bc13a5
+# LOG_LEVEL: DEV
+# GIN_MODE: release
+# API_KEY_HEADER_NAME: X-API-KEY
+# API_PORT: ":8085"
+# APP_ID: f3e3bf76-62dc-42a7-ad0d-ef9033bc13a5
 
 # Query service
 SERVICE_PORT: "8084"
