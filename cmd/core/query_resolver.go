@@ -211,43 +211,9 @@ func (r *QueryResolver) ResolveMultiple(typeName string, p graphql.ResolveParams
 	args := []interface{}{}
 	if whereRaw, ok := p.Args["where"]; ok && whereRaw != nil {
 		if whereMap, ok := whereRaw.(map[string]interface{}); ok {
-			conditions := []string{}
-			for field, filter := range whereMap {
-				if filterMap, ok := filter.(map[string]interface{}); ok {
-					columnName := fmt.Sprintf(`"%s"."%s"`, tableName, toSnakeCase(field))
-					for op, val := range filterMap {
-						if val == nil {
-							continue
-						}
-						var converted interface{} = val
-						switch v := val.(type) {
-						case big.Int:
-							converted = v.String()
-						case *big.Int:
-							converted = v.String()
-						}
-						var sqlOp string
-						switch op {
-						case "gte":
-							sqlOp = ">="
-						case "gt":
-							sqlOp = ">"
-						case "eq":
-							sqlOp = "="
-						case "lt":
-							sqlOp = "<"
-						case "lte":
-							sqlOp = "<="
-						default:
-							continue
-						}
-						conditions = append(conditions, fmt.Sprintf("%s %s $%d", columnName, sqlOp, len(args)+1))
-						args = append(args, converted)
-					}
-				}
-			}
-			if len(conditions) > 0 {
-				query += " WHERE " + strings.Join(conditions, " AND ")
+			conditionStr := r.processWhere(whereMap, tableName, &args)
+			if conditionStr != "" {
+				query += " WHERE " + conditionStr
 			}
 		}
 	}
@@ -349,14 +315,16 @@ func (r *QueryResolver) ResolveMultiple(typeName string, p graphql.ResolveParams
 				nestedAliases = append(nestedAliases, "id")
 			}
 			joinColumn := fmt.Sprintf(`"%s_id"`, derivedFieldName)
-			nestedQuery := fmt.Sprintf(`SELECT DISTINCT %s FROM "%s" WHERE %s = $1`,
+			nestedQuery := fmt.Sprintf(`SELECT DISTINCT %s FROM "%s" WHERE %s = $%d`,
 				strings.Join(nestedSelects, ", "),
 				relatedTable,
-				joinColumn)
+				joinColumn,
+				len(args)+1)
 			parentID, ok := record["id"].(string)
 			if !ok {
 				continue
 			}
+			args = append(args, parentID)
 			nestedRows, err := db.DB.Query(nestedQuery, parentID)
 			if err != nil {
 				return nil, err
@@ -390,7 +358,7 @@ func (r *QueryResolver) ResolveMultiple(typeName string, p graphql.ResolveParams
 			nestedRows.Close()
 			record[toCamelCase(fieldName)] = nestedResults
 		}
-		// Post-process join fields: group flat join columns into nested objects.
+		// Group flat join columns into nested objects.
 		for _, fieldDef := range r.Schema.Types[typeName].Fields {
 			if !isScalar(fieldDef.Type) && !hasDirective(fieldDef, "derivedFrom") {
 				prefix := toCamelCase(toSnakeCase(fieldDef.Name.Value))
@@ -567,4 +535,82 @@ func (r *QueryResolver) buildSelectAndJoins(typeName string, fields []*ast.Field
 		fieldToIndex["id"] = currentIndex
 	}
 	return
+}
+
+// Add this new helper method to QueryResolver.
+func (r *QueryResolver) processWhere(whereMap map[string]interface{}, tableName string, args *[]interface{}) string {
+	conditions := []string{}
+	// Process regular field filters.
+	for field, filter := range whereMap {
+		if field == "AND" || field == "OR" {
+			continue
+		}
+		if filterMap, ok := filter.(map[string]interface{}); ok {
+			columnName := fmt.Sprintf(`"%s"."%s"`, tableName, toSnakeCase(field))
+			for op, val := range filterMap {
+				if val == nil {
+					continue
+				}
+				var converted interface{} = val
+				switch v := val.(type) {
+				case big.Int:
+					converted = v.String()
+				case *big.Int:
+					converted = v.String()
+				}
+				var sqlOp string
+				switch op {
+				case "gte":
+					sqlOp = ">="
+				case "gt":
+					sqlOp = ">"
+				case "eq":
+					sqlOp = "="
+				case "lt":
+					sqlOp = "<"
+				case "lte":
+					sqlOp = "<="
+				default:
+					continue
+				}
+				conditions = append(conditions, fmt.Sprintf("%s %s $%d", columnName, sqlOp, len(*args)+1))
+				*args = append(*args, converted)
+			}
+		}
+	}
+	// Process nested AND conditions.
+	if andRaw, ok := whereMap["AND"]; ok {
+		if andList, ok := andRaw.([]interface{}); ok {
+			andConditions := []string{}
+			for _, clause := range andList {
+				if clauseMap, ok := clause.(map[string]interface{}); ok {
+					nestedCondition := r.processWhere(clauseMap, tableName, args)
+					if nestedCondition != "" {
+						andConditions = append(andConditions, "("+nestedCondition+")")
+					}
+				}
+			}
+			if len(andConditions) > 0 {
+				conditions = append(conditions, "("+strings.Join(andConditions, " AND ")+")")
+			}
+		}
+	}
+	// Process nested OR conditions.
+	if orRaw, ok := whereMap["OR"]; ok {
+		if orList, ok := orRaw.([]interface{}); ok {
+			orConditions := []string{}
+			for _, clause := range orList {
+				if clauseMap, ok := clause.(map[string]interface{}); ok {
+					nestedCondition := r.processWhere(clauseMap, tableName, args)
+					if nestedCondition != "" {
+						orConditions = append(orConditions, "("+nestedCondition+")")
+					}
+				}
+			}
+			if len(orConditions) > 0 {
+				conditions = append(conditions, "("+strings.Join(orConditions, " OR ")+")")
+			}
+		}
+	}
+	return strings.Join(conditions, " AND ")
 }
