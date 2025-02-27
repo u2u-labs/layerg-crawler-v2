@@ -8,6 +8,36 @@ import (
 	"time"
 )
 
+func generateFullMigrationDown(entities []Entity) (string, error) {
+	sortedEntities, err := sortEntities(entities)
+	if err != nil {
+		return "", err
+	}
+	var sb strings.Builder
+	// Reverse the alterations done in the second pass (for array relations)
+	for _, entity := range sortedEntities {
+		for _, field := range entity.Fields {
+			if field.Relation != "" && strings.HasPrefix(field.Type, "[") && !field.DerivedFrom {
+				baseType := strings.Trim(strings.Trim(field.Type, "[]!"), "!")
+				manyTableName := toSnakeCase(baseType)
+				oneTableName := toSnakeCase(entity.Name)
+				sb.WriteString(fmt.Sprintf(`DROP INDEX IF EXISTS "idx_%s_%s_id";`, manyTableName, oneTableName))
+				sb.WriteString("\n")
+				sb.WriteString(fmt.Sprintf(`ALTER TABLE "%s" DROP CONSTRAINT IF EXISTS "fk_%s_%s";`, manyTableName, manyTableName, oneTableName))
+				sb.WriteString("\n")
+				sb.WriteString(fmt.Sprintf(`ALTER TABLE "%s" DROP COLUMN IF EXISTS "%s_id";`, manyTableName, oneTableName))
+				sb.WriteString("\n\n")
+			}
+		}
+	}
+	// Drop the tables created in the first pass in reverse order
+	for i := len(sortedEntities) - 1; i >= 0; i-- {
+		tableName := toSnakeCase(sortedEntities[i].Name)
+		sb.WriteString(fmt.Sprintf("DROP TABLE IF EXISTS \"%s\" CASCADE;\n", tableName))
+	}
+	return sb.String(), nil
+}
+
 func GenerateMigrationScripts(entities []Entity, outputDir string) error {
 	migrationsDir := outputDir + "/migrations"
 
@@ -47,6 +77,12 @@ func GenerateMigrationScripts(entities []Entity, outputDir string) error {
 	if strings.TrimSpace(migrationSQL) == "" {
 		migrationSQL = "-- No schema changes detected\n"
 	}
+
+	// generate down migration based on the same entities (or subset in diff migration)
+	downSQL, err := generateFullMigrationDown(entities)
+	if err != nil {
+		return err
+	}
 	timestamp := time.Now().Format("20060102150405")
 	filePath := fmt.Sprintf("%s/%s_migration.sql", migrationsDir, timestamp)
 
@@ -71,6 +107,11 @@ func GenerateMigrationScripts(entities []Entity, outputDir string) error {
 	if _, err := f.WriteString(downFooter); err != nil {
 		return err
 	}
+
+	if _, err := f.WriteString(downSQL); err != nil {
+		return err
+	}
+
 	snapshotData, err := json.MarshalIndent(entities, "", "  ")
 	if err != nil {
 		return err
