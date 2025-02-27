@@ -85,14 +85,14 @@ func (h *TransferHandler) HandleTransfer(ctx context.Context, event *eventhandle
 			h.Logger.Errorw("Failed to get token URI", "err", err)
 			tokenUri = ""
 		}
-		_, err = h.GQL.CreateItem(ctx, graphqldb.CreateItemParams{
+		createdItem, err := h.GQL.CreateItem(ctx, graphqldb.CreateItemParams{
 			ID:       uuid.New().String(),
 			TokenID:  tokenID,
 			TokenUri: tokenUri,
 			OwnerID:  toUser.ID,
 			Contract: event.Raw.Address.Hex(),
 		})
-		h.AddOperation("Item", item, event.Raw.BlockHash.Hex(), event.Raw.BlockNumber)
+		h.AddOperation("Item", createdItem, event.Raw.BlockHash.Hex(), event.Raw.BlockNumber)
 		if err != nil {
 			h.Logger.Errorw("Failed to create new item",
 				"err", err,
