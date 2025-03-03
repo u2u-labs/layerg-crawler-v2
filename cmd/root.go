@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/u2u-labs/layerg-crawler/cmd/abigen"
 )
 
 var cfgFile string
@@ -41,6 +42,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.layerg-crawler.yaml)")
 
+	rootCmd.AddCommand(abigen.GeneratorCmd)
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")

@@ -40,3 +40,17 @@ prepare:
 	@echo "Running code generation flow..."
 	go run cmd/prepare/main.go -schema=./schema.graphql -out=./generated -queries=./db
 	sqlc generate
+
+
+# Generate Go helper files for all ABI files
+gen-abi:
+	@echo "Generating Go helper files from ABI..."
+	@mkdir -p generated/abi_helpers
+	@for file in abis/*.json; do \
+		filename=$$(basename $$file .json); \
+		echo "Processing $$filename..."; \
+		go run main.go abigen -i $$file -o generated/abi_helpers/$${filename}_helpers.go; \
+	done
+	@echo "Done generating helpers!"
+
+.PHONY: gen-abi clean-helpers
