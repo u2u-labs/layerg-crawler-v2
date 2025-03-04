@@ -88,7 +88,7 @@ func GenerateFunction(fn ABIFunction, abiVar string) (string, error) {
 	if err != nil {
 		sugar.Errorf("Failed to unpack %s: %%v", err)
 		return %s, err
-	}`, unpackVar, "result", fn.Name, fn.Name, zeroValue)
+	}`, unpackVar, "unpackVar", fn.Name, fn.Name, zeroValue)
 
 	data := FunctionData{
 		FunctionName: filepath.Base(abiVar) + strings.Title(fn.Name),

@@ -1,6 +1,6 @@
 [
   {
-    "Name": "Item",
+    "Name": "Value",
     "Fields": [
       {
         "Name": "id",
@@ -13,7 +13,7 @@
         "Relation": ""
       },
       {
-        "Name": "tokenId",
+        "Name": "Value",
         "Type": "BigInt",
         "IsNonNull": true,
         "IsIndexed": false,
@@ -23,7 +23,7 @@
         "Relation": ""
       },
       {
-        "Name": "tokenUri",
+        "Name": "Sender",
         "Type": "String",
         "IsNonNull": true,
         "IsIndexed": false,
@@ -31,161 +31,6 @@
         "IsList": false,
         "DerivedFrom": false,
         "Relation": ""
-      },
-      {
-        "Name": "standard",
-        "Type": "String",
-        "IsNonNull": true,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "IsList": false,
-        "DerivedFrom": false,
-        "Relation": ""
-      },
-      {
-        "Name": "balances",
-        "Type": "[Balance!]",
-        "IsNonNull": true,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "IsList": false,
-        "DerivedFrom": true,
-        "Relation": "[Balance!]"
-      }
-    ]
-  },
-  {
-    "Name": "Balance",
-    "Fields": [
-      {
-        "Name": "id",
-        "Type": "ID",
-        "IsNonNull": true,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "IsList": false,
-        "DerivedFrom": false,
-        "Relation": ""
-      },
-      {
-        "Name": "item",
-        "Type": "Item",
-        "IsNonNull": true,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "IsList": false,
-        "DerivedFrom": false,
-        "Relation": "Item"
-      },
-      {
-        "Name": "owner",
-        "Type": "User",
-        "IsNonNull": true,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "IsList": false,
-        "DerivedFrom": false,
-        "Relation": "User"
-      },
-      {
-        "Name": "value",
-        "Type": "BigInt",
-        "IsNonNull": true,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "IsList": false,
-        "DerivedFrom": false,
-        "Relation": ""
-      },
-      {
-        "Name": "updatedAt",
-        "Type": "BigInt",
-        "IsNonNull": true,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "IsList": false,
-        "DerivedFrom": false,
-        "Relation": ""
-      },
-      {
-        "Name": "contract",
-        "Type": "String",
-        "IsNonNull": true,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "IsList": false,
-        "DerivedFrom": false,
-        "Relation": ""
-      }
-    ]
-  },
-  {
-    "Name": "MetadataUpdateRecord",
-    "Fields": [
-      {
-        "Name": "id",
-        "Type": "ID",
-        "IsNonNull": true,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "IsList": false,
-        "DerivedFrom": false,
-        "Relation": ""
-      },
-      {
-        "Name": "tokenId",
-        "Type": "BigInt",
-        "IsNonNull": true,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "IsList": false,
-        "DerivedFrom": false,
-        "Relation": ""
-      },
-      {
-        "Name": "actor",
-        "Type": "User",
-        "IsNonNull": true,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "IsList": false,
-        "DerivedFrom": false,
-        "Relation": "User"
-      },
-      {
-        "Name": "timestamp",
-        "Type": "BigInt",
-        "IsNonNull": true,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "IsList": false,
-        "DerivedFrom": false,
-        "Relation": ""
-      }
-    ]
-  },
-  {
-    "Name": "User",
-    "Fields": [
-      {
-        "Name": "id",
-        "Type": "ID",
-        "IsNonNull": true,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "IsList": false,
-        "DerivedFrom": false,
-        "Relation": ""
-      },
-      {
-        "Name": "balances",
-        "Type": "[Balance!]",
-        "IsNonNull": true,
-        "IsIndexed": false,
-        "IsUnique": false,
-        "IsList": false,
-        "DerivedFrom": true,
-        "Relation": "[Balance!]"
       }
     ]
   }

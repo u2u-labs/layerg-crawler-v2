@@ -33,210 +33,26 @@ func (h *DefaultHandler) HandleEvent(ctx context.Context, log *types.Log, logger
 }
 
 
-// Transfer represents the event data for Transfer(address,address,uint256)
-type Transfer struct {
+// ValueUpdated represents the event data for ValueUpdated(uint256)
+type ValueUpdated struct {
 	
-	From common.Address // address
-	
-	To common.Address // address
-	
-	TokenId *big.Int // uint256
+	NewValue *big.Int // uint256
 	
 	Raw *types.Log
 }
 
-func UnpackTransfer(log *types.Log) (*Transfer, error) {
-	event := new(Transfer)
-	event.Raw = log
-	var dataOffset int
-	
-	
-	if len(log.Topics) < 2 {
-		return nil, fmt.Errorf("missing topic for indexed parameter from")
-	}
-	
-	event.From = common.HexToAddress(log.Topics[1].Hex())
-	
-	
-	
-	
-	if len(log.Topics) < 3 {
-		return nil, fmt.Errorf("missing topic for indexed parameter to")
-	}
-	
-	event.To = common.HexToAddress(log.Topics[2].Hex())
-	
-	
-	
-	
-	if len(log.Topics) < 4 {
-		return nil, fmt.Errorf("missing topic for indexed parameter tokenId")
-	}
-	
-	event.TokenId = new(big.Int).SetBytes(log.Topics[3].Bytes())
-	
-	
-	
-	_ = dataOffset
-	return event, nil
-}
-
-// MetadataUpdate represents the event data for MetadataUpdate(uint256)
-type MetadataUpdate struct {
-	
-	TokenId *big.Int // uint256
-	
-	Raw *types.Log
-}
-
-func UnpackMetadataUpdate(log *types.Log) (*MetadataUpdate, error) {
-	event := new(MetadataUpdate)
+func UnpackValueUpdated(log *types.Log) (*ValueUpdated, error) {
+	event := new(ValueUpdated)
 	event.Raw = log
 	var dataOffset int
 	
 	
 		
 		if len(log.Data) < dataOffset+32 {
-			return nil, fmt.Errorf("insufficient data for non-indexed parameter _tokenId")
+			return nil, fmt.Errorf("insufficient data for non-indexed parameter newValue")
 		}
-		event.TokenId = new(big.Int).SetBytes(log.Data[dataOffset:dataOffset+32])
+		event.NewValue = new(big.Int).SetBytes(log.Data[dataOffset:dataOffset+32])
 		dataOffset += 32
-		
-	
-	
-	_ = dataOffset
-	return event, nil
-}
-
-// TransferSingle represents the event data for TransferSingle(address,address,address,uint256,uint256)
-type TransferSingle struct {
-	
-	Operator common.Address // address
-	
-	From common.Address // address
-	
-	To common.Address // address
-	
-	Id *big.Int // uint256
-	
-	Value *big.Int // uint256
-	
-	Raw *types.Log
-}
-
-func UnpackTransferSingle(log *types.Log) (*TransferSingle, error) {
-	event := new(TransferSingle)
-	event.Raw = log
-	var dataOffset int
-	
-	
-	if len(log.Topics) < 2 {
-		return nil, fmt.Errorf("missing topic for indexed parameter operator")
-	}
-	
-	event.Operator = common.HexToAddress(log.Topics[1].Hex())
-	
-	
-	
-	
-	if len(log.Topics) < 3 {
-		return nil, fmt.Errorf("missing topic for indexed parameter from")
-	}
-	
-	event.From = common.HexToAddress(log.Topics[2].Hex())
-	
-	
-	
-	
-	if len(log.Topics) < 4 {
-		return nil, fmt.Errorf("missing topic for indexed parameter to")
-	}
-	
-	event.To = common.HexToAddress(log.Topics[3].Hex())
-	
-	
-	
-	
-		
-		if len(log.Data) < dataOffset+32 {
-			return nil, fmt.Errorf("insufficient data for non-indexed parameter id")
-		}
-		event.Id = new(big.Int).SetBytes(log.Data[dataOffset:dataOffset+32])
-		dataOffset += 32
-		
-	
-	
-	
-		
-		if len(log.Data) < dataOffset+32 {
-			return nil, fmt.Errorf("insufficient data for non-indexed parameter value")
-		}
-		event.Value = new(big.Int).SetBytes(log.Data[dataOffset:dataOffset+32])
-		dataOffset += 32
-		
-	
-	
-	_ = dataOffset
-	return event, nil
-}
-
-// TransferBatch represents the event data for TransferBatch(address,address,address,uint256[],uint256[])
-type TransferBatch struct {
-	
-	Operator common.Address // address
-	
-	From common.Address // address
-	
-	To common.Address // address
-	
-	Ids []*big.Int // uint256[]
-	
-	Values []*big.Int // uint256[]
-	
-	Raw *types.Log
-}
-
-func UnpackTransferBatch(log *types.Log) (*TransferBatch, error) {
-	event := new(TransferBatch)
-	event.Raw = log
-	var dataOffset int
-	
-	
-	if len(log.Topics) < 2 {
-		return nil, fmt.Errorf("missing topic for indexed parameter operator")
-	}
-	
-	event.Operator = common.HexToAddress(log.Topics[1].Hex())
-	
-	
-	
-	
-	if len(log.Topics) < 3 {
-		return nil, fmt.Errorf("missing topic for indexed parameter from")
-	}
-	
-	event.From = common.HexToAddress(log.Topics[2].Hex())
-	
-	
-	
-	
-	if len(log.Topics) < 4 {
-		return nil, fmt.Errorf("missing topic for indexed parameter to")
-	}
-	
-	event.To = common.HexToAddress(log.Topics[3].Hex())
-	
-	
-	
-	
-		
-		event.Ids = []*big.Int{new(big.Int).SetBytes(log.Data)}
-		
-	
-	
-	
-		
-		event.Values = []*big.Int{new(big.Int).SetBytes(log.Data)}
 		
 	
 	
@@ -247,18 +63,12 @@ func UnpackTransferBatch(log *types.Log) (*TransferBatch, error) {
 
 // EventSignatures maps event signatures to their hex representations
 var EventSignatures = map[string]string{
-	"Transfer(address,address,uint256)": common.HexToHash(KeccakHash("Transfer(address,address,uint256)")).Hex(),
-	"MetadataUpdate(uint256)": common.HexToHash(KeccakHash("MetadataUpdate(uint256)")).Hex(),
-	"TransferSingle(address,address,address,uint256,uint256)": common.HexToHash(KeccakHash("TransferSingle(address,address,address,uint256,uint256)")).Hex(),
-	"TransferBatch(address,address,address,uint256[],uint256[])": common.HexToHash(KeccakHash("TransferBatch(address,address,address,uint256[],uint256[])")).Hex(),
+	"ValueUpdated(uint256)": common.HexToHash(KeccakHash("ValueUpdated(uint256)")).Hex(),
 }
 
 // HandlerRegistry maps event signatures to their handlers
 var HandlerRegistry = map[string]EventHandler{
-	EventSignatures["Transfer(address,address,uint256)"]: &DefaultHandler{},
-	EventSignatures["MetadataUpdate(uint256)"]: &DefaultHandler{},
-	EventSignatures["TransferSingle(address,address,address,uint256,uint256)"]: &DefaultHandler{},
-	EventSignatures["TransferBatch(address,address,address,uint256[],uint256[])"]: &DefaultHandler{},
+	EventSignatures["ValueUpdated(uint256)"]: &DefaultHandler{},
 }
 
 // KeccakHash returns the Keccak256 hash of a string
@@ -267,7 +77,4 @@ func KeccakHash(s string) string {
 }
 
 // Event signatures
-var TransferEventSignature = crypto.Keccak256Hash([]byte("Transfer(address,address,uint256)")).Hex()
-var MetadataUpdateEventSignature = crypto.Keccak256Hash([]byte("MetadataUpdate(uint256)")).Hex()
-var TransferSingleEventSignature = crypto.Keccak256Hash([]byte("TransferSingle(address,address,address,uint256,uint256)")).Hex()
-var TransferBatchEventSignature = crypto.Keccak256Hash([]byte("TransferBatch(address,address,address,uint256[],uint256[])")).Hex()
+var ValueUpdatedEventSignature = crypto.Keccak256Hash([]byte("ValueUpdated(uint256)")).Hex()

@@ -10,43 +10,18 @@ network:
     - "https://rpc-nebulas-testnet.uniultra.xyz"
 dataSources:
   - kind: EthereumDatasourceKind.Runtime
-    startBlock: 16213720
+    startBlock: 45821261
     options:
-      address: "0x1b122eff77d9a54d6c773c971f6acb6aaa9f90a8"
+      address: "0xa595cd76b7705d5795c10406b9e1d97bf3779861"
       abis:
-        - name: "URC721"
-          file: "./abis/URC721.json"
-        - name: "URC4906"
-          file: "./abis/URC4906.json"
+        - name: "SimpleStorage"
+          file: "./abis/SimpleStorage.json"
     mapping:
       handlers:
         - kind: EthereumHandlerKind.Event
-          handler: "HandleTransfer"
+          handler: "HandleEvent"
           filter:
             topics:
-              - "Transfer(address indexed from, address indexed to, uint256 amount)"
-        - kind: EthereumHandlerKind.Event
-          handler: "MetadataUpdate"
-          filter:
-            topics:
-              - "MetadataUpdate(uint256 tokenId)"
-  - kind: EthereumDatasourceKind.Runtime
-    startBlock: 16213720
-    options:
-      address: "0xeddd02437aa5db6def90ff32c329decd2bcb86db"
-      abis:
-        - name: "URC1155"
-          file: "./abis/URC1155.json"
-    mapping:
-      handlers:
-        - kind: EthereumHandlerKind.Event
-          handler: "HandleTransferSingle"
-          filter:
-            topics:
-              - "TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value)"
-        - kind: EthereumHandlerKind.Event
-          handler: "HandleTransferBatch"
-          filter:
-            topics:
-              - "TransferBatch(address indexed operator, address indexed from, address indexed to, uint256[] ids, uint256[] values)"
-repository: "https://github.com/subquery/ethereum-subql-starter" 
+              - "ValueUpdated(uint256 newValue)"
+
+repository: "https://github.com/subquery/ethereum-subql-starter"

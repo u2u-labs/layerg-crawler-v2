@@ -39,34 +39,13 @@ func (r *EventRouter) Route(ctx context.Context, log *types.Log) error {
 
     signature := log.Topics[0].Hex()
     switch signature {
-    case eventhandlers.TransferEventSignature:
-        handler := handlers.NewTransferHandler(r.queries, r.gql, r.chainID, r.logger)
-        event, err := eventhandlers.UnpackTransfer(log)
+    case eventhandlers.ValueUpdatedEventSignature:
+        handler := handlers.NewValueUpdatedHandler(r.queries, r.gql, r.chainID, r.logger)
+        event, err := eventhandlers.UnpackValueUpdated(log)
         if err != nil {
-            return fmt.Errorf("failed to unpack Transfer event: %w", err)
+            return fmt.Errorf("failed to unpack ValueUpdated event: %w", err)
         }
-        return handler.HandleTransfer(ctx, event)
-    case eventhandlers.MetadataUpdateEventSignature:
-        handler := handlers.NewMetadataUpdateHandler(r.queries, r.gql, r.chainID, r.logger)
-        event, err := eventhandlers.UnpackMetadataUpdate(log)
-        if err != nil {
-            return fmt.Errorf("failed to unpack MetadataUpdate event: %w", err)
-        }
-        return handler.HandleMetadataUpdate(ctx, event)
-    case eventhandlers.TransferSingleEventSignature:
-        handler := handlers.NewTransferSingleHandler(r.queries, r.gql, r.chainID, r.logger)
-        event, err := eventhandlers.UnpackTransferSingle(log)
-        if err != nil {
-            return fmt.Errorf("failed to unpack TransferSingle event: %w", err)
-        }
-        return handler.HandleTransferSingle(ctx, event)
-    case eventhandlers.TransferBatchEventSignature:
-        handler := handlers.NewTransferBatchHandler(r.queries, r.gql, r.chainID, r.logger)
-        event, err := eventhandlers.UnpackTransferBatch(log)
-        if err != nil {
-            return fmt.Errorf("failed to unpack TransferBatch event: %w", err)
-        }
-        return handler.HandleTransferBatch(ctx, event)
+        return handler.HandleValueUpdated(ctx, event)
     default:
         r.logger.Debugw("No handler for event signature", "signature", signature)
         return nil
