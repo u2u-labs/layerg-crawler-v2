@@ -272,7 +272,7 @@ func URC721MINT_PRICE(ctx context.Context, sugar *zap.SugaredLogger, client *eth
 
 	// Unpack the result
 	var unpackVar *big.Int
-	err = contractABI.UnpackIntoInterface(&result, "MINT_PRICE", result)
+	err = contractABI.UnpackIntoInterface(&unpackVar, "MINT_PRICE", result)
 	if err != nil {
 		sugar.Errorf("Failed to unpack MINT_PRICE: %v", err)
 		return nil, err
@@ -312,7 +312,7 @@ func URC721BalanceOf(ctx context.Context, sugar *zap.SugaredLogger, client *ethc
 
 	// Unpack the result
 	var unpackVar *big.Int
-	err = contractABI.UnpackIntoInterface(&result, "balanceOf", result)
+	err = contractABI.UnpackIntoInterface(&unpackVar, "balanceOf", result)
 	if err != nil {
 		sugar.Errorf("Failed to unpack balanceOf: %v", err)
 		return nil, err
@@ -352,7 +352,7 @@ func URC721BaseExtension(ctx context.Context, sugar *zap.SugaredLogger, client *
 
 	// Unpack the result
 	var unpackVar string
-	err = contractABI.UnpackIntoInterface(&result, "baseExtension", result)
+	err = contractABI.UnpackIntoInterface(&unpackVar, "baseExtension", result)
 	if err != nil {
 		sugar.Errorf("Failed to unpack baseExtension: %v", err)
 		return "", err
@@ -392,7 +392,7 @@ func URC721GetApproved(ctx context.Context, sugar *zap.SugaredLogger, client *et
 
 	// Unpack the result
 	var unpackVar common.Address
-	err = contractABI.UnpackIntoInterface(&result, "getApproved", result)
+	err = contractABI.UnpackIntoInterface(&unpackVar, "getApproved", result)
 	if err != nil {
 		sugar.Errorf("Failed to unpack getApproved: %v", err)
 		return common.Address{}, err
@@ -432,7 +432,7 @@ func URC721IsApprovedForAll(ctx context.Context, sugar *zap.SugaredLogger, clien
 
 	// Unpack the result
 	var unpackVar bool
-	err = contractABI.UnpackIntoInterface(&result, "isApprovedForAll", result)
+	err = contractABI.UnpackIntoInterface(&unpackVar, "isApprovedForAll", result)
 	if err != nil {
 		sugar.Errorf("Failed to unpack isApprovedForAll: %v", err)
 		return false, err
@@ -472,7 +472,7 @@ func URC721MaxSupply(ctx context.Context, sugar *zap.SugaredLogger, client *ethc
 
 	// Unpack the result
 	var unpackVar *big.Int
-	err = contractABI.UnpackIntoInterface(&result, "maxSupply", result)
+	err = contractABI.UnpackIntoInterface(&unpackVar, "maxSupply", result)
 	if err != nil {
 		sugar.Errorf("Failed to unpack maxSupply: %v", err)
 		return nil, err
@@ -512,7 +512,7 @@ func URC721Name(ctx context.Context, sugar *zap.SugaredLogger, client *ethclient
 
 	// Unpack the result
 	var unpackVar string
-	err = contractABI.UnpackIntoInterface(&result, "name", result)
+	err = contractABI.UnpackIntoInterface(&unpackVar, "name", result)
 	if err != nil {
 		sugar.Errorf("Failed to unpack name: %v", err)
 		return "", err
@@ -552,7 +552,7 @@ func URC721Owner(ctx context.Context, sugar *zap.SugaredLogger, client *ethclien
 
 	// Unpack the result
 	var unpackVar common.Address
-	err = contractABI.UnpackIntoInterface(&result, "owner", result)
+	err = contractABI.UnpackIntoInterface(&unpackVar, "owner", result)
 	if err != nil {
 		sugar.Errorf("Failed to unpack owner: %v", err)
 		return common.Address{}, err
@@ -592,7 +592,7 @@ func URC721OwnerOf(ctx context.Context, sugar *zap.SugaredLogger, client *ethcli
 
 	// Unpack the result
 	var unpackVar common.Address
-	err = contractABI.UnpackIntoInterface(&result, "ownerOf", result)
+	err = contractABI.UnpackIntoInterface(&unpackVar, "ownerOf", result)
 	if err != nil {
 		sugar.Errorf("Failed to unpack ownerOf: %v", err)
 		return common.Address{}, err
@@ -632,7 +632,7 @@ func URC721Paused(ctx context.Context, sugar *zap.SugaredLogger, client *ethclie
 
 	// Unpack the result
 	var unpackVar bool
-	err = contractABI.UnpackIntoInterface(&result, "paused", result)
+	err = contractABI.UnpackIntoInterface(&unpackVar, "paused", result)
 	if err != nil {
 		sugar.Errorf("Failed to unpack paused: %v", err)
 		return false, err
@@ -672,7 +672,7 @@ func URC721SupportsInterface(ctx context.Context, sugar *zap.SugaredLogger, clie
 
 	// Unpack the result
 	var unpackVar bool
-	err = contractABI.UnpackIntoInterface(&result, "supportsInterface", result)
+	err = contractABI.UnpackIntoInterface(&unpackVar, "supportsInterface", result)
 	if err != nil {
 		sugar.Errorf("Failed to unpack supportsInterface: %v", err)
 		return false, err
@@ -712,7 +712,7 @@ func URC721Symbol(ctx context.Context, sugar *zap.SugaredLogger, client *ethclie
 
 	// Unpack the result
 	var unpackVar string
-	err = contractABI.UnpackIntoInterface(&result, "symbol", result)
+	err = contractABI.UnpackIntoInterface(&unpackVar, "symbol", result)
 	if err != nil {
 		sugar.Errorf("Failed to unpack symbol: %v", err)
 		return "", err
@@ -752,7 +752,7 @@ func URC721TokenURI(ctx context.Context, sugar *zap.SugaredLogger, client *ethcl
 
 	// Unpack the result
 	var unpackVar string
-	err = contractABI.UnpackIntoInterface(&result, "tokenURI", result)
+	err = contractABI.UnpackIntoInterface(&unpackVar, "tokenURI", result)
 	if err != nil {
 		sugar.Errorf("Failed to unpack tokenURI: %v", err)
 		return "", err
@@ -792,7 +792,7 @@ func URC721TotalSupply(ctx context.Context, sugar *zap.SugaredLogger, client *et
 
 	// Unpack the result
 	var unpackVar *big.Int
-	err = contractABI.UnpackIntoInterface(&result, "totalSupply", result)
+	err = contractABI.UnpackIntoInterface(&unpackVar, "totalSupply", result)
 	if err != nil {
 		sugar.Errorf("Failed to unpack totalSupply: %v", err)
 		return nil, err

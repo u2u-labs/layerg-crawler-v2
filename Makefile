@@ -53,4 +53,3 @@ gen-abi:
 	done
 	@echo "Done generating helpers!"
 
-.PHONY: gen-abi clean-helpers

@@ -121,7 +121,7 @@ func URC1155BalanceOf(ctx context.Context, sugar *zap.SugaredLogger, client *eth
 
 	// Unpack the result
 	var unpackVar *big.Int
-	err = contractABI.UnpackIntoInterface(&result, "balanceOf", result)
+	err = contractABI.UnpackIntoInterface(&unpackVar, "balanceOf", result)
 	if err != nil {
 		sugar.Errorf("Failed to unpack balanceOf: %v", err)
 		return nil, err
@@ -161,7 +161,7 @@ func URC1155BalanceOfBatch(ctx context.Context, sugar *zap.SugaredLogger, client
 
 	// Unpack the result
 	var unpackVar *big.Int
-	err = contractABI.UnpackIntoInterface(&result, "balanceOfBatch", result)
+	err = contractABI.UnpackIntoInterface(&unpackVar, "balanceOfBatch", result)
 	if err != nil {
 		sugar.Errorf("Failed to unpack balanceOfBatch: %v", err)
 		return nil, err
@@ -201,7 +201,7 @@ func URC1155IsApprovedForAll(ctx context.Context, sugar *zap.SugaredLogger, clie
 
 	// Unpack the result
 	var unpackVar bool
-	err = contractABI.UnpackIntoInterface(&result, "isApprovedForAll", result)
+	err = contractABI.UnpackIntoInterface(&unpackVar, "isApprovedForAll", result)
 	if err != nil {
 		sugar.Errorf("Failed to unpack isApprovedForAll: %v", err)
 		return false, err

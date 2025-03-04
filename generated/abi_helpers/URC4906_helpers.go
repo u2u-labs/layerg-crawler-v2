@@ -149,7 +149,7 @@ func URC4906BalanceOf(ctx context.Context, sugar *zap.SugaredLogger, client *eth
 
 	// Unpack the result
 	var unpackVar *big.Int
-	err = contractABI.UnpackIntoInterface(&result, "balanceOf", result)
+	err = contractABI.UnpackIntoInterface(&unpackVar, "balanceOf", result)
 	if err != nil {
 		sugar.Errorf("Failed to unpack balanceOf: %v", err)
 		return nil, err
@@ -189,7 +189,7 @@ func URC4906GetApproved(ctx context.Context, sugar *zap.SugaredLogger, client *e
 
 	// Unpack the result
 	var unpackVar common.Address
-	err = contractABI.UnpackIntoInterface(&result, "getApproved", result)
+	err = contractABI.UnpackIntoInterface(&unpackVar, "getApproved", result)
 	if err != nil {
 		sugar.Errorf("Failed to unpack getApproved: %v", err)
 		return common.Address{}, err
@@ -229,7 +229,7 @@ func URC4906IsApprovedForAll(ctx context.Context, sugar *zap.SugaredLogger, clie
 
 	// Unpack the result
 	var unpackVar bool
-	err = contractABI.UnpackIntoInterface(&result, "isApprovedForAll", result)
+	err = contractABI.UnpackIntoInterface(&unpackVar, "isApprovedForAll", result)
 	if err != nil {
 		sugar.Errorf("Failed to unpack isApprovedForAll: %v", err)
 		return false, err
@@ -269,7 +269,7 @@ func URC4906OwnerOf(ctx context.Context, sugar *zap.SugaredLogger, client *ethcl
 
 	// Unpack the result
 	var unpackVar common.Address
-	err = contractABI.UnpackIntoInterface(&result, "ownerOf", result)
+	err = contractABI.UnpackIntoInterface(&unpackVar, "ownerOf", result)
 	if err != nil {
 		sugar.Errorf("Failed to unpack ownerOf: %v", err)
 		return common.Address{}, err
@@ -309,7 +309,7 @@ func URC4906SupportsInterface(ctx context.Context, sugar *zap.SugaredLogger, cli
 
 	// Unpack the result
 	var unpackVar bool
-	err = contractABI.UnpackIntoInterface(&result, "supportsInterface", result)
+	err = contractABI.UnpackIntoInterface(&unpackVar, "supportsInterface", result)
 	if err != nil {
 		sugar.Errorf("Failed to unpack supportsInterface: %v", err)
 		return false, err
