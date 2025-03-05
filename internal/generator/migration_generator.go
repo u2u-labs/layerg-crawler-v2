@@ -199,6 +199,24 @@ func generateFullMigration(entities []Entity) (string, error) {
 				}
 			}
 		}
+
+		// create composite indexes
+		compositeIndex := entity.CompositeIndex
+		if len(compositeIndex) > 0 {
+
+			idxName := fmt.Sprintf("idx_%s", tableName)
+			for i, col := range compositeIndex {
+				colNames := make([]string, len(compositeIndex[i]))
+				for j, c := range col {
+					colNames[j] = fmt.Sprintf("\"%s\"", toSnakeCase(c))
+				}
+
+				sb.WriteString(fmt.Sprintf("CREATE INDEX \"%s_%d\" ON \"%s\"(%s);\n",
+					idxName, i, tableName, strings.Join(colNames, ", ")))
+			}
+
+		}
+
 		sb.WriteString("\n")
 	}
 

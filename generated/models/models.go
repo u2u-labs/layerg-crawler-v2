@@ -6,7 +6,7 @@ import (
 
 // Item represents the Item entity.
 type Item struct {
-	Id string `gorm:"primaryKey;not null"`
+	Id string `gorm:"primaryKey;uniqueIndex;not null"`
 	TokenId string `gorm:"not null"`
 	TokenUri string `gorm:"not null"`
 	Standard string `gorm:"not null"`
@@ -17,7 +17,7 @@ type Item struct {
 // Balance represents the Balance entity.
 type Balance struct {
 	Id string `gorm:"primaryKey;not null"`
-	ItemID string `gorm:"not null"`
+	ItemID string `gorm:"uniqueIndex;not null"`
 	Item *Item `gorm:"-"`
 	OwnerID string `gorm:"not null"`
 	Owner *User `gorm:"-"`

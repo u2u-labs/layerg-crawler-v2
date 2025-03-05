@@ -1,17 +1,18 @@
 -- +goose Up
 -- Migration script generated from GraphQL schema (incremental)
 
-CREATE TABLE "user" (
-    "id" TEXT PRIMARY KEY,
-    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-
 CREATE TABLE "item" (
     "id" TEXT PRIMARY KEY,
     "token_id" NUMERIC NOT NULL,
     "token_uri" TEXT NOT NULL,
     "standard" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX "idx_item_id" ON "item"("id");
+
+CREATE TABLE "user" (
+    "id" TEXT PRIMARY KEY,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -28,6 +29,9 @@ CREATE TABLE "balance" (
     FOREIGN KEY ("owner_id") REFERENCES "user"("id") ON DELETE CASCADE
 );
 
+CREATE UNIQUE INDEX "idx_balance_item" ON "balance"("item_id");
+CREATE INDEX "idx_balance_0" ON "balance"("id", "item");
+CREATE INDEX "idx_balance_1" ON "balance"("owner", "value");
 
 CREATE TABLE "metadata_update_record" (
     "id" TEXT PRIMARY KEY,
@@ -41,3 +45,7 @@ CREATE TABLE "metadata_update_record" (
 
 
 -- +goose Down
+DROP TABLE IF EXISTS "metadata_update_record" CASCADE;
+DROP TABLE IF EXISTS "balance" CASCADE;
+DROP TABLE IF EXISTS "item" CASCADE;
+DROP TABLE IF EXISTS "user" CASCADE;
