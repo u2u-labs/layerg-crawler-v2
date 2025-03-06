@@ -204,13 +204,27 @@ func generateFullMigration(entities []Entity) (string, error) {
 		compositeIndex := entity.CompositeIndex
 		if len(compositeIndex) > 0 {
 
-			idxName := fmt.Sprintf("idx_%s", tableName)
+			idxName := fmt.Sprintf("idx_composite_%s", tableName)
 			for i, col := range compositeIndex {
 				colNames := make([]string, len(compositeIndex[i]))
-				for j, c := range col {
-					colNames[j] = fmt.Sprintf("\"%s\"", toSnakeCase(c))
-				}
 
+				for j, c := range col {
+					colNames[j] = toSnakeCase(c)
+					for _, col := range colNames {
+
+						for _, field := range entity.Fields {
+							if field.Name == col {
+								if field.Relation != "" && !strings.HasPrefix(field.Type, "[") {
+									colNames[j] += "_id"
+								}
+								break
+							}
+
+						}
+					}
+					colNames[j] = fmt.Sprintf("\"%s\"", colNames[j])
+
+				}
 				sb.WriteString(fmt.Sprintf("CREATE INDEX \"%s_%d\" ON \"%s\"(%s);\n",
 					idxName, i, tableName, strings.Join(colNames, ", ")))
 			}
@@ -241,6 +255,7 @@ func generateFullMigration(entities []Entity) (string, error) {
 						oneTableName, oneTableName))
 					sb.WriteString("\n")
 
+					// Create index
 					sb.WriteString(fmt.Sprintf(`CREATE INDEX IF NOT EXISTS "idx_%s_%s_id" ON "%s"("%s_id");`,
 						manyTableName, oneTableName, manyTableName, oneTableName))
 					sb.WriteString("\n\n")

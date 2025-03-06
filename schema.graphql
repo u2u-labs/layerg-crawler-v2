@@ -6,11 +6,13 @@ type Item @entity {
   balances: [Balance!]! @derivedFrom(field: "item")
 }
 
-type Balance @entity {
-  id: ID!   
-  item: Item!
+type Balance
+  @entity
+  @compositeIndexes(fields: [["item", "owner"], ["item", "value"]]) {
+  id: ID! @unique
+  item: Item! @index(unique: true)
   owner: User!
-  value: BigInt!
+  value: BigInt! @index
   updatedAt: BigInt!
   contract: String!
 }

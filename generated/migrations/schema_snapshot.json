@@ -6,8 +6,8 @@
         "Name": "id",
         "Type": "ID",
         "IsNonNull": true,
-        "IsIndexed": true,
-        "IsUnique": true,
+        "IsIndexed": false,
+        "IsUnique": false,
         "IsList": false,
         "DerivedFrom": false,
         "Relation": ""
@@ -63,7 +63,7 @@
         "Type": "ID",
         "IsNonNull": true,
         "IsIndexed": false,
-        "IsUnique": false,
+        "IsUnique": true,
         "IsList": false,
         "DerivedFrom": false,
         "Relation": ""
@@ -92,7 +92,7 @@
         "Name": "value",
         "Type": "BigInt",
         "IsNonNull": true,
-        "IsIndexed": false,
+        "IsIndexed": true,
         "IsUnique": false,
         "IsList": false,
         "DerivedFrom": false,
@@ -121,11 +121,11 @@
     ],
     "CompositeIndex": [
       [
-        "id",
-        "item"
+        "item",
+        "owner"
       ],
       [
-        "owner",
+        "item",
         "value"
       ]
     ]
