@@ -16,12 +16,12 @@ type Item struct {
 
 // Balance represents the Balance entity.
 type Balance struct {
-	Id string `gorm:"primaryKey;not null"`
-	ItemID string `gorm:"not null"`
+	Id string `gorm:"primaryKey;uniqueIndex;not null"`
+	ItemID string `gorm:"uniqueIndex;not null"`
 	Item *Item `gorm:"-"`
 	OwnerID string `gorm:"not null"`
 	Owner *User `gorm:"-"`
-	Value string `gorm:"not null"`
+	Value string `gorm:"index;not null"`
 	UpdatedAt string `gorm:"not null"`
 	Contract string `gorm:"not null"`
 	CreatedAt time.Time `gorm:"not null"`

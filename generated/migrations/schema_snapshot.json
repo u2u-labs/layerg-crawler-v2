@@ -52,7 +52,8 @@
         "DerivedFrom": true,
         "Relation": "[Balance!]"
       }
-    ]
+    ],
+    "CompositeIndex": null
   },
   {
     "Name": "Balance",
@@ -62,7 +63,7 @@
         "Type": "ID",
         "IsNonNull": true,
         "IsIndexed": false,
-        "IsUnique": false,
+        "IsUnique": true,
         "IsList": false,
         "DerivedFrom": false,
         "Relation": ""
@@ -71,8 +72,8 @@
         "Name": "item",
         "Type": "Item",
         "IsNonNull": true,
-        "IsIndexed": false,
-        "IsUnique": false,
+        "IsIndexed": true,
+        "IsUnique": true,
         "IsList": false,
         "DerivedFrom": false,
         "Relation": "Item"
@@ -91,7 +92,7 @@
         "Name": "value",
         "Type": "BigInt",
         "IsNonNull": true,
-        "IsIndexed": false,
+        "IsIndexed": true,
         "IsUnique": false,
         "IsList": false,
         "DerivedFrom": false,
@@ -117,6 +118,16 @@
         "DerivedFrom": false,
         "Relation": ""
       }
+    ],
+    "CompositeIndex": [
+      [
+        "item",
+        "owner"
+      ],
+      [
+        "item",
+        "value"
+      ]
     ]
   },
   {
@@ -162,7 +173,8 @@
         "DerivedFrom": false,
         "Relation": ""
       }
-    ]
+    ],
+    "CompositeIndex": null
   },
   {
     "Name": "User",
@@ -187,6 +199,7 @@
         "DerivedFrom": true,
         "Relation": "[Balance!]"
       }
-    ]
+    ],
+    "CompositeIndex": null
   }
 ]
