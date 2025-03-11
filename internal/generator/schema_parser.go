@@ -75,6 +75,7 @@ func ParseGraphQLSchema(path string) ([]Entity, []Enum, error) {
 			currentSchema = RAWSchema{Name: strings.Fields(trimmedLine)[1]}
 			currentSchema.Header = trimmedLine
 		} else if strings.HasPrefix(trimmedLine, "type") {
+
 			if currentSchema.Name != "" {
 				rawSchemas = append(rawSchemas, currentSchema)
 			}
@@ -97,6 +98,15 @@ func ParseGraphQLSchema(path string) ([]Entity, []Enum, error) {
 
 	var currentEntity *Entity
 	for _, rawSchema := range rawSchemas {
+		if rawSchema.Name == "Mutation" {
+			log.Fatal("Error: do not support mutation")
+			continue
+		}
+
+		if rawSchema.Name == "Query" {
+			continue
+		}
+
 		if strings.Contains(rawSchema.Header, "enum") {
 			currentEnum := Enum{Name: rawSchema.Name}
 			for _, field := range rawSchema.Fields {

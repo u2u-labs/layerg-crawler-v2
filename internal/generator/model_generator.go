@@ -17,6 +17,7 @@ func GenerateGoModels(entities []Entity, outputDir string) error {
 		return err
 	}
 	defer f.Close()
+
 	header := `package models
 
 import (
@@ -97,10 +98,12 @@ type {{ .Name }} struct {
 		},
 		"gormTagFK": func(field Field) string {
 			var tags []string
-			if field.IsUnique {
+			if field.IsUnique && field.IsIndexed {
 				tags = append(tags, "uniqueIndex")
 			} else if field.IsIndexed {
 				tags = append(tags, "index")
+			} else if field.IsUnique {
+				tags = append(tags, "unique")
 			}
 			if field.IsNonNull {
 				tags = append(tags, "not null")

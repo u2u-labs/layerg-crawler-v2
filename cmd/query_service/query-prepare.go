@@ -151,9 +151,9 @@ func mapFieldType(ft FieldType) string {
 	case "Boolean":
 		base = "graphql.Boolean"
 	case "Date":
-		base = "core.DateType"
+		base = "core.DateType" // Your custom Date scalar.
 	case "BigInt":
-		base = "core.BigIntType"
+		base = "core.BigIntType" // Your custom BigInt scalar.
 	default:
 		if ft.IsEnum {
 			base = ft.Name
