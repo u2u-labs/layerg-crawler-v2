@@ -8,6 +8,24 @@ import (
 
 
 
+// Define enum types
+
+var ItemStandard = graphql.NewEnum(graphql.EnumConfig{
+	Name: "ItemStandard",
+	Values: graphql.EnumValueConfigMap{
+		"ERC721": &graphql.EnumValueConfig{
+			Value: "ERC721",
+		},
+		"ERC1155": &graphql.EnumValueConfig{
+			Value: "ERC1155",
+		},
+		
+	},
+})
+
+
+
+
 var StringFilterType = graphql.NewInputObject(graphql.InputObjectConfig{
 	Name: "StringFilter",
 	Fields: graphql.InputObjectConfigFieldMap{
