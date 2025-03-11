@@ -1,8 +1,13 @@
+enum ItemStandard {
+  ERC721
+  ERC1155
+}
+
 type Item @entity {
   id: ID!
   tokenId: BigInt!
   tokenUri: String!
-  standard: String!
+  standard: ItemStandard!
   balances: [Balance!]! @derivedFrom(field: "item")
 }
 

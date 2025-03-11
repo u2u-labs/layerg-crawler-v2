@@ -1,6 +1,11 @@
 -- +goose Up
 -- Migration script generated from GraphQL schema (incremental)
 
+CREATE TYPE "ItemStandard" AS ENUM (
+    'ERC721',
+    'ERC1155'
+);
+
 CREATE TABLE "item" (
     "id" TEXT PRIMARY KEY,
     "token_id" NUMERIC NOT NULL,
@@ -49,3 +54,4 @@ DROP TABLE IF EXISTS "metadata_update_record" CASCADE;
 DROP TABLE IF EXISTS "balance" CASCADE;
 DROP TABLE IF EXISTS "user" CASCADE;
 DROP TABLE IF EXISTS "item" CASCADE;
+DROP TYPE IF EXISTS "ItemStandard" CASCADE;

@@ -26,6 +26,11 @@ type Entity struct {
 	CompositeIndex [][]string
 }
 
+type Enum struct {
+	Name   string
+	Values []string
+}
+
 type RAWSchema struct {
 	Name   string
 	Header string
@@ -37,11 +42,20 @@ func isScalar(t string) bool {
 	return l == "id" || l == "string" || l == "boolean" || l == "date" || l == "bigint"
 }
 
-func ParseGraphQLSchema(path string) ([]Entity, error) {
+func containsEnum(enums []Enum, t string) bool {
+	for _, enum := range enums {
+		if enum.Name == t {
+			return true
+		}
+	}
+	return false
+}
+
+func ParseGraphQLSchema(path string) ([]Entity, []Enum, error) {
 	content, err := ioutil.ReadFile(path)
 	if err != nil {
 		fmt.Println("Error reading schema file:", err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	schema := string(content)
@@ -52,11 +66,15 @@ func ParseGraphQLSchema(path string) ([]Entity, error) {
 	var rawSchemas []RAWSchema
 	var entities []Entity
 	var currentSchema RAWSchema
+	var enums []Enum
 
 	for _, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
 
-		if strings.HasPrefix(trimmedLine, "type") {
+		if strings.HasPrefix(trimmedLine, "enum") {
+			currentSchema = RAWSchema{Name: strings.Fields(trimmedLine)[1]}
+			currentSchema.Header = trimmedLine
+		} else if strings.HasPrefix(trimmedLine, "type") {
 			if currentSchema.Name != "" {
 				rawSchemas = append(rawSchemas, currentSchema)
 			}
@@ -79,7 +97,18 @@ func ParseGraphQLSchema(path string) ([]Entity, error) {
 
 	var currentEntity *Entity
 	for _, rawSchema := range rawSchemas {
+		if strings.Contains(rawSchema.Header, "enum") {
+			currentEnum := Enum{Name: rawSchema.Name}
+			for _, field := range rawSchema.Fields {
+				value := strings.TrimSpace(field)
+				if value != "" && !strings.HasPrefix(value, "#") {
+					currentEnum.Values = append(currentEnum.Values, value)
+				}
+			}
+			enums = append(enums, currentEnum)
+			continue
 
+		}
 		// handle header
 		entityName := strings.Fields(rawSchema.Header)[1]
 		currentEntity = &Entity{Name: entityName}
@@ -118,7 +147,7 @@ func ParseGraphQLSchema(path string) ([]Entity, error) {
 			if strings.HasPrefix(line, "type") && strings.Contains(line, "@entity") {
 				parts := strings.Split(line, " ")
 				if len(parts) < 2 {
-					return nil, errors.New("invalid type definition")
+					return nil, nil, errors.New("invalid type definition")
 				}
 				entityName := parts[1]
 				currentEntity = &Entity{Name: entityName}
@@ -168,7 +197,7 @@ func ParseGraphQLSchema(path string) ([]Entity, error) {
 					if strings.Contains(rest, "@derivedFrom") {
 						field.DerivedFrom = true
 					}
-					if !isScalar(fieldType) {
+					if !isScalar(fieldType) && !containsEnum(enums, fieldType) {
 						field.Relation = fieldType
 					}
 					currentEntity.Fields = append(currentEntity.Fields, field)
@@ -177,9 +206,8 @@ func ParseGraphQLSchema(path string) ([]Entity, error) {
 		}
 
 		entities = append(entities, *currentEntity)
-
 	}
 
-	return entities, nil
+	return entities, enums, nil
 
 }

@@ -139,7 +139,7 @@ func CreateQueryFields(resolver *core.QueryResolver) graphql.Fields {
 				},
 				
 				"standard": &graphql.Field{
-					Type: graphql.String,
+					Type: ItemStandard,
 				},
 				
 				"balances": &graphql.Field{

@@ -30,7 +30,7 @@ func main() {
 	}
 
 	// Parse the GraphQL schema.
-	entities, err := generator.ParseGraphQLSchema(*schemaPath)
+	entities, enums, err := generator.ParseGraphQLSchema(*schemaPath)
 	if err != nil {
 		log.Fatalf("failed to parse GraphQL schema: %v", err)
 	}
@@ -41,7 +41,7 @@ func main() {
 	}
 
 	// Generate migration scripts.
-	if err := generator.GenerateMigrationScripts(entities, *outputDir); err != nil {
+	if err := generator.GenerateMigrationScripts(entities, enums, *outputDir); err != nil {
 		log.Fatalf("failed to generate migration scripts: %v", err)
 	}
 
