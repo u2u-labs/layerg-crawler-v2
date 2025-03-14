@@ -34,7 +34,7 @@
       },
       {
         "Name": "standard",
-        "Type": "String",
+        "Type": "ItemStandard",
         "IsNonNull": true,
         "IsIndexed": false,
         "IsUnique": false,

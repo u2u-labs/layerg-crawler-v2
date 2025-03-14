@@ -23,12 +23,18 @@ type TypeData struct {
 	TypeName string
 	Fields   []FieldData
 }
+type EnumData struct {
+	Name   string
+	Values []string
+}
 type FieldType struct {
 	Name   string
 	IsList bool
+	IsEnum bool
 }
 type GenerationData struct {
 	Types   []TypeData
+	Enums   []EnumData
 	HasDate bool
 }
 
@@ -38,14 +44,27 @@ func GenerateQueryService(schemaPath string) error {
 		log.Fatal(err)
 	}
 	var types []TypeData
-	hasDate := false
+	var enums []EnumData
+	var hasDate bool
+	// Process enums first
+	for name, def := range schema.Enums {
+		values := make([]string, len(def.Values))
+		for i, v := range def.Values {
+			values[i] = v.Name.Value
+		}
+		enums = append(enums, EnumData{
+			Name:   name,
+			Values: values,
+		})
+	}
+	// Process types
 	for tn, def := range schema.Types {
 		if tn == "Query" || tn == "Mutation" {
 			continue
 		}
 		td := TypeData{TypeName: tn}
 		for _, f := range def.Fields {
-			ft := resolveFieldType(f.Type)
+			ft := resolveFieldType(f.Type, schema)
 			mapped := mapFieldType(ft)
 			if mapped == "core.DateType" {
 				hasDate = true
@@ -60,6 +79,7 @@ func GenerateQueryService(schemaPath string) error {
 
 	genData := GenerationData{
 		Types:   types,
+		Enums:   enums,
 		HasDate: hasDate,
 	}
 
@@ -102,16 +122,17 @@ func GenerateQueryService(schemaPath string) error {
 	return nil
 }
 
-func resolveFieldType(t ast.Type) FieldType {
+func resolveFieldType(t ast.Type, schema *core.Schema) FieldType {
 	switch tt := t.(type) {
 	case *ast.List:
-		ft := resolveFieldType(tt.Type)
+		ft := resolveFieldType(tt.Type, schema)
 		ft.IsList = true
 		return ft
 	case *ast.NonNull:
-		return resolveFieldType(tt.Type)
+		return resolveFieldType(tt.Type, schema)
 	case *ast.Named:
-		return FieldType{Name: tt.Name.Value, IsList: false}
+		isEnum := schema.IsEnum(tt.Name.Value)
+		return FieldType{Name: tt.Name.Value, IsList: false, IsEnum: isEnum}
 	}
 	return FieldType{}
 }
@@ -134,7 +155,11 @@ func mapFieldType(ft FieldType) string {
 	case "BigInt":
 		base = "core.BigIntType" // Your custom BigInt scalar.
 	default:
-		base = ft.Name + "Type"
+		if ft.IsEnum {
+			base = ft.Name
+		} else {
+			base = ft.Name + "Type"
+		}
 	}
 	if ft.IsList {
 		return "graphql.NewList(" + base + ")"
@@ -168,6 +193,21 @@ import (
 {{if .HasDate}}
 var DateType = core.DateType
 {{end}}
+
+// Define enum types
+{{range .Enums}}
+var {{.Name}} = graphql.NewEnum(graphql.EnumConfig{
+	Name: "{{.Name}}",
+	Values: graphql.EnumValueConfigMap{
+		{{range .Values}}"{{.}}": &graphql.EnumValueConfig{
+			Value: "{{.}}",
+		},
+		{{end}}
+	},
+})
+{{end}}
+
+
 
 var StringFilterType = graphql.NewInputObject(graphql.InputObjectConfig{
 	Name: "StringFilter",
@@ -263,4 +303,5 @@ func CreateQueryFields(resolver *core.QueryResolver) graphql.Fields {
 		},
 		{{end}}
 	}
-}`
+}
+`

@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func generateFullMigrationDown(entities []Entity) (string, error) {
+func generateFullMigrationDown(entities []Entity, enums []Enum) (string, error) {
 	sortedEntities, err := sortEntities(entities)
 	if err != nil {
 		return "", err
@@ -35,10 +35,16 @@ func generateFullMigrationDown(entities []Entity) (string, error) {
 		tableName := toSnakeCase(sortedEntities[i].Name)
 		sb.WriteString(fmt.Sprintf("DROP TABLE IF EXISTS \"%s\" CASCADE;\n", tableName))
 	}
+
+	// drop all enums
+	for _, enum := range enums {
+		sb.WriteString(fmt.Sprintf("DROP TYPE IF EXISTS \"%s\" CASCADE;\n", enum.Name))
+	}
+
 	return sb.String(), nil
 }
 
-func GenerateMigrationScripts(entities []Entity, outputDir string) error {
+func GenerateMigrationScripts(entities []Entity, enums []Enum, outputDir string) error {
 	migrationsDir := outputDir + "/migrations"
 
 	// Only remove if directory exists
@@ -62,13 +68,13 @@ func GenerateMigrationScripts(entities []Entity, outputDir string) error {
 	}
 	var migrationSQL string
 	if len(prevEntities) > 0 {
-		diffSQL, err := generateDiffMigration(prevEntities, entities)
+		diffSQL, err := generateDiffMigration(prevEntities, entities, enums)
 		if err != nil {
 			return err
 		}
 		migrationSQL = diffSQL
 	} else {
-		fullSQL, err := generateFullMigration(entities)
+		fullSQL, err := generateFullMigration(entities, enums)
 		if err != nil {
 			return err
 		}
@@ -79,7 +85,7 @@ func GenerateMigrationScripts(entities []Entity, outputDir string) error {
 	}
 
 	// generate down migration based on the same entities (or subset in diff migration)
-	downSQL, err := generateFullMigrationDown(entities)
+	downSQL, err := generateFullMigrationDown(entities, enums)
 	if err != nil {
 		return err
 	}
@@ -122,7 +128,7 @@ func GenerateMigrationScripts(entities []Entity, outputDir string) error {
 	return nil
 }
 
-func generateFullMigration(entities []Entity) (string, error) {
+func generateFullMigration(entities []Entity, enums []Enum) (string, error) {
 	sortedEntities, err := sortEntities(entities)
 	if err != nil {
 		return "", err
@@ -130,7 +136,20 @@ func generateFullMigration(entities []Entity) (string, error) {
 
 	var sb strings.Builder
 
-	// First pass: Create all base tables
+	// Create all enums to support type in table
+	for _, enum := range enums {
+		sb.WriteString(fmt.Sprintf("CREATE TYPE \"%s\" AS ENUM (\n", enum.Name))
+		for i, value := range enum.Values {
+			if i == len(enum.Values)-1 {
+				sb.WriteString(fmt.Sprintf("    '%s'\n", value))
+			} else {
+				sb.WriteString(fmt.Sprintf("    '%s',\n", value))
+			}
+		}
+		sb.WriteString(");\n\n")
+	}
+
+	// Create all base tables
 	for _, entity := range sortedEntities {
 		tableName := toSnakeCase(entity.Name)
 		sb.WriteString(fmt.Sprintf("CREATE TABLE \"%s\" (\n", tableName))
@@ -288,7 +307,7 @@ func getSQLType(graphqlType string) string {
 	}
 }
 
-func generateDiffMigration(prev, curr []Entity) (string, error) {
+func generateDiffMigration(prev, curr []Entity, enums []Enum) (string, error) {
 	var sb strings.Builder
 	for _, newEntity := range curr {
 		exists := false
@@ -299,7 +318,7 @@ func generateDiffMigration(prev, curr []Entity) (string, error) {
 			}
 		}
 		if !exists {
-			full, err := generateFullMigration([]Entity{newEntity})
+			full, err := generateFullMigration([]Entity{newEntity}, enums)
 			if err != nil {
 				return "", err
 			}
