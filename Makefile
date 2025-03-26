@@ -1,5 +1,8 @@
+-include .env
+export
+
 GOOSE_DRIVER='postgres'
-GOOSE_DBSTRING='postgres://root@localhost:26257/layerg?sslmode=disable'
+GOOSE_DBSTRING?='postgres://root@localhost:26257/layerg?sslmode=disable'
 SYSTEM_MIGRATION_DIR='./db/migrations'
 GENERATED_MIGRATION_DIR='./generated/migrations'
 SERVICE_PORT='8084'

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/u2u-labs/layerg-crawler/cmd/abigen"
@@ -64,6 +65,7 @@ func initConfig() {
 		viper.SetConfigName(".layerg-crawler")
 	}
 
+	_ = godotenv.Load()
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
