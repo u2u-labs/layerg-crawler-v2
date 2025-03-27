@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/joho/godotenv"
@@ -216,23 +217,83 @@ func moveFilesToBuild() error {
 		logger.Infof("Copied %s to %s", file, dstPath)
 	}
 
-	// Copy SQL files from generated/migrations/
-	migrationSrcDir := "generated/migrations"
-	migrationFiles, err := filepath.Glob(filepath.Join(migrationSrcDir, "*.sql"))
-	if err != nil {
-		logger.Errorf("Failed to list migration files: %v", err)
+	if err = mergeMigrations(buildDir); err != nil {
+		logger.Errorf("Failed to merge migrations: %v", err)
 		return err
 	}
 
-	for _, srcPath := range migrationFiles {
-		dstPath := filepath.Join(buildDir, "migrations", filepath.Base(srcPath))
-		err = copyFile(srcPath, dstPath)
-		if err != nil {
-			logger.Errorf("Failed to copy %s: %v", srcPath, err)
-			return err
-		}
-		logger.Infof("Copied %s to %s", srcPath, dstPath)
+	return nil
+}
+
+func mergeMigrations(buildDir string) error {
+	systemSrcDir := "db/migrations"
+	migrationSrcDir := "generated/migrations"
+
+	mergedFilePath := filepath.Join(buildDir, "migrations", "20250101000000_init_schema.sql")
+
+	// Open the merged file for writing
+	mergedFile, err := os.Create(mergedFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to create merged file: %v", err)
 	}
+	defer mergedFile.Close()
+
+	// Buffers for the final content
+	var upSections []string
+	var downSections []string
+	hasDown := false // Track if any file contains Down migration
+
+	// Function to process files
+	appendFiles := func(srcDir string) error {
+		files, err := filepath.Glob(filepath.Join(srcDir, "*.sql"))
+		if err != nil {
+			return fmt.Errorf("failed to list migration files in %s: %v", srcDir, err)
+		}
+
+		for _, srcPath := range files {
+			data, err := os.ReadFile(srcPath)
+			if err != nil {
+				return fmt.Errorf("failed to read %s: %v", srcPath, err)
+			}
+
+			content := string(data)
+			parts := strings.Split(content, "-- +goose Down")
+
+			upPart := strings.TrimSpace(parts[0])                   // Everything before "-- +goose Down"
+			upPart = strings.Replace(upPart, "-- +goose Up", "", 1) // Remove duplicate Up comment
+			upSections = append(upSections, fmt.Sprintf("-- %s\n%s", filepath.Base(srcPath), upPart))
+
+			if len(parts) > 1 {
+				hasDown = true
+				downPart := strings.TrimSpace(parts[1]) // Everything after "-- +goose Down"
+				downSections = append(downSections, fmt.Sprintf("-- %s\n%s", filepath.Base(srcPath), downPart))
+			}
+		}
+		return nil
+	}
+
+	// Process files from both directories
+	if err := appendFiles(systemSrcDir); err != nil {
+		return err
+	}
+	if err := appendFiles(migrationSrcDir); err != nil {
+		return err
+	}
+
+	// Write merged content with a single goose annotation
+	_, err = mergedFile.WriteString("-- +goose Up\n\n" + strings.Join(upSections, "\n\n") + "\n\n")
+	if err != nil {
+		return fmt.Errorf("failed to write Up migrations: %v", err)
+	}
+
+	if hasDown {
+		_, err = mergedFile.WriteString("-- +goose Down\n\n" + strings.Join(downSections, "\n\n") + "\n")
+		if err != nil {
+			return fmt.Errorf("failed to write Down migrations: %v", err)
+		}
+	}
+
+	logger.Infof("All migrations merged into %s", mergedFilePath)
 	return nil
 }
 
