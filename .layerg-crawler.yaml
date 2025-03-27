@@ -11,7 +11,7 @@ SUBGRAPH_ID: d4e35a40-8237-47f9-b121-b27aea135de9
 # Webhook
 WEBHOOK_URL: http://localhost:7350
 
-REDIS_DB_URL: localhost:7379
+REDIS_DB_URL: localhost:6379
 REDIS_DB_PASSWORD:
 REDIS_DB: 0
 
