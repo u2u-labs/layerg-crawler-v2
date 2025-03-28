@@ -27,7 +27,8 @@ var (
 		Long:  "Fetches files from an IPFS server using the provided CID and runs them.",
 		Run:   executeFn,
 	}
-	logger *zap.SugaredLogger
+	logger  *zap.SugaredLogger
+	noCache bool
 )
 
 func init() {
@@ -46,6 +47,9 @@ func init() {
 	executeCmd.Flags().StringVar(&executableCid, "ecid", "", "Executable CID")
 	executeCmd.Flags().StringVar(&migrationCid, "mcid", "", "Migration CID")
 	executeCmd.Flags().StringVar(&baseGateway, "gw", "https://gateway.pinata.cloud/ipfs", "IPFS gateway URL")
+
+	deployCmd.Flags().BoolVar(&noCache, "no-cache", false, "Disable caching during deployment")
+	executeCmd.Flags().BoolVar(&noCache, "no-cache", false, "Disable caching during execution")
 
 	rootCmd.AddCommand(deployCmd, executeCmd)
 	rootCmd.CompletionOptions.DisableDefaultCmd = true

@@ -138,7 +138,7 @@ func (dm *DeploymentManager) FetchFromIPFS() (string, error) {
 		zap.String("ecid", dm.metadata.ExecutableCid))
 
 	// If local path exists and is valid, return it
-	if dm.metadata.LocalPath != "" {
+	if dm.metadata.LocalPath != "" && !noCache {
 		if _, err := os.Stat(dm.metadata.LocalPath); err == nil {
 			dm.logger.Info("Using existing local path",
 				zap.String("path", dm.metadata.LocalPath))
