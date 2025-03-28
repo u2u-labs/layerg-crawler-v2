@@ -57,7 +57,7 @@ gen-abi:
 	@echo "Done generating helpers!"
 
 deploy:
-	go run github.com/u2u-labs/layerg-crawler/cmd/deploy
+	go run github.com/u2u-labs/layerg-crawler/cmd/deploy deploy
 run-subgraph:
-	go run github.com/u2u-labs/layerg-crawler/cmd/execute
+	go run github.com/u2u-labs/layerg-crawler/cmd/deploy run
 

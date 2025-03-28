@@ -1,11 +1,10 @@
-package main
+package internal
 
 import (
 	"crypto/tls"
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -21,31 +20,16 @@ import (
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/pressly/goose/v3"
+	"github.com/spf13/cobra"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
-// Global logger
-var logger *zap.Logger
-
 // Gateway URL
-var baseGateway = "https://gateway.pinata.cloud/ipfs"
+var (
+	subgraphCid, configCid, executableCid, migrationCid string
 
-// Initialize logger
-func initLogger() *zap.Logger {
-	config := zap.NewDevelopmentConfig()
-	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
-	config.EncoderConfig.TimeKey = "timestamp"
-	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-
-	// Create logger
-	log, err := config.Build()
-	if err != nil {
-		panic(fmt.Sprintf("Failed to initialize logger: %v", err))
-	}
-
-	return log
-}
+	baseGateway string
+)
 
 // Deployment Metadata struct to track deployment state
 type DeploymentMetadata struct {
@@ -69,10 +53,10 @@ type DeploymentMetadata struct {
 type DeploymentManager struct {
 	metadataFile string
 	metadata     DeploymentMetadata
-	logger       *zap.Logger
+	logger       *zap.SugaredLogger
 }
 
-func NewDeploymentManager(subgraphCid, configCid, executableCid, migrationCid string, cids map[string]string, logger *zap.Logger) *DeploymentManager {
+func NewDeploymentManager(subgraphCid, configCid, executableCid, migrationCid string, cids map[string]string, logger *zap.SugaredLogger) *DeploymentManager {
 	// Use a consistent metadata file path
 	metadataPath := filepath.Join(os.TempDir(), fmt.Sprintf("deployment-manager_%s.json", executableCid))
 	migrationPath := ""
@@ -258,9 +242,10 @@ func (dm *DeploymentManager) FetchFromIPFS() (string, error) {
 	return tempDir, nil
 }
 
-func downloadFileFromGateway(client *http.Client, baseGateway, cid, localPath string, logger *zap.Logger) error {
+func downloadFileFromGateway(client *http.Client, baseGateway, cid, localPath string, logger *zap.SugaredLogger) error {
 	// Construct full URL
 	fileUrl := fmt.Sprintf("%s/%s", baseGateway, cid)
+	fmt.Println(fileUrl)
 
 	// Create request
 	req, err := http.NewRequest("GET", fileUrl, nil)
@@ -446,24 +431,21 @@ func readCidsFromFile(subgraphCid, configCid, executableCid, migrationCid *strin
 	return cids, nil
 }
 
-func main() {
-	// Initialize logger
-	logger = initLogger()
-	defer logger.Sync()
-
-	var subgraphCid, configCid, executableCid, migrationCid string
+func executeFn(cmd *cobra.Command, args []string) {
+	// Read CIDs from file (if available)
+	var err error
 	cids, err := readCidsFromFile(&subgraphCid, &configCid, &executableCid, &migrationCid)
 	if err != nil {
 		logger.Fatal("Failed to read subgraph")
 		return
 	}
 
-	flag.StringVar(&subgraphCid, "scid", subgraphCid, "subgraph cid")
-	flag.StringVar(&configCid, "ccid", configCid, "config cid")
-	flag.StringVar(&executableCid, "ecid", executableCid, "executable cid")
-	flag.StringVar(&migrationCid, "mcid", migrationCid, "migration cid")
-	flag.StringVar(&baseGateway, "gw", baseGateway, "ipfs pinata gateway")
-	flag.Parse()
+	// Get flag values from Cobra (defaulting to file values if they exist)
+	subgraphCid, _ = cmd.Flags().GetString("scid")
+	configCid, _ = cmd.Flags().GetString("ccid")
+	executableCid, _ = cmd.Flags().GetString("ecid")
+	migrationCid, _ = cmd.Flags().GetString("mcid")
+	baseGateway, _ = cmd.Flags().GetString("gw")
 
 	// Load environment variables
 	err = godotenv.Load()
@@ -512,14 +494,14 @@ func main() {
 	configPath := filepath.Join(tempDir, "config.yaml")
 	binaryPath := filepath.Join(tempDir, "crawler")
 
-	cmd := exec.Command(binaryPath, "--config", configPath)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Env = append(os.Environ(),
+	binaryCmd := exec.Command(binaryPath, "--config", configPath)
+	binaryCmd.Stdout = os.Stdout
+	binaryCmd.Stderr = os.Stderr
+	binaryCmd.Env = append(os.Environ(),
 		fmt.Sprintf("COCKROACH_DB_URL=%s", deploymentManager.metadata.DatabaseConn),
 	)
 
-	err = cmd.Run()
+	err = binaryCmd.Run()
 	if err != nil {
 		logger.Fatal("Crawler execution failed", zap.Error(err))
 	}
