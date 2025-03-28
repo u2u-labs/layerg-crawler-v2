@@ -8,9 +8,11 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -208,6 +210,35 @@ func (d *Deployer) MoveFilesToBuild() error {
 	return nil
 }
 
+func (d *Deployer) Build() error {
+	d.logger.Info("Building layerg-crawler...")
+	// Build the project
+	// Get current Git commit
+	commitHash := getGitCommitHash()
+
+	// Inject build flags
+	ldflags := fmt.Sprintf(
+		"-X 'github.com/u2u-labs/layerg-crawler/cmd/version.Version=v0.1.0' "+
+			"-X 'github.com/u2u-labs/layerg-crawler/cmd/version.GitCommit=%s' "+
+			"-X 'github.com/u2u-labs/layerg-crawler/cmd/version.BuildTime=%s' -s -w",
+		commitHash,
+		time.Now().Format(time.RFC3339),
+	)
+
+	// Build binary with embedded metadata
+	cmd := exec.Command(
+		"go", "build",
+		"-ldflags", ldflags,
+		"-o", "layerg-crawler",
+	)
+	err := cmd.Run()
+	if err != nil {
+		d.logger.Errorf("Failed to build layerg-crawler: %v", err)
+		return err
+	}
+	return nil
+}
+
 func (d *Deployer) mergeMigrations(buildDir string) error {
 	systemSrcDir := "db/migrations"
 	migrationSrcDir := "generated/migrations"
@@ -316,8 +347,13 @@ func deployFn(cmd *cobra.Command, args []string) {
 	// Initialize deployer with environment variables and the IPFS URL
 	d := NewDeployer(logger, os.Getenv("PINATA_API_KEY"), os.Getenv("PINATA_API_SECRET"), ipfsServerURL)
 
+	err := d.Build()
+	if err != nil {
+		logger.Fatalf("Failed to build: %v", err)
+	}
+
 	// Move files to build directory
-	err := d.MoveFilesToBuild()
+	err = d.MoveFilesToBuild()
 	if err != nil {
 		logger.Fatalf("Failed to move files: %v", err)
 	}

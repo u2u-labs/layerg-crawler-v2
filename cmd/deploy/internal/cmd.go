@@ -27,8 +27,9 @@ var (
 		Long:  "Fetches files from an IPFS server using the provided CID and runs them.",
 		Run:   executeFn,
 	}
-	logger  *zap.SugaredLogger
-	noCache bool
+	logger          *zap.SugaredLogger
+	noCache         bool
+	devExperimental bool
 )
 
 func init() {
@@ -50,6 +51,8 @@ func init() {
 
 	deployCmd.Flags().BoolVar(&noCache, "no-cache", false, "Disable caching during deployment")
 	executeCmd.Flags().BoolVar(&noCache, "no-cache", false, "Disable caching during execution")
+	deployCmd.Flags().BoolVar(&devExperimental, "dev", false, "Enable experimental features for development")
+	executeCmd.Flags().BoolVar(&devExperimental, "dev", false, "Enable experimental features for development")
 
 	rootCmd.AddCommand(deployCmd, executeCmd)
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
