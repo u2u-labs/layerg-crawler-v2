@@ -245,7 +245,6 @@ func (dm *DeploymentManager) FetchFromIPFS() (string, error) {
 func downloadFileFromGateway(client *http.Client, baseGateway, cid, localPath string, logger *zap.SugaredLogger) error {
 	// Construct full URL
 	fileUrl := fmt.Sprintf("%s/%s", baseGateway, cid)
-	fmt.Println(fileUrl)
 
 	// Create request
 	req, err := http.NewRequest("GET", fileUrl, nil)
