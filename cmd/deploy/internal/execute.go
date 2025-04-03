@@ -239,6 +239,14 @@ func (dm *DeploymentManager) FetchFromIPFS() (string, error) {
 	dm.logger.Info("Successfully fetched subgraph from IPFS",
 		zap.String("localPath", tempDir))
 
+	// checking legit
+	if !devExperimental {
+		vc := NewVersionChecker()
+		if ok := vc.CheckVersion(binaryPath); !ok {
+			return "", fmt.Errorf("invalid crawler version: %s", binaryPath)
+		}
+	}
+
 	return tempDir, nil
 }
 
@@ -399,7 +407,7 @@ func readCidsFromFile(subgraphCid, configCid, executableCid, migrationCid *strin
 
 	// Open the file
 	file, err := os.Open(filePath)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err != nil {
 		// If the file doesn't exist, return empty strings and no error
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
@@ -434,8 +442,8 @@ func executeFn(cmd *cobra.Command, args []string) {
 	// Read CIDs from file (if available)
 	var err error
 	cids, err := readCidsFromFile(&subgraphCid, &configCid, &executableCid, &migrationCid)
-	if err != nil {
-		logger.Fatal("Failed to read subgraph")
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		logger.Fatal("Failed to read subgraph", "err", err)
 		return
 	}
 
@@ -455,6 +463,11 @@ func executeFn(cmd *cobra.Command, args []string) {
 	// Create deployment manager
 	deploymentManager := NewDeploymentManager(subgraphCid, configCid, executableCid, migrationCid, cids, logger)
 
+	if subgraphCid == "" || configCid == "" || executableCid == "" || migrationCid == "" {
+		logger.Fatal("Cid is required")
+		return
+	}
+
 	// Log start of deployment
 	logger.Info("Starting subgraph deployment",
 		zap.String("ecid", executableCid))
@@ -467,10 +480,19 @@ func executeFn(cmd *cobra.Command, args []string) {
 
 	// Fetch from IPFS
 	tempDir, err := deploymentManager.FetchFromIPFS()
+	defer func(path string) {
+		err = os.RemoveAll(path)
+		if err != nil {
+			logger.Error("Failed to remove temp dir", zap.String("path", path))
+		}
+		err = os.RemoveAll(deploymentManager.metadataFile)
+		if err != nil {
+			logger.Error("Failed to remove metadata file", zap.Error(err))
+		}
+	}(tempDir)
 	if err != nil {
 		logger.Fatal("Failed to fetch from IPFS", zap.Error(err))
 	}
-	defer os.RemoveAll(tempDir)
 
 	// Base connection string
 	baseConnString := os.Getenv("COCKROACH_DB_URL")

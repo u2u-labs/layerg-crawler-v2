@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 
@@ -40,6 +41,9 @@ func NewGitCommitVerifier(githubToken string) *GitCommitVerifier {
 		AllowedBranches: []string{
 			"master",
 			"main",
+			"develop",
+			"dev",
+			"ft/code_fetching",
 		},
 	}
 }
@@ -48,6 +52,7 @@ func (gcv *GitCommitVerifier) VerifyCommit(commitHash string) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	logger.Info("Verifying commit:", commitHash)
 	// Parse repository owner and name
 	for _, repoFullName := range gcv.AllowedRepositories {
 		parts := strings.Split(repoFullName, "/")
@@ -71,6 +76,7 @@ func (gcv *GitCommitVerifier) isCommitInAllowedBranches(
 ) bool {
 	// Check each allowed branch
 	for _, branch := range gcv.AllowedBranches {
+		logger.Info("Checking branch:", branch, " for commit:", commitHash, "in repository:", owner+"/"+repo)
 		if gcv.isCommitInBranch(ctx, owner, repo, branch, commitHash) {
 			return true
 		}
@@ -143,4 +149,37 @@ func getGitCommitHash() string {
 		return ""
 	}
 	return strings.TrimSpace(string(output))
+}
+
+type VersionChecker struct {
+}
+
+func NewVersionChecker() *VersionChecker {
+	return &VersionChecker{}
+
+}
+
+func (vc *VersionChecker) CheckVersion(binaryPath string) bool {
+	v := NewGitCommitVerifier("")
+
+	// Execute the binary with "version" argument
+	cmd := exec.Command(binaryPath, "version")
+	output, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+
+	// Convert output to string
+	outputStr := string(output)
+
+	// Extract Git Commit hash using regex
+	re := regexp.MustCompile(`Git Commit:\s*([a-f0-9]+)`)
+	matches := re.FindStringSubmatch(outputStr)
+	logger.Info("Matches:", matches)
+	if len(matches) < 2 {
+		return false // Commit hash not found
+	}
+
+	commitHash := matches[1]
+	return v.VerifyCommit(commitHash)
 }
