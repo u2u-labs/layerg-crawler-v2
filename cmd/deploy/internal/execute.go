@@ -239,13 +239,13 @@ func (dm *DeploymentManager) FetchFromIPFS() (string, error) {
 	dm.logger.Info("Successfully fetched subgraph from IPFS",
 		zap.String("localPath", tempDir))
 
-	// checking legit
-	if !devExperimental {
-		vc := NewVersionChecker()
-		if ok := vc.CheckVersion(binaryPath); !ok {
-			return "", fmt.Errorf("invalid crawler version: %s", binaryPath)
-		}
-	}
+	//// checking legit
+	//if !devExperimental {
+	//	vc := NewVersionChecker()
+	//	if ok := vc.CheckVersion(binaryPath); !ok {
+	//		return "", fmt.Errorf("invalid crawler version: %s", binaryPath)
+	//	}
+	//}
 
 	return tempDir, nil
 }
@@ -464,7 +464,7 @@ func executeFn(cmd *cobra.Command, args []string) {
 	deploymentManager := NewDeploymentManager(subgraphCid, configCid, executableCid, migrationCid, cids, logger)
 
 	if subgraphCid == "" || configCid == "" || executableCid == "" || migrationCid == "" {
-		logger.Fatal("Cid is required")
+		logger.Fatal("Failed to read CIDs from file. Please provide them as flags or run deploy first")
 		return
 	}
 

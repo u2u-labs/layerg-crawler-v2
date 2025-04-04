@@ -7,6 +7,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 var (
@@ -34,7 +35,7 @@ var (
 
 func init() {
 	// Initialize logger
-	l, err := zap.NewDevelopment()
+	l, err := zap.NewDevelopment(zap.AddStacktrace(zapcore.InvalidLevel))
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create logger: %v", err))
 	}
