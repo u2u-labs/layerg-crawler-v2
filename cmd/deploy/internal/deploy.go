@@ -26,11 +26,6 @@ type Deployer struct {
 }
 
 func NewDeployer(logger *zap.SugaredLogger, apiKey string, apiSecret string, ipfsServerUrl string) *Deployer {
-	if apiKey == "" || apiSecret == "" {
-		apiKey = "7bad5b3f8eaeb310d34d"
-		apiSecret = "23238c347d7cc575d315c3f5291196b136c1bcd0a6e80e7d51fee0471c504696"
-	}
-
 	return &Deployer{
 		logger:        logger,
 		apiKey:        apiKey,
