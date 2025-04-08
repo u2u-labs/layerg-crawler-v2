@@ -340,7 +340,7 @@ func writeCIDsToTempFile(data map[string]string) (string, error) {
 	return filePath, nil
 }
 
-func deployFn(cmd *cobra.Command, args []string) {
+func publishFn(cmd *cobra.Command, args []string) {
 	// Get the value of the Cobra flag
 	ipfsServerURL, _ := cmd.Flags().GetString("ipfs-url")
 

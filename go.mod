@@ -6,7 +6,6 @@ toolchain go1.23.1
 
 require (
 	github.com/gin-gonic/gin v1.10.0
-	github.com/google/go-github/v70 v70.0.0
 	github.com/google/uuid v1.6.0
 	github.com/graphql-go/graphql v0.8.1
 	github.com/graphql-go/handler v0.2.4
@@ -20,11 +19,10 @@ require (
 	github.com/swaggo/swag v1.16.4
 	github.com/unicornultrafoundation/go-u2u v1.0.0-rc1.0.20241024081005-ff0e8a756acd
 	go.uber.org/zap v1.27.0
-	golang.org/x/oauth2 v0.28.0
 )
 
 require (
-	github.com/google/go-querystring v1.1.0 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
