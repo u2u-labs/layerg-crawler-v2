@@ -286,7 +286,11 @@ func deployGraph(config DeploymentConfig) error {
 
 	// Start services using docker-compose
 	logger.Infof("Starting services with docker-compose in %s", deployDir)
-	cmd = exec.Command("docker", "compose", "up", "-d", "--build")
+	args := []string{"compose", "up", "-d"}
+	if noCache {
+		args = append(args, "--build")
+	}
+	cmd = exec.Command("docker", args...)
 	cmd.Dir = deployDir
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to start services: %s\nOutput: %s", err, string(output))

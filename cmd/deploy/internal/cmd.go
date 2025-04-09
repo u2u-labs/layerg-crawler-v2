@@ -13,13 +13,13 @@ import (
 var (
 	rootCmd = &cobra.Command{
 		Use:   "layerg-deploy",
-		Short: "CLI tool for deploying and executing files on IPFS",
-		Long:  "LayerG-Deploy is a command-line tool to publish builds to an IPFS server and execute downloaded files.",
+		Short: "CLI tool for running subgraph deployments",
+		Long:  "LayerG-Deploy is a command-line tool to run subgraph deployments.",
 	}
 	executeCmd = &cobra.Command{
 		Use:   "run",
-		Short: "Download and execute files from IPFS",
-		Long:  "Fetches files from an IPFS server using the provided CID and runs them.",
+		Short: "Clone repo and run the crawler",
+		Long:  "Clones the repository, and runs the crawler.",
 		Run:   executeFn,
 	}
 	logger          *zap.SugaredLogger
