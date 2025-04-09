@@ -51,8 +51,8 @@ services:
     container_name: {{.ShortID}}-crawler-app
     command: --config layerg-crawler.yaml
     volumes:
-      - ./cfg_{{.ShortID}}/layerg-crawler.yaml:/go/bin/layerg-crawler.yaml
-      - ./cfg_{{.ShortID}}/subgraph.yaml:/go/bin/subgraph.yaml
+      - ./layerg-crawler.yaml:/go/bin/layerg-crawler.yaml
+      - ./subgraph.yaml:/go/bin/subgraph.yaml
     environment:
       - COCKROACH_DB_DRIVER=postgres
       - COCKROACH_DB_URL=postgres://root@crdb:26257/{{.DatabaseName}}?sslmode=disable
@@ -74,8 +74,8 @@ services:
     container_name: {{.ShortID}}-crawler-query
     command: query --config layerg-crawler.yaml
     volumes:
-      - ./cfg_{{.ShortID}}/layerg-crawler.yaml:/go/bin/layerg-crawler.yaml
-      - ./cfg_{{.ShortID}}/schema.graphql:/go/bin/schema.graphql
+      - ./layerg-crawler.yaml:/go/bin/layerg-crawler.yaml
+      - ./schema.graphql:/go/bin/schema.graphql
     environment:
       - COCKROACH_DB_DRIVER=postgres
       - COCKROACH_DB_URL=postgres://root@crdb:26257/{{.DatabaseName}}?sslmode=disable
@@ -288,10 +288,8 @@ func deployGraph(config DeploymentConfig) error {
 	logger.Infof("Starting services with docker-compose in %s", deployDir)
 	cmd = exec.Command("docker", "compose", "up", "-d")
 	cmd.Dir = deployDir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to start services: %s\n", err)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to start services: %s\nOutput: %s", err, string(output))
 	}
 
 	logger.Infof("Deployment successful! ShortID: %s, Database: %s, Redis DB: %d, Query Port: %d",
@@ -317,8 +315,8 @@ func executeFn(cmd *cobra.Command, args []string) {
 		RepoURL:          subgraphRepoUrl,
 		Branch:           branch,
 		BasePath:         basePath,
-		ShortID:          shortID,
-		DatabaseName:     fmt.Sprintf("layerg_%s", shortID),
+		ShortID:          strings.ToLower(shortID),
+		DatabaseName:     fmt.Sprintf("layerg_%s", strings.ToLower(shortID)),
 		DatabasePassword: os.Getenv("COCKROACH_PASSWORD"),
 		RedisDBNumber:    1, // Increment this for each new deployment
 		CRDBPort:         26257,
