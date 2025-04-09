@@ -57,5 +57,5 @@ gen-abi:
 	@echo "Done generating helpers!"
 
 run-subgraph:
-	go run github.com/u2u-labs/layerg-crawler/cmd/deploy run
+	go run github.com/u2u-labs/layerg-crawler/cmd/deploy run --branch ft/code_fetching
 

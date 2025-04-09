@@ -45,6 +45,7 @@ func init() {
 	_ = godotenv.Load()
 	publishCmd.Flags().String("ipfs-url", "https://api.pinata.cloud/pinning/pinFileToIPFS", "IPFS server URL to upload files")
 	executeCmd.Flags().StringVar(&subgraphRepoUrl, "url", "https://github.com/u2u-labs/layerg-crawler-v2", "Subgraph repository URL")
+	executeCmd.Flags().StringVar(&branch, "branch", "master", "Branch to fetch from the repository")
 
 	publishCmd.Flags().BoolVar(&noCache, "no-cache", false, "Disable caching during deployment")
 	executeCmd.Flags().BoolVar(&noCache, "no-cache", false, "Disable caching during execution")

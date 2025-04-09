@@ -16,6 +16,7 @@ import (
 
 var (
 	subgraphRepoUrl = ""
+	branch          = "master"
 )
 
 func init() {
@@ -24,6 +25,7 @@ func init() {
 // Configuration for deployment
 type DeploymentConfig struct {
 	RepoURL          string
+	Branch           string
 	BasePath         string
 	ShortID          string
 	DatabaseName     string
@@ -41,7 +43,7 @@ const dockerComposeTemplate = `version: "3.5"
 services:
   app:
     image: u2labs/layerg-crawler:latest
-    container_name: crawler-app-{{.ShortID}}
+    container_name: {{.ShortID}}-crawler-app
     command: --config layerg-crawler.yaml
     volumes:
       - ./cfg_{{.ShortID}}/layerg-crawler.yaml:/go/bin/layerg-crawler.yaml
@@ -52,6 +54,9 @@ services:
       - REDIS_DB_URL=host.docker.internal:7379
       - REDIS_DB={{.RedisDBNumber}}
       - REDIS_DB_PASSWORD={{.RedisPassword}}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
     restart: always
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -63,7 +68,7 @@ services:
 
   query:
     image: u2labs/layerg-crawler:latest
-    container_name: crawler-query-{{.ShortID}}
+    container_name: {{.ShortID}}-crawler-query
     command: query --config layerg-crawler.yaml
     volumes:
       - ./cfg_{{.ShortID}}/layerg-crawler.yaml:/go/bin/layerg-crawler.yaml
@@ -74,6 +79,9 @@ services:
       - REDIS_DB_URL=host.docker.internal:7379
       - REDIS_DB={{.RedisDBNumber}}
       - REDIS_DB_PASSWORD={{.RedisPassword}}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
     ports:
       - "{{.QueryPort}}:8084"
     restart: always
@@ -87,7 +95,7 @@ services:
 
   db-setup:
     image: cockroachdb/cockroach:v24.2.1
-    container_name: crawler-dbsetup-{{.ShortID}}
+    container_name: {{.ShortID}}-crawler-dbsetup
     command: sql --insecure --host=host.docker.internal --port=26258 --execute='CREATE DATABASE IF NOT EXISTS {{.DatabaseName}};'
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -95,7 +103,7 @@ services:
   migrate:
     build:
       dockerfile: migrate.Dockerfile
-    container_name: crawler-migrate-{{.ShortID}}
+    container_name: {{.ShortID}}-crawler-migrate
     command: ["system-migrate-up", "generated-migrate-up"]
     environment:
       - GOOSE_DRIVER=postgres
@@ -258,8 +266,8 @@ func deployGraph(config DeploymentConfig) error {
 	}
 
 	// Clone the repository
-	logger.Infof("Cloning repository from %s to %s", config.RepoURL, deployDir)
-	cmd := exec.Command("git", "clone", config.RepoURL, deployDir)
+	cmd := exec.Command("git", "clone", "--depth", "1", "--branch", config.Branch, config.RepoURL, deployDir)
+	logger.Infof("Cloning repository from %s to %s, branch %s: %s", config.RepoURL, deployDir, config.Branch, cmd)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to clone repository: %s\nOutput: %s", err, output)
 	}
@@ -283,8 +291,10 @@ func deployGraph(config DeploymentConfig) error {
 	logger.Infof("Starting services with docker-compose in %s", deployDir)
 	cmd = exec.Command("docker", "compose", "up", "-d")
 	cmd.Dir = deployDir
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to start services: %s\nOutput: %s", err, output)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start services: %s\n", err)
 	}
 
 	logger.Infof("Deployment successful! ShortID: %s, Database: %s, Redis DB: %d, Query Port: %d",
@@ -308,6 +318,7 @@ func executeFn(cmd *cobra.Command, args []string) {
 	// Configure deployment
 	config := DeploymentConfig{
 		RepoURL:          subgraphRepoUrl,
+		Branch:           branch,
 		BasePath:         basePath,
 		ShortID:          shortID,
 		DatabaseName:     fmt.Sprintf("layerg_%s", shortID),
