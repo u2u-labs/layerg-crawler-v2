@@ -51,7 +51,7 @@ services:
     container_name: {{.ShortID}}-crawler-app
     command: --config layerg-crawler.yaml
     volumes:
-      - ./layerg-crawler.yaml:/go/bin/layerg-crawler.yaml
+      - ./.layerg-crawler.yaml:/go/bin/layerg-crawler.yaml
       - ./subgraph.yaml:/go/bin/subgraph.yaml
     environment:
       - COCKROACH_DB_DRIVER=postgres
@@ -74,7 +74,7 @@ services:
     container_name: {{.ShortID}}-crawler-query
     command: query --config layerg-crawler.yaml
     volumes:
-      - ./layerg-crawler.yaml:/go/bin/layerg-crawler.yaml
+      - ./.layerg-crawler.yaml:/go/bin/layerg-crawler.yaml
       - ./schema.graphql:/go/bin/schema.graphql
     environment:
       - COCKROACH_DB_DRIVER=postgres
@@ -286,7 +286,7 @@ func deployGraph(config DeploymentConfig) error {
 
 	// Start services using docker-compose
 	logger.Infof("Starting services with docker-compose in %s", deployDir)
-	cmd = exec.Command("docker", "compose", "up", "-d")
+	cmd = exec.Command("docker", "compose", "up", "-d", "--build")
 	cmd.Dir = deployDir
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to start services: %s\nOutput: %s", err, string(output))
@@ -309,6 +309,7 @@ func executeFn(cmd *cobra.Command, args []string) {
 	if err != nil {
 		logger.Fatalf("Failed to expand base path: %v", err)
 	}
+	graphIndex := 1
 
 	// Configure deployment
 	config := DeploymentConfig{
@@ -318,11 +319,11 @@ func executeFn(cmd *cobra.Command, args []string) {
 		ShortID:          strings.ToLower(shortID),
 		DatabaseName:     fmt.Sprintf("layerg_%s", strings.ToLower(shortID)),
 		DatabasePassword: os.Getenv("COCKROACH_PASSWORD"),
-		RedisDBNumber:    1, // Increment this for each new deployment
+		RedisDBNumber:    graphIndex, // Increment this for each new deployment
 		CRDBPort:         26257,
 		RedisPort:        6379,
 		RedisPassword:    os.Getenv("REDIS_PASSWORD"),
-		QueryPort:        8084 + 1, // Use a different port for each deployment
+		QueryPort:        8084 + graphIndex, // Use a different port for each deployment
 	}
 
 	// Deploy the graph node
