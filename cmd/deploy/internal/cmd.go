@@ -16,12 +16,6 @@ var (
 		Short: "CLI tool for deploying and executing files on IPFS",
 		Long:  "LayerG-Deploy is a command-line tool to publish builds to an IPFS server and execute downloaded files.",
 	}
-	publishCmd = &cobra.Command{
-		Use:   "publish",
-		Short: "Publish a build to IPFS",
-		Long:  "Uploads a specified directory or file to an IPFS server and returns the content identifier (CID).",
-		Run:   publishFn,
-	}
 	executeCmd = &cobra.Command{
 		Use:   "run",
 		Short: "Download and execute files from IPFS",
@@ -43,16 +37,13 @@ func init() {
 	logger = l.Sugar()
 
 	_ = godotenv.Load()
-	publishCmd.Flags().String("ipfs-url", "https://api.pinata.cloud/pinning/pinFileToIPFS", "IPFS server URL to upload files")
 	executeCmd.Flags().StringVar(&subgraphRepoUrl, "url", "https://github.com/u2u-labs/layerg-crawler-v2", "Subgraph repository URL")
 	executeCmd.Flags().StringVar(&branch, "branch", "master", "Branch to fetch from the repository")
 
-	publishCmd.Flags().BoolVar(&noCache, "no-cache", false, "Disable caching during deployment")
 	executeCmd.Flags().BoolVar(&noCache, "no-cache", false, "Disable caching during execution")
-	publishCmd.Flags().BoolVar(&devExperimental, "dev", false, "Enable experimental features for development")
 	executeCmd.Flags().BoolVar(&devExperimental, "dev", false, "Enable experimental features for development")
 
-	rootCmd.AddCommand(publishCmd, executeCmd)
+	rootCmd.AddCommand(executeCmd)
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 }
 
