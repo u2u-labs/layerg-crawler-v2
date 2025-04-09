@@ -1,5 +1,9 @@
 version: "3.5"
 
+networks:
+  default:
+    name: crawler-network
+
 services:
   crdb:
     image: cockroachdb/cockroach:v24.2.1

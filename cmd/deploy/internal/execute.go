@@ -40,6 +40,11 @@ type DeploymentConfig struct {
 // Template for the modified docker-compose.yml
 const dockerComposeTemplate = `version: "3.5"
 
+networks:
+  default:
+    external:
+      name: crawler-network
+
 services:
   app:
     image: u2labs/layerg-crawler:latest
@@ -50,16 +55,14 @@ services:
       - ./cfg_{{.ShortID}}/subgraph.yaml:/go/bin/subgraph.yaml
     environment:
       - COCKROACH_DB_DRIVER=postgres
-      - COCKROACH_DB_URL=postgres://root@host.docker.internal:26258/{{.DatabaseName}}?sslmode=disable
-      - REDIS_DB_URL=host.docker.internal:7379
+      - COCKROACH_DB_URL=postgres://root@crdb:26257/{{.DatabaseName}}?sslmode=disable
+      - REDIS_DB_URL=redis:6379
       - REDIS_DB={{.RedisDBNumber}}
       - REDIS_DB_PASSWORD={{.RedisPassword}}
     depends_on:
       migrate:
         condition: service_completed_successfully
     restart: always
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     logging:
       driver: "json-file"
       options:
@@ -75,8 +78,8 @@ services:
       - ./cfg_{{.ShortID}}/schema.graphql:/go/bin/schema.graphql
     environment:
       - COCKROACH_DB_DRIVER=postgres
-      - COCKROACH_DB_URL=postgres://root@host.docker.internal:26258/{{.DatabaseName}}?sslmode=disable
-      - REDIS_DB_URL=host.docker.internal:7379
+      - COCKROACH_DB_URL=postgres://root@crdb:26257/{{.DatabaseName}}?sslmode=disable
+      - REDIS_DB_URL=redis:6379
       - REDIS_DB={{.RedisDBNumber}}
       - REDIS_DB_PASSWORD={{.RedisPassword}}
     depends_on:
@@ -85,8 +88,6 @@ services:
     ports:
       - "{{.QueryPort}}:8084"
     restart: always
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     logging:
       driver: "json-file"
       options:
@@ -96,9 +97,7 @@ services:
   db-setup:
     image: cockroachdb/cockroach:v24.2.1
     container_name: {{.ShortID}}-crawler-dbsetup
-    command: sql --insecure --host=host.docker.internal --port=26258 --execute='CREATE DATABASE IF NOT EXISTS {{.DatabaseName}};'
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    command: sql --insecure --host=crdb --port=26257 --execute='CREATE DATABASE IF NOT EXISTS {{.DatabaseName}};'
 
   migrate:
     build:
@@ -107,11 +106,9 @@ services:
     command: ["system-migrate-up", "generated-migrate-up"]
     environment:
       - GOOSE_DRIVER=postgres
-      - GOOSE_DBSTRING=postgres://root@host.docker.internal:26258/{{.DatabaseName}}?sslmode=disable
+      - GOOSE_DBSTRING=postgres://root@crdb:26257/{{.DatabaseName}}?sslmode=disable
     depends_on:
       - db-setup
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 `
 
 // Safe characters for folder names: a-z, A-Z, 0-9
