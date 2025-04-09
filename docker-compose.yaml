@@ -5,13 +5,25 @@ services:
     image: cockroachdb/cockroach:v24.2.1
     container_name: crawler-db
     ports:
-      - "26257:26257"
+      - "26258:26257"
       - "8080:8080"
     command: "start-single-node --insecure  && cockroach sql --execute='CREATE DATABASE IF NOT EXISTS layerg;'"
     environment:
       - COCKROACH_DATABASE=layerg
     volumes:
       - ../data/crdb:/cockroach/cockroach-data
+    healthcheck:
+      test: ["CMD", "cockroach", "node", "status", "--insecure"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  crdb-setup:
+    image: cockroachdb/cockroach:v24.2.1
+    depends_on:
+      crdb:
+        condition: service_healthy
+    command: sql --insecure --host=crdb --execute='CREATE DATABASE IF NOT EXISTS layerg;'
 
   redis:
     image: bitnami/redis:latest
@@ -20,9 +32,14 @@ services:
       - ALLOW_EMPTY_PASSWORD=yes
       - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
     ports:
-      - "6379:6379"
+      - "7379:6379"
     volumes:
       - ../redis_data:/bitnami/redis/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   app:
     image: u2labs/layerg-crawler:latest
@@ -31,9 +48,17 @@ services:
     volumes:
       - ./layerg-crawler.yaml:/go/bin/layerg-crawler.yaml
       - ./subgraph.yaml:/go/bin/subgraph.yaml
+    environment:
+      - COCKROACH_DB_DRIVER=postgres
+      - COCKROACH_DB_URL=postgres://root@crdb:26257/layerg?sslmode=disable
+      - REDIS_DB_URL=redis:6379
     depends_on:
-      - crdb
-      - redis
+      crdb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     restart: always
     logging:
       driver: "json-file"
@@ -50,9 +75,17 @@ services:
     volumes:
       - ./layerg-crawler.yaml:/go/bin/layerg-crawler.yaml
       - ./schema.graphql:/go/bin/schema.graphql
+    environment:
+      - COCKROACH_DB_DRIVER=postgres
+      - COCKROACH_DB_URL=postgres://root@crdb:26257/layerg?sslmode=disable
+      - REDIS_DB_URL=redis:6379
     depends_on:
-      - crdb
-      - redis
+      crdb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     ports:
       - "8084:8084"
     restart: always
@@ -61,3 +94,15 @@ services:
       options:
         max-size: 300m
         tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
+
+  migrate:
+    build:
+      dockerfile: migrate.Dockerfile
+    container_name: crawler-migrate
+    depends_on:
+      crdb:
+        condition: service_healthy
+    command:  ["system-migrate-up", "generated-migrate-up"]
+    environment:
+      - GOOSE_DRIVER=postgres
+      - GOOSE_DBSTRING=postgres://root@crdb:26257/layerg?sslmode=disable

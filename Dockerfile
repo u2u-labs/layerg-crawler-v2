@@ -1,4 +1,4 @@
-FROM golang:1.22.8-alpine AS builder
+FROM golang:1.23.1-alpine AS builder
 RUN apk update && apk add build-base cmake gcc git
 WORKDIR /go/src/github.com/u2u-labs/layerg-crawler
 ADD . .

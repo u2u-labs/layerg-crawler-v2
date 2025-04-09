@@ -1,535 +1,328 @@
 package internal
 
 import (
-	"crypto/tls"
-	"database/sql"
-	"encoding/json"
-	"errors"
+	"crypto/rand"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"strings"
-	"sync"
-	"time"
+	"text/template"
 
-	"github.com/google/uuid"
-	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
-	"github.com/pressly/goose/v3"
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 )
 
-// Gateway URL
 var (
-	subgraphCid, configCid, executableCid, migrationCid string
-
-	baseGateway string
+	subgraphRepoUrl = ""
 )
 
-// Deployment Metadata struct to track deployment state
-type DeploymentMetadata struct {
-	ID             string    `json:"id"`
-	SubgraphCid    string    `json:"subgraph_cid"`
-	ConfigCid      string    `json:"config_cid"`
-	ExecutableCid  string    `json:"executable_cid"`
-	MigrationCid   string    `json:"migration_cid"`
-	SubgraphPath   string    `json:"subgraph_path"`
-	ConfigPath     string    `json:"config_path"`
-	ExecutablePath string    `json:"executable_path"`
-	MigrationPath  string    `json:"migration_path"`
-	DatabaseName   string    `json:"database_name"`
-	DatabaseConn   string    `json:"database_conn"`
-	LocalPath      string    `json:"local_path"`
-	CreatedAt      time.Time `json:"created_at"`
-	LastRunAt      time.Time `json:"last_run_at"`
-	Status         string    `json:"status"` // pending, running, completed, failed
+func init() {
 }
 
-type DeploymentManager struct {
-	metadataFile string
-	metadata     DeploymentMetadata
-	logger       *zap.SugaredLogger
+// Configuration for deployment
+type DeploymentConfig struct {
+	RepoURL          string
+	BasePath         string
+	ShortID          string
+	DatabaseName     string
+	DatabasePassword string
+	RedisDBNumber    int
+	RedisPassword    string
+	CRDBPort         int
+	RedisPort        int
+	QueryPort        int
 }
 
-func NewDeploymentManager(subgraphCid, configCid, executableCid, migrationCid string, cids map[string]string, logger *zap.SugaredLogger) *DeploymentManager {
-	// Use a consistent metadata file path
-	metadataPath := filepath.Join(os.TempDir(), fmt.Sprintf("deployment-manager_%s.json", executableCid))
-	migrationPath := ""
-	for key := range cids {
-		if strings.HasPrefix(key, "build/migrations/") && strings.HasSuffix(key, ".sql") {
-			migrationPath = strings.ReplaceAll(key, "build", "")
+// Template for the modified docker-compose.yml
+const dockerComposeTemplate = `version: "3.5"
+
+services:
+  app:
+    image: u2labs/layerg-crawler:latest
+    container_name: crawler-app-{{.ShortID}}
+    command: --config layerg-crawler.yaml
+    volumes:
+      - ./cfg_{{.ShortID}}/layerg-crawler.yaml:/go/bin/layerg-crawler.yaml
+      - ./cfg_{{.ShortID}}/subgraph.yaml:/go/bin/subgraph.yaml
+    environment:
+      - COCKROACH_DB_DRIVER=postgres
+      - COCKROACH_DB_URL=postgres://root@host.docker.internal:26258/{{.DatabaseName}}?sslmode=disable
+      - REDIS_DB_URL=host.docker.internal:7379
+      - REDIS_DB={{.RedisDBNumber}}
+      - REDIS_DB_PASSWORD={{.RedisPassword}}
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: 300m
+        tag: "{{ "{{" }}.ImageName{{ "}}" }}|{{ "{{" }}.Name{{ "}}" }}|{{ "{{" }}.ImageFullID{{ "}}" }}|{{ "{{" }}.FullID{{ "}}" }}"
+
+  query:
+    image: u2labs/layerg-crawler:latest
+    container_name: crawler-query-{{.ShortID}}
+    command: query --config layerg-crawler.yaml
+    volumes:
+      - ./cfg_{{.ShortID}}/layerg-crawler.yaml:/go/bin/layerg-crawler.yaml
+      - ./cfg_{{.ShortID}}/schema.graphql:/go/bin/schema.graphql
+    environment:
+      - COCKROACH_DB_DRIVER=postgres
+      - COCKROACH_DB_URL=postgres://root@host.docker.internal:26258/{{.DatabaseName}}?sslmode=disable
+      - REDIS_DB_URL=host.docker.internal:7379
+      - REDIS_DB={{.RedisDBNumber}}
+      - REDIS_DB_PASSWORD={{.RedisPassword}}
+    ports:
+      - "{{.QueryPort}}:8084"
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: 300m
+        tag: "{{ "{{" }}.ImageName{{ "}}" }}|{{ "{{" }}.Name{{ "}}" }}|{{ "{{" }}.ImageFullID{{ "}}" }}|{{ "{{" }}.FullID{{ "}}" }}"
+
+  db-setup:
+    image: cockroachdb/cockroach:v24.2.1
+    container_name: crawler-dbsetup-{{.ShortID}}
+    command: sql --insecure --host=host.docker.internal --port=26258 --execute='CREATE DATABASE IF NOT EXISTS {{.DatabaseName}};'
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  migrate:
+    build:
+      dockerfile: migrate.Dockerfile
+    container_name: crawler-migrate-{{.ShortID}}
+    command: ["system-migrate-up", "generated-migrate-up"]
+    environment:
+      - GOOSE_DRIVER=postgres
+      - GOOSE_DBSTRING=postgres://root@host.docker.internal:26258/{{.DatabaseName}}?sslmode=disable
+    depends_on:
+      - db-setup
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+`
+
+// Safe characters for folder names: a-z, A-Z, 0-9
+const safeChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+func generateShortID(length int) (string, error) {
+	if length <= 0 {
+		return "", fmt.Errorf("length must be positive")
+	}
+
+	// Generate random bytes
+	bytes := make([]byte, length)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+
+	// Map each byte to a character from safeChars
+	result := make([]byte, length)
+	for i, b := range bytes {
+		result[i] = safeChars[int(b)%len(safeChars)]
+	}
+
+	return string(result), nil
+}
+
+// expandPath handles environment variables and tilde expansion in paths
+func expandPath(path string) (string, error) {
+	// Handle $HOME or ~ at the beginning of the path
+	if strings.HasPrefix(path, "$HOME") || strings.HasPrefix(path, "~") {
+		currentUser, err := user.Current()
+		if err != nil {
+			return "", fmt.Errorf("failed to get current user: %w", err)
+		}
+
+		if strings.HasPrefix(path, "$HOME") {
+			path = strings.Replace(path, "$HOME", currentUser.HomeDir, 1)
+		} else if strings.HasPrefix(path, "~") {
+			path = strings.Replace(path, "~", currentUser.HomeDir, 1)
+		}
+	}
+
+	// Handle other environment variables
+	for strings.Contains(path, "$") {
+		startIndex := strings.Index(path, "$")
+		endIndex := strings.Index(path[startIndex:], "/")
+
+		if endIndex == -1 {
+			endIndex = len(path)
+		} else {
+			endIndex += startIndex
+		}
+
+		envVar := path[startIndex:endIndex]
+		if strings.Contains(envVar, "/") {
+			envVar = envVar[:strings.Index(envVar, "/")]
+		}
+
+		// Remove $ from the environment variable name
+		envName := envVar[1:]
+		envValue := os.Getenv(envName)
+
+		if envValue == "" {
+			logger.Warnf("Environment variable %s not found, keeping as is", envName)
 			break
 		}
+
+		path = strings.Replace(path, envVar, envValue, 1)
 	}
 
-	return &DeploymentManager{
-		metadataFile: metadataPath,
-		logger:       logger,
-		metadata: DeploymentMetadata{
-			ID:             uuid.New().String(),
-			SubgraphCid:    subgraphCid,
-			ConfigCid:      configCid,
-			ExecutableCid:  executableCid,
-			MigrationCid:   migrationCid,
-			SubgraphPath:   "/subgraph.yaml",
-			ConfigPath:     "/.layerg-crawler.yaml",
-			ExecutablePath: "/layerg-crawler",
-			MigrationPath:  migrationPath,
-			CreatedAt:      time.Now(),
-			Status:         "pending",
-		},
-	}
+	return path, nil
 }
 
-func (dm *DeploymentManager) LoadOrCreateMetadata() error {
-	dm.logger.Info("Loading or creating deployment metadata",
-		zap.String("metadataFile", dm.metadataFile),
-		zap.String("ecid", dm.metadata.ExecutableCid))
+// createDatabaseInCockroach creates a new database in CockroachDB
+func createDatabaseInCockroach(config DeploymentConfig) error {
+	cmd := exec.Command("docker", "exec", "crawler-db",
+		"cockroach", "sql", "--insecure",
+		"--execute", fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", config.DatabaseName))
 
-	// Try to load existing metadata
-	data, err := os.ReadFile(dm.metadataFile)
-	if err == nil {
-		// Metadata exists, try to parse
-		var existingMetadata DeploymentMetadata
-		if err := json.Unmarshal(data, &existingMetadata); err == nil {
-			// Check if existing deployment is recent and valid
-			if existingMetadata.ExecutableCid == dm.metadata.ExecutableCid &&
-				time.Since(existingMetadata.CreatedAt) < 24*time.Hour {
-				dm.logger.Info("Found existing valid metadata",
-					zap.String("id", existingMetadata.ID),
-					zap.Time("createdAt", existingMetadata.CreatedAt))
-				dm.metadata = existingMetadata
-				return nil
-			}
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to create database: %s\nOutput: %s", err, output)
+	}
+
+	logger.Infof("Created database %s in CockroachDB", config.DatabaseName)
+	return nil
+}
+
+// updateConfigFiles updates configuration files with the new database settings
+func updateConfigFiles(config DeploymentConfig, deployDir string) error {
+	// Update layerg-crawler.yaml (assuming it needs to be updated with DB connection info)
+	configFilePath := filepath.Join(deployDir, "layerg-crawler.yaml")
+
+	if _, err := os.Stat(configFilePath); err == nil {
+		content, err := os.ReadFile(configFilePath)
+		if err != nil {
+			return fmt.Errorf("failed to read config file: %w", err)
 		}
-	}
 
-	// If no valid existing metadata, create new
-	dm.logger.Info("Creating new deployment metadata")
-	return dm.SaveMetadata()
-}
+		updatedContent := strings.Replace(
+			string(content),
+			"database: layerg",
+			fmt.Sprintf("database: %s", config.DatabaseName),
+			-1,
+		)
 
-func (dm *DeploymentManager) SaveMetadata() error {
-	data, err := json.Marshal(dm.metadata)
-	if err != nil {
-		dm.logger.Error("Failed to marshal metadata",
-			zap.Error(err))
-		return err
-	}
+		updatedContent = strings.Replace(
+			updatedContent,
+			"db: 0",
+			fmt.Sprintf("db: %d", config.RedisDBNumber),
+			-1,
+		)
 
-	err = os.WriteFile(dm.metadataFile, data, 0644)
-	if err != nil {
-		dm.logger.Error("Failed to save metadata file",
-			zap.String("path", dm.metadataFile),
-			zap.Error(err))
-		return err
+		err = os.WriteFile(configFilePath, []byte(updatedContent), 0644)
+		if err != nil {
+			return fmt.Errorf("failed to write updated config file: %w", err)
+		}
 	}
 
 	return nil
 }
 
-func (dm *DeploymentManager) FetchFromIPFS() (string, error) {
-	dm.logger.Info("Fetching subgraph from IPFS",
-		zap.String("ecid", dm.metadata.ExecutableCid))
-
-	// If local path exists and is valid, return it
-	if dm.metadata.LocalPath != "" && !noCache {
-		if _, err := os.Stat(dm.metadata.LocalPath); err == nil {
-			dm.logger.Info("Using existing local path",
-				zap.String("path", dm.metadata.LocalPath))
-			return dm.metadata.LocalPath, nil
-		}
-	}
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true, // Use cautiously
-			},
-		},
-	}
-
-	// Create a temporary directory for download
-	tempDir, err := os.MkdirTemp("", "subgraph-*")
+// createDockerComposeFile creates a docker-compose.yml file from the template
+func createDockerComposeFile(config DeploymentConfig, deployDir string) error {
+	tmpl, err := template.New("docker-compose").Parse(dockerComposeTemplate)
 	if err != nil {
-		dm.logger.Error("Failed to create temp directory", zap.Error(err))
-		return "", err
+		return fmt.Errorf("failed to parse template: %w", err)
 	}
 
-	// Path to save binary and config
-	subgraphPath := filepath.Join(tempDir, "subgraph.yaml")
-	binaryPath := filepath.Join(tempDir, "crawler")
-	configPath := filepath.Join(tempDir, "config.yaml")
-	migrationDir := filepath.Join(tempDir, "migrations")
-	migrationPath := filepath.Join(tempDir, dm.metadata.MigrationPath)
-
-	// Ensure migration directory exists
-	if err := os.MkdirAll(migrationDir, 0755); err != nil {
-		dm.logger.Error("Failed to create migrations directory",
-			zap.String("path", migrationDir),
-			zap.Error(err))
-		return "", err
-	}
-
-	// Prepare downloads
-	var wg sync.WaitGroup
-	var downloadErrs []error
-	var mu sync.Mutex
-
-	downloads := []struct {
-		cid  string
-		path string
-		name string
-	}{
-		{dm.metadata.ExecutableCid + dm.metadata.ExecutablePath, binaryPath, "binary"},
-		{dm.metadata.ConfigCid + dm.metadata.ConfigPath, configPath, "config"},
-		{dm.metadata.MigrationCid + dm.metadata.MigrationPath, migrationPath, "migrations"},
-		{dm.metadata.SubgraphCid + dm.metadata.SubgraphPath, subgraphPath, "subgraph"},
-	}
-
-	// Concurrent downloads
-	for _, download := range downloads {
-		wg.Add(1)
-		go func(d struct {
-			cid  string
-			path string
-			name string
-		}) {
-			defer wg.Done()
-
-			err := downloadFileFromGateway(client, baseGateway, d.cid, d.path, dm.logger)
-			if err != nil {
-				mu.Lock()
-				downloadErrs = append(downloadErrs,
-					fmt.Errorf("failed to fetch %s: %w", d.name, err))
-				mu.Unlock()
-				dm.logger.Error("Download failed",
-					zap.String("component", d.name),
-					zap.Error(err))
-			}
-		}(download)
-	}
-
-	// Wait for all downloads to complete
-	wg.Wait()
-
-	// Check if any download failed
-	if len(downloadErrs) > 0 {
-		return "", fmt.Errorf("multiple download errors: %v", downloadErrs)
-	}
-
-	// Make binary executable
-	err = os.Chmod(binaryPath, 0755)
+	filePath := filepath.Join(deployDir, "docker-compose.yaml")
+	file, err := os.Create(filePath)
 	if err != nil {
-		dm.logger.Error("Failed to make binary executable",
-			zap.String("path", binaryPath),
-			zap.Error(err))
-		return "", err
-	}
-
-	// Update metadata
-	dm.metadata.LocalPath = tempDir
-	dm.SaveMetadata()
-
-	dm.logger.Info("Successfully fetched subgraph from IPFS",
-		zap.String("localPath", tempDir))
-
-	//// checking legit
-	//if !devExperimental {
-	//	vc := NewVersionChecker()
-	//	if ok := vc.CheckVersion(binaryPath); !ok {
-	//		return "", fmt.Errorf("invalid crawler version: %s", binaryPath)
-	//	}
-	//}
-
-	return tempDir, nil
-}
-
-func downloadFileFromGateway(client *http.Client, baseGateway, cid, localPath string, logger *zap.SugaredLogger) error {
-	// Construct full URL
-	fileUrl := fmt.Sprintf("%s/%s", baseGateway, cid)
-
-	// Create request
-	req, err := http.NewRequest("GET", fileUrl, nil)
-	if err != nil {
-		logger.Error("Failed to create request",
-			zap.String("fileUrl", fileUrl),
-			zap.Error(err))
-		return err
-	}
-
-	// Add user agent to improve chances of successful download
-	req.Header.Set("User-Agent", "Mozilla/5.0")
-
-	// Send request
-	resp, err := client.Do(req)
-	if err != nil {
-		logger.Error("Failed to download file",
-			zap.String("fileUrl", fileUrl),
-			zap.Error(err))
-		return err
-	}
-	defer resp.Body.Close()
-
-	// Check response status
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("download failed with status %d", resp.StatusCode)
-	}
-
-	// Create local file
-	out, err := os.Create(localPath)
-	if err != nil {
-		logger.Error("Failed to create local file",
-			zap.String("path", localPath),
-			zap.Error(err))
-		return err
-	}
-	defer out.Close()
-
-	// Copy content
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		logger.Error("Failed to write file",
-			zap.String("path", localPath),
-			zap.Error(err))
-		return err
-	}
-
-	return nil
-}
-
-func (dm *DeploymentManager) CreateIsolatedDatabase(baseConnString string) (*sql.DB, string, error) {
-	dm.logger.Info("Creating isolated database")
-
-	// If database already exists, return existing connection
-	if dm.metadata.DatabaseName != "" && dm.metadata.DatabaseConn != "" {
-		db, err := sql.Open("postgres", dm.metadata.DatabaseConn)
-		if err == nil {
-			dm.logger.Info("Reusing existing database",
-				zap.String("dbName", dm.metadata.DatabaseName))
-			return db, dm.metadata.DatabaseName, nil
-		}
-	}
-
-	// Generate unique database name
-	uniqueDBName := fmt.Sprintf("subgraph_%s", strings.ReplaceAll(dm.metadata.ID, "-", "_"))
-
-	// Connect to base PostgreSQL instance
-	baseDB, err := sql.Open("postgres", baseConnString)
-	if err != nil {
-		dm.logger.Error("Failed to connect to base database",
-			zap.String("connString", baseConnString),
-			zap.Error(err))
-		return nil, "", err
-	}
-	defer baseDB.Close()
-
-	// Create new database
-	_, err = baseDB.Exec(fmt.Sprintf("CREATE DATABASE %s", uniqueDBName))
-	if err != nil {
-		dm.logger.Error("Failed to create database",
-			zap.String("dbName", uniqueDBName),
-			zap.Error(err))
-		return nil, "", err
-	}
-
-	// Parse base connection string
-	u, err := url.Parse(baseConnString)
-	if err != nil {
-		dm.logger.Error("Failed to parse connection string",
-			zap.String("connString", baseConnString),
-			zap.Error(err))
-		return nil, "", err
-	}
-
-	// Replace the database name in the path
-	u.Path = "/" + uniqueDBName
-
-	// Construct new connection string
-	isolatedConnString := u.String()
-
-	// Connect to the new database
-	isolatedDB, err := sql.Open("postgres", isolatedConnString)
-	if err != nil {
-		dm.logger.Error("Failed to connect to isolated database",
-			zap.String("connString", isolatedConnString),
-			zap.Error(err))
-		return nil, "", err
-	}
-
-	// Update metadata
-	dm.metadata.DatabaseName = uniqueDBName
-	dm.metadata.DatabaseConn = isolatedConnString
-	dm.SaveMetadata()
-
-	dm.logger.Info("Successfully created isolated database",
-		zap.String("dbName", uniqueDBName))
-
-	return isolatedDB, uniqueDBName, nil
-}
-
-func (dm *DeploymentManager) RunMigrations(db *sql.DB, migrationDir string) error {
-	dm.logger.Info("Running migrations",
-		zap.String("migrationDir", migrationDir))
-
-	db, err := sql.Open("postgres", dm.metadata.DatabaseConn)
-	if err != nil {
-		return fmt.Errorf("failed to open database: %v", err)
-	}
-	defer db.Close()
-
-	// Set the migration directory
-	if err := goose.SetDialect("postgres"); err != nil {
-		return fmt.Errorf("failed to set dialect: %v", err)
-	}
-
-	// Run migrations
-	if err := goose.Up(db, migrationDir); err != nil {
-		return fmt.Errorf("migration failed: %v", err)
-	}
-
-	dm.logger.Info("Migrations completed successfully")
-
-	return nil
-}
-
-func readCidsFromFile(subgraphCid, configCid, executableCid, migrationCid *string) (map[string]string, error) {
-	// Get the system's temp directory
-	tempDir := os.TempDir()
-
-	// Define the full file path
-	filePath := filepath.Join(tempDir, "subgraph_deploy_cids.json")
-
-	// Open the file
-	file, err := os.Open(filePath)
-	if err != nil {
-		// If the file doesn't exist, return empty strings and no error
-		return nil, fmt.Errorf("failed to open file: %w", err)
+		return fmt.Errorf("failed to create docker-compose file: %w", err)
 	}
 	defer file.Close()
 
-	// Decode JSON into a map
-	var cids map[string]string
-	err = json.NewDecoder(file).Decode(&cids)
+	err = tmpl.Execute(file, config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode JSON: %v", err)
+		return fmt.Errorf("failed to execute template: %w", err)
 	}
 
-	*subgraphCid = cids["build/subgraph.yaml"]
-	*configCid = cids["build/.layerg-crawler.yaml"]
-	*executableCid = cids["build/layerg-crawler"]
+	return nil
+}
 
-	for key, value := range cids {
-		if strings.HasPrefix(key, "build/migrations/") && strings.HasSuffix(key, ".sql") {
-			*migrationCid = value
-			break // Take the first match
-		}
+// deployGraph clones the repo and starts the services
+func deployGraph(config DeploymentConfig) error {
+	// Create deployment directory with short ID
+	deployDir := filepath.Join(config.BasePath, fmt.Sprintf("layerg-crawler-%s", config.ShortID))
+
+	logger.Infof("Creating deployment directory: %s", deployDir)
+	if err := os.MkdirAll(deployDir, 0755); err != nil {
+		return fmt.Errorf("failed to create deployment directory: %w", err)
 	}
 
-	if *migrationCid == "" {
-		return nil, fmt.Errorf("no migration file found in JSON")
+	// Clone the repository
+	logger.Infof("Cloning repository from %s to %s", config.RepoURL, deployDir)
+	cmd := exec.Command("git", "clone", config.RepoURL, deployDir)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to clone repository: %s\nOutput: %s", err, output)
 	}
 
-	return cids, nil
+	// Create docker-compose.yml file
+	if err := createDockerComposeFile(config, deployDir); err != nil {
+		return err
+	}
+
+	// Create database in CockroachDB
+	if err := createDatabaseInCockroach(config); err != nil {
+		return err
+	}
+
+	// Update configuration files
+	if err := updateConfigFiles(config, deployDir); err != nil {
+		return err
+	}
+
+	// Start services using docker-compose
+	logger.Infof("Starting services with docker-compose in %s", deployDir)
+	cmd = exec.Command("docker", "compose", "up", "-d")
+	cmd.Dir = deployDir
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to start services: %s\nOutput: %s", err, output)
+	}
+
+	logger.Infof("Deployment successful! ShortID: %s, Database: %s, Redis DB: %d, Query Port: %d",
+		config.ShortID, config.DatabaseName, config.RedisDBNumber, config.QueryPort)
+
+	return nil
 }
 
 func executeFn(cmd *cobra.Command, args []string) {
-	// Read CIDs from file (if available)
-	var err error
-	cids, err := readCidsFromFile(&subgraphCid, &configCid, &executableCid, &migrationCid)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		logger.Fatal("Failed to read subgraph", "err", err)
-		return
-	}
-
-	// Get flag values from Cobra (defaulting to file values if they exist)
-	subgraphCid, _ = cmd.Flags().GetString("scid")
-	configCid, _ = cmd.Flags().GetString("ccid")
-	executableCid, _ = cmd.Flags().GetString("ecid")
-	migrationCid, _ = cmd.Flags().GetString("mcid")
-	baseGateway, _ = cmd.Flags().GetString("gw")
-
-	// Load environment variables
-	err = godotenv.Load()
+	shortID, err := generateShortID(6)
 	if err != nil {
-		logger.Warn("Error loading .env file", zap.Error(err))
+		logger.Fatalf("Failed to generate short ID: %v", err)
 	}
 
-	// Create deployment manager
-	deploymentManager := NewDeploymentManager(subgraphCid, configCid, executableCid, migrationCid, cids, logger)
-
-	if subgraphCid == "" || configCid == "" || executableCid == "" || migrationCid == "" {
-		logger.Fatal("Failed to read CIDs from file. Please provide them as flags or run deploy first")
-		return
-	}
-
-	// Log start of deployment
-	logger.Info("Starting subgraph deployment",
-		zap.String("ecid", executableCid))
-
-	// Load or create metadata
-	err = deploymentManager.LoadOrCreateMetadata()
+	// Expand the base path to handle environment variables
+	basePath, err := expandPath("$HOME/.layerg/crawler/deployments")
 	if err != nil {
-		logger.Fatal("Failed to load or create metadata", zap.Error(err))
+		logger.Fatalf("Failed to expand base path: %v", err)
 	}
 
-	// Fetch from IPFS
-	tempDir, err := deploymentManager.FetchFromIPFS()
-	defer func(path string) {
-		err = os.RemoveAll(path)
-		if err != nil {
-			logger.Error("Failed to remove temp dir", zap.String("path", path))
-		}
-		err = os.RemoveAll(deploymentManager.metadataFile)
-		if err != nil {
-			logger.Error("Failed to remove metadata file", zap.Error(err))
-		}
-	}(tempDir)
-	if err != nil {
-		logger.Fatal("Failed to fetch from IPFS", zap.Error(err))
+	// Configure deployment
+	config := DeploymentConfig{
+		RepoURL:          subgraphRepoUrl,
+		BasePath:         basePath,
+		ShortID:          shortID,
+		DatabaseName:     fmt.Sprintf("layerg_%s", shortID),
+		DatabasePassword: os.Getenv("COCKROACH_PASSWORD"),
+		RedisDBNumber:    1, // Increment this for each new deployment
+		CRDBPort:         26257,
+		RedisPort:        6379,
+		RedisPassword:    os.Getenv("REDIS_PASSWORD"),
+		QueryPort:        8084 + 1, // Use a different port for each deployment
 	}
 
-	// Base connection string
-	baseConnString := os.Getenv("COCKROACH_DB_URL")
-
-	// Create isolated database
-	db, _, err := deploymentManager.CreateIsolatedDatabase(baseConnString)
-	if err != nil {
-		logger.Fatal("Failed to create isolated database", zap.Error(err))
+	// Deploy the graph node
+	if err := deployGraph(config); err != nil {
+		logger.Fatalf("Deployment failed: %v", err)
 	}
-	defer db.Close()
-
-	// Run migrations
-	migrationDir := filepath.Join(tempDir, "migrations")
-	err = deploymentManager.RunMigrations(db, migrationDir)
-	if err != nil {
-		logger.Fatal("Migration failed", zap.Error(err))
-	}
-
-	// Execute crawler with isolated config
-	configPath := filepath.Join(tempDir, "config.yaml")
-	binaryPath := filepath.Join(tempDir, "crawler")
-
-	binaryCmd := exec.Command(binaryPath, "--config", configPath)
-	binaryCmd.Stdout = os.Stdout
-	binaryCmd.Stderr = os.Stderr
-	binaryCmd.Env = append(os.Environ(),
-		fmt.Sprintf("COCKROACH_DB_URL=%s", deploymentManager.metadata.DatabaseConn),
-	)
-
-	err = binaryCmd.Run()
-	if err != nil {
-		logger.Fatal("Crawler execution failed", zap.Error(err))
-	}
-
-	// Update metadata status
-	deploymentManager.metadata.Status = "completed"
-	deploymentManager.SaveMetadata()
 
 	logger.Info("Subgraph deployment completed successfully")
 }
