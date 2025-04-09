@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	db "github.com/u2u-labs/layerg-crawler/db/sqlc"
@@ -13,7 +14,15 @@ import (
 )
 
 func loadCrawlerConfig() (*generator.CrawlerConfig, error) {
-	data, err := os.ReadFile("subgraph.yaml")
+	// Get the directory of the currently running executable
+	execPath, err := os.Executable()
+	if err != nil {
+		return nil, err
+	}
+	execDir := filepath.Dir(execPath)
+	configPath := filepath.Join(execDir, "subgraph.yaml")
+
+	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, err
 	}

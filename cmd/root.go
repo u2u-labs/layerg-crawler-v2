@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/u2u-labs/layerg-crawler/cmd/abigen"
+	"github.com/u2u-labs/layerg-crawler/cmd/version"
 )
 
 var cfgFile string
@@ -42,7 +44,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.layerg-crawler.yaml)")
 
-	rootCmd.AddCommand(abigen.GeneratorCmd)
+	rootCmd.AddCommand(abigen.GeneratorCmd, version.VersionCmd)
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
@@ -64,6 +66,7 @@ func initConfig() {
 		viper.SetConfigName(".layerg-crawler")
 	}
 
+	_ = godotenv.Load()
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.

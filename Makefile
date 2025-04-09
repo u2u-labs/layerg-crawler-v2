@@ -1,5 +1,8 @@
+-include .env
+export
+
 GOOSE_DRIVER='postgres'
-GOOSE_DBSTRING='postgres://root@localhost:26257/layerg?sslmode=disable'
+GOOSE_DBSTRING?='postgres://root@localhost:26257/layerg?sslmode=disable'
 SYSTEM_MIGRATION_DIR='./db/migrations'
 GENERATED_MIGRATION_DIR='./generated/migrations'
 SERVICE_PORT='8084'
@@ -52,4 +55,7 @@ gen-abi:
 		go run main.go abigen -i $$file -o generated/abi_helpers/$${filename}_helpers.go; \
 	done
 	@echo "Done generating helpers!"
+
+run-subgraph:
+	go run github.com/u2u-labs/layerg-crawler/cmd/deploy run --branch ft/code_fetching
 
